@@ -1,0 +1,362 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "LanguageTool API",
+    "description": "Check texts for style and grammar issues with LanguageTool. See <a href='http://wiki.languagetool.org/public-http-api'>our wiki</a> for access limitations.",
+    "version": "1.0.2"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:9003/v2"
+    }
+  ],
+  "paths": {
+    "/{check1}": {
+      "post": {
+        "summary": "Check a text",
+        "description": "The main feature - check a text with LanguageTool for possible style and grammar issues.",
+        "parameters": [
+          {
+            "name": "check1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "check"
+              ]
+            }
+          },
+          {
+            "name": "text",
+            "in": "query",
+            "description": "The text to be checked. This or 'data' is required.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "description": "A language code like `en-US`, `de-DE`, `fr`, or `auto` to guess the language automatically (see `preferredVariants` below). For languages with variants (English, German, Portuguese) spell checking will only be activated when you specify the variant, e.g. `en-GB` instead of just `en`.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en-US",
+                "fr",
+                "auto",
+                "en-GB",
+                "en"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the result of checking the text",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{check2}": {
+      "post": {
+        "summary": "Check a text",
+        "description": "The main feature - check a text with LanguageTool for possible style and grammar issues.",
+        "parameters": [
+          {
+            "name": "check2",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "check"
+              ]
+            }
+          },
+          {
+            "name": "text",
+            "in": "query",
+            "description": "The text to be checked. This or 'data' is required.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "description": "A language code like `en-US`, `de-DE`, `fr`, or `auto` to guess the language automatically (see `preferredVariants` below). For languages with variants (English, German, Portuguese) spell checking will only be activated when you specify the variant, e.g. `en-GB` instead of just `en`.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "auto"
+              ]
+            }
+          },
+          {
+            "name": "preferredVariants",
+            "in": "query",
+            "required": true,
+            "description": "Comma-separated list of preferred language variants. The language detector used with `language=auto` can detect e.g. English, but it cannot decide whether British English or American English is used. Thus this parameter can be used to specify the preferred variants like `en-GB` and `de-AT`. Only available with `language=auto`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en-GB",
+                "de-AT"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the result of checking the text",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{check3}": {
+      "post": {
+        "summary": "Check a text",
+        "description": "The main feature - check a text with LanguageTool for possible style and grammar issues.",
+        "parameters": [
+          {
+            "name": "check3",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "check"
+              ]
+            }
+          },
+          {
+            "name": "data",
+            "in": "query",
+            "required": true,
+            "description": "The text to be checked, given as a JSON document that specifies what's text and what's markup. This or 'text' is required. Markup will be ignored when looking for errors. Example text: <pre>A &lt;b>test&lt;/b></pre>JSON for the example text: <pre>{\"annotation\":[\n {\"text\": \"A \"},\n {\"markup\": \"&lt;b>\"},\n {\"text\": \"test\"},\n {\"markup\": \"&lt;/b>\"}\n]}</pre> <p>If you have markup that should be interpreted as whitespace, like <tt>&lt;p&gt;</tt> in HTML, you can have it interpreted like this: <pre>{\"markup\": \"&lt;p&gt;\", \"interpretAs\": \"\\n\\n\"}</pre><p>The 'data' feature is not limited to HTML or XML, it can be used for any kind of markup.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "{\"text\": \"A \"}"
+              ]
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "description": "A language code like `en-US`, `de-DE`, `fr`, or `auto` to guess the language automatically (see `preferredVariants` below). For languages with variants (English, German, Portuguese) spell checking will only be activated when you specify the variant, e.g. `en-GB` instead of just `en`.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en-US",
+                "fr",
+                "auto",
+                "en-GB",
+                "en"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the result of checking the text",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/check": {
+      "post": {
+        "summary": "Check a text",
+        "description": "The main feature - check a text with LanguageTool for possible style and grammar issues.",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "description": "The text to be checked. This or 'data' is required.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "data",
+            "in": "query",
+            "description": "The text to be checked, given as a JSON document that specifies what's text and what's markup. This or 'text' is required. Markup will be ignored when looking for errors. Example text: <pre>A &lt;b>test&lt;/b></pre>JSON for the example text: <pre>{\"annotation\":[\n {\"text\": \"A \"},\n {\"markup\": \"&lt;b>\"},\n {\"text\": \"test\"},\n {\"markup\": \"&lt;/b>\"}\n]}</pre> <p>If you have markup that should be interpreted as whitespace, like <tt>&lt;p&gt;</tt> in HTML, you can have it interpreted like this: <pre>{\"markup\": \"&lt;p&gt;\", \"interpretAs\": \"\\n\\n\"}</pre><p>The 'data' feature is not limited to HTML or XML, it can be used for any kind of markup.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "{\"text\": \"A \"}"
+              ]
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "description": "A language code like `en-US`, `de-DE`, `fr`, or `auto` to guess the language automatically (see `preferredVariants` below). For languages with variants (English, German, Portuguese) spell checking will only be activated when you specify the variant, e.g. `en-GB` instead of just `en`.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en-US",
+                "fr",
+                "auto",
+                "en-GB",
+                "en"
+              ]
+            }
+          },
+          {
+            "name": "altLanguages",
+            "in": "query",
+            "description": "EXPERIMENTAL: Comma-separated list of language codes to check if a word is not similar to one of the main language (parameter `language`). Unknown words that are similar to a word from the main language will still be considered errors but with type `Hint`. For languages with variants (English, German, Portuguese) you need to specify the variant, e.g. `en-GB` instead of just `en`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en-GB"
+              ]
+            }
+          },
+          {
+            "name": "motherTongue",
+            "in": "query",
+            "description": "A language code of the user's native language, enabling false friends checks for some language pairs.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "preferredVariants",
+            "in": "query",
+            "description": "Comma-separated list of preferred language variants. The language detector used with `language=auto` can detect e.g. English, but it cannot decide whether British English or American English is used. Thus this parameter can be used to specify the preferred variants like `en-GB` and `de-AT`. Only available with `language=auto`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en-GB",
+                "de-AT"
+              ]
+            }
+          },
+          {
+            "name": "enabledRules",
+            "in": "query",
+            "description": "IDs of rules to be enabled, comma-separated",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "disabledRules",
+            "in": "query",
+            "description": "IDs of rules to be disabled, comma-separated",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "enabledCategories",
+            "in": "query",
+            "description": "IDs of categories to be enabled, comma-separated",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "disabledCategories",
+            "in": "query",
+            "description": "IDs of categories to be disabled, comma-separated",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "enabledOnly",
+            "in": "query",
+            "description": "If true, only the rules and categories whose IDs are specified with `enabledRules` or `enabledCategories` are enabled.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the result of checking the text",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/languages": {
+      "get": {
+        "summary": "Get a list of supported languages.",
+        "responses": {
+          "200": {
+            "description": "An array of language objects.",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "required": [
+                      "code",
+                      "longCode",
+                      "name"
+                    ],
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "a language name like 'French' or 'English (Australia)'"
+                      },
+                      "code": {
+                        "type": "string",
+                        "description": "a language code like 'en'"
+                      },
+                      "longCode": {
+                        "type": "string",
+                        "description": "a language code like 'en-US' or 'ca-ES-valencia'"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {}
+}

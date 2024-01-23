@@ -1,0 +1,2662 @@
+basePath: /
+definitions:
+  AlleleCount:
+    properties:
+      ac:
+        format: int32
+        type: integer
+      ac_afr:
+        format: int32
+        type: integer
+      ac_amr:
+        format: int32
+        type: integer
+      ac_asj:
+        format: int32
+        type: integer
+      ac_eas:
+        format: int32
+        type: integer
+      ac_fin:
+        format: int32
+        type: integer
+      ac_nfe:
+        format: int32
+        type: integer
+      ac_oth:
+        format: int32
+        type: integer
+      ac_sas:
+        format: int32
+        type: integer
+    required:
+      - ac
+      - ac_afr
+      - ac_amr
+      - ac_asj
+      - ac_eas
+      - ac_fin
+      - ac_nfe
+      - ac_oth
+      - ac_sas
+    type: object
+  AlleleFrequency:
+    properties:
+      af:
+        format: double
+        type: number
+      af_afr:
+        format: double
+        type: number
+      af_amr:
+        format: double
+        type: number
+      af_asj:
+        format: double
+        type: number
+      af_eas:
+        format: double
+        type: number
+      af_fin:
+        format: double
+        type: number
+      af_nfe:
+        format: double
+        type: number
+      af_oth:
+        format: double
+        type: number
+      af_sas:
+        format: double
+        type: number
+    required:
+      - af
+      - af_afr
+      - af_amr
+      - af_asj
+      - af_eas
+      - af_fin
+      - af_nfe
+      - af_oth
+      - af_sas
+    type: object
+  AlleleNumber:
+    properties:
+      an:
+        format: int32
+        type: integer
+      an_afr:
+        format: int32
+        type: integer
+      an_amr:
+        format: int32
+        type: integer
+      an_asj:
+        format: int32
+        type: integer
+      an_eas:
+        format: int32
+        type: integer
+      an_fin:
+        format: int32
+        type: integer
+      an_nfe:
+        format: int32
+        type: integer
+      an_oth:
+        format: int32
+        type: integer
+      an_sas:
+        format: int32
+        type: integer
+    required:
+      - an
+      - an_afr
+      - an_amr
+      - an_asj
+      - an_eas
+      - an_fin
+      - an_nfe
+      - an_oth
+      - an_sas
+    type: object
+  Alleles:
+    properties:
+      allele:
+        description: allele
+        type: string
+    type: object
+  ArticleAbstract:
+    properties:
+      abstract:
+        type: string
+      link:
+        type: string
+    type: object
+  Citations:
+    properties:
+      abstracts:
+        items:
+          $ref: '#/definitions/ArticleAbstract'
+        type: array
+      pmids:
+        items:
+          type: string
+        type: array
+    type: object
+  ClinVar:
+    properties:
+      alleleId:
+        description: allele_id
+        format: int32
+        type: integer
+      alt:
+        description: alt
+        type: string
+      chrom:
+        description: chrom
+        type: string
+      cytogenic:
+        description: cytogenic
+        type: string
+      gene:
+        $ref: '#/definitions/Gene'
+      hg19:
+        $ref: '#/definitions/Hg19'
+      hg38:
+        $ref: '#/definitions/Hg38'
+      hgvs:
+        $ref: '#/definitions/Hgvs'
+      license:
+        description: license
+        type: string
+      rcv:
+        items:
+          $ref: '#/definitions/Rcv'
+        type: array
+      variantId:
+        description: variant_id
+        format: int32
+        type: integer
+    type: object
+  Clinvar:
+    properties:
+      alternateAllele:
+        type: string
+      chromosome:
+        type: string
+      clinicalSignificance:
+        type: string
+      clinvarId:
+        format: int32
+        type: integer
+      conflictingClinicalSignificance:
+        type: string
+      endPosition:
+        format: int32
+        type: integer
+      referenceAllele:
+        type: string
+      startPosition:
+        format: int32
+        type: integer
+    type: object
+  ClinvarAnnotation:
+    properties:
+      annotation:
+        $ref: '#/definitions/Clinvar'
+    type: object
+  ColocatedVariant:
+    properties:
+      dbSnpId:
+        type: string
+      gnomad_afr_allele:
+        description: GnomAD African/African American Allele
+        type: string
+      gnomad_afr_maf:
+        description: GnomAD African/African American MAF
+        type: string
+      gnomad_eas_allele:
+        description: GnomAD East Asian Allele
+        type: string
+      gnomad_eas_maf:
+        description: GnomAD East Asian MAF
+        type: string
+      gnomad_nfe_allele:
+        description: GnomAD Non-Finnish European Allele
+        type: string
+      gnomad_nfe_maf:
+        description: GnomAD Non-Finnish European MAF
+        type: string
+    required:
+      - gnomad_afr_allele
+      - gnomad_afr_maf
+      - gnomad_eas_allele
+      - gnomad_eas_maf
+      - gnomad_nfe_allele
+      - gnomad_nfe_maf
+    type: object
+  Cosmic:
+    properties:
+      alt:
+        description: alt
+        type: string
+      chrom:
+        description: chrom
+        type: string
+      cosmicId:
+        description: cosmic_id
+        type: string
+      hg19:
+        $ref: '#/definitions/Hg19'
+      license:
+        description: _license
+        type: string
+      mutFreq:
+        description: mut_freq
+        format: double
+        type: number
+      mutNt:
+        description: mut_nt
+        type: string
+      ref:
+        description: ref
+        type: string
+      tumorSite:
+        description: tumor_site
+        type: string
+    type: object
+  CountByTumorType:
+    properties:
+      tumorType:
+        description: Tumor Type
+        type: string
+      tumorTypeCount:
+        description: Sample count for Tumor Type
+        format: int32
+        type: integer
+      variantCount:
+        description: Variant count for Tumor Type
+        format: int32
+        type: integer
+    type: object
+  Dbsnp:
+    properties:
+      _class:
+        description: class
+        type: string
+      alleleOrigin:
+        description: allele_origin
+        type: string
+      alleles:
+        description: alleles
+        items:
+          $ref: '#/definitions/Alleles'
+        type: array
+      alt:
+        description: alt
+        type: string
+      chrom:
+        description: chrom
+        type: string
+      dbsnpBuild:
+        description: dbsnp_build
+        format: int32
+        type: integer
+      flags:
+        description: flags
+        items:
+          type: string
+        type: array
+      hg19:
+        $ref: '#/definitions/Hg19'
+      license:
+        description: _license
+        type: string
+      ref:
+        description: ref
+        type: string
+      rsid:
+        description: rsid
+        type: string
+      validated:
+        description: validated
+        example: false
+        type: boolean
+      varSubtype:
+        description: var_subtype
+        type: string
+      vartype:
+        description: vartype
+        type: string
+    type: object
+  Drug:
+    properties:
+      drugName:
+        type: string
+      ncitCode:
+        type: string
+      synonyms:
+        items:
+          type: string
+        type: array
+      uuid:
+        type: string
+    type: object
+  EnsemblFilter:
+    properties:
+      geneIds:
+        description: >-
+          List of Ensembl gene IDs. For example ["ENSG00000136999",
+          "ENSG00000272398", "ENSG00000198695"]
+        items:
+          enum:
+            - ENSG00000136999
+            - ENSG00000272398
+            - ENSG00000198695
+          type: string
+        type: array
+      hugoSymbols:
+        description: 'List of Hugo Symbols. For example ["TP53", "PIK3CA", "BRCA1"]'
+        items:
+          enum:
+            - TP53
+            - PIK3CA
+            - BRCA1
+          type: string
+        type: array
+      proteinIds:
+        description: >-
+          List of Ensembl protein IDs. For example ["ENSP00000439985",
+          "ENSP00000478460", "ENSP00000346196"]
+        items:
+          enum:
+            - ENSP00000439985
+            - ENSP00000478460
+            - ENSP00000346196
+          type: string
+        type: array
+      transcriptIds:
+        description: >-
+          List of Ensembl transcript IDs. For example ["ENST00000361390",
+          "ENST00000361453", "ENST00000361624"]
+        items:
+          enum:
+            - ENST00000361390
+            - ENST00000361453
+            - ENST00000361624
+          type: string
+        type: array
+    type: object
+  EnsemblGene:
+    properties:
+      entrezGeneId:
+        description: Entrez Gene Id
+        type: string
+      geneId:
+        description: Ensembl gene id
+        type: string
+      hugoSymbol:
+        description: Approved Hugo symbol
+        type: string
+      previousSymbols:
+        description: Previous Hugo symbols
+        items:
+          type: string
+        type: array
+      synonyms:
+        description: Hugo symbol synonyms
+        items:
+          type: string
+        type: array
+    required:
+      - geneId
+      - hugoSymbol
+    type: object
+  EnsemblTranscript:
+    properties:
+      ccdsId:
+        description: Consensus CDS (CCDS) ID
+        type: string
+      exons:
+        description: Exon information
+        items:
+          $ref: '#/definitions/Exon'
+        type: array
+      geneId:
+        description: Ensembl gene id
+        type: string
+      hugoSymbols:
+        description: Hugo symbols
+        items:
+          type: string
+        type: array
+      pfamDomains:
+        description: Pfam domains
+        items:
+          $ref: '#/definitions/PfamDomainRange'
+        type: array
+      proteinId:
+        description: Ensembl protein id
+        type: string
+      proteinLength:
+        description: Length of protein
+        format: int32
+        type: integer
+      refseqMrnaId:
+        description: RefSeq mRNA ID
+        type: string
+      transcriptId:
+        description: Ensembl transcript id
+        type: string
+      uniprotId:
+        type: string
+      utrs:
+        description: UTR information
+        items:
+          $ref: '#/definitions/UntranslatedRegion'
+        type: array
+    required:
+      - geneId
+      - proteinId
+      - transcriptId
+    type: object
+  Exon:
+    properties:
+      exonEnd:
+        description: End position of exon
+        format: int32
+        type: integer
+      exonId:
+        description: Exon id
+        type: string
+      exonStart:
+        description: Start position of exon
+        format: int32
+        type: integer
+      rank:
+        description: Number of exon in transcript
+        format: int32
+        type: integer
+      strand:
+        description: 'Strand exon is on, -1 for - and 1 for +'
+        format: int32
+        type: integer
+      version:
+        description: Exon version
+        format: int32
+        type: integer
+    required:
+      - exonEnd
+      - exonId
+      - exonStart
+      - rank
+      - strand
+      - version
+    type: object
+  Gene:
+    properties:
+      geneId:
+        description: geneid
+        type: string
+      symbol:
+        description: symbol
+        type: string
+    type: object
+  GeneXref:
+    properties:
+      db_display_name:
+        description: Database display name
+        type: string
+      dbname:
+        description: Database name
+        type: string
+      description:
+        description: Description
+        type: string
+      display_id:
+        description: Display id
+        type: string
+      ensemblGeneId:
+        type: string
+      info_text:
+        description: Database info text
+        type: string
+      info_types:
+        description: Database info type
+        type: string
+      primary_id:
+        description: Primary id
+        type: string
+      synonyms:
+        description: Synonyms
+        items:
+          type: string
+        type: array
+      version:
+        description: Version
+        type: string
+    required:
+      - db_display_name
+      - dbname
+      - description
+      - display_id
+      - primary_id
+      - version
+    type: object
+  GeneralPopulationStats:
+    properties:
+      counts:
+        $ref: '#/definitions/SignalPopulationStats'
+      frequencies:
+        $ref: '#/definitions/SignalPopulationStats'
+    type: object
+  GenomicLocation:
+    properties:
+      chromosome:
+        description: Chromosome
+        type: string
+      end:
+        description: End Position
+        format: int32
+        type: integer
+      referenceAllele:
+        description: Reference Allele
+        type: string
+      start:
+        description: Start Position
+        format: int32
+        type: integer
+      variantAllele:
+        description: Variant Allele
+        type: string
+    required:
+      - chromosome
+      - end
+      - referenceAllele
+      - start
+      - variantAllele
+    type: object
+  Gnomad:
+    properties:
+      alleleCount:
+        $ref: '#/definitions/AlleleCount'
+      alleleFrequency:
+        $ref: '#/definitions/AlleleFrequency'
+      alleleNumber:
+        $ref: '#/definitions/AlleleNumber'
+      homozygotes:
+        $ref: '#/definitions/Homozygotes'
+    type: object
+  Hg19:
+    properties:
+      end:
+        description: end
+        format: int32
+        type: integer
+      start:
+        description: start
+        format: int32
+        type: integer
+    type: object
+  Hg38:
+    properties:
+      end:
+        description: end
+        type: string
+      start:
+        description: start
+        type: string
+    type: object
+  Hgvs:
+    properties:
+      coding:
+        items:
+          type: string
+        type: array
+      genomic:
+        items:
+          type: string
+        type: array
+    type: object
+  Homozygotes:
+    properties:
+      hom:
+        format: int32
+        type: integer
+      hom_afr:
+        format: int32
+        type: integer
+      hom_amr:
+        format: int32
+        type: integer
+      hom_asj:
+        format: int32
+        type: integer
+      hom_eas:
+        format: int32
+        type: integer
+      hom_fin:
+        format: int32
+        type: integer
+      hom_nfe:
+        format: int32
+        type: integer
+      hom_oth:
+        format: int32
+        type: integer
+      hom_sas:
+        format: int32
+        type: integer
+    required:
+      - hom
+      - hom_afr
+      - hom_amr
+      - hom_asj
+      - hom_eas
+      - hom_fin
+      - hom_nfe
+      - hom_oth
+      - hom_sas
+    type: object
+  Hotspot:
+    properties:
+      hugoSymbol:
+        description: Hugo gene symbol
+        type: string
+      inframeCount:
+        description: Inframe mutation count
+        format: int32
+        type: integer
+      missenseCount:
+        description: Missense mutation count
+        format: int32
+        type: integer
+      residue:
+        description: Hotspot residue
+        type: string
+      spliceCount:
+        description: Splice mutation count
+        format: int32
+        type: integer
+      transcriptId:
+        description: Ensembl Transcript Id
+        type: string
+      truncatingCount:
+        description: Truncation mutation count
+        format: int32
+        type: integer
+      tumorCount:
+        description: Tumor count
+        format: int32
+        type: integer
+      type:
+        description: Hotspot type
+        type: string
+    type: object
+  HotspotAnnotation:
+    properties:
+      annotation:
+        items:
+          items:
+            $ref: '#/definitions/Hotspot'
+          type: array
+        type: array
+      license:
+        type: string
+    type: object
+  HrdScore:
+    properties:
+      fractionLoh:
+        description: Median HRD Fraction LOH
+        format: double
+        type: number
+      lst:
+        description: Median HRD LST
+        format: double
+        type: number
+      ntelomericAi:
+        description: Median HRD ntelomeric AI
+        format: double
+        type: number
+    type: object
+  Implication:
+    properties:
+      alterations:
+        items:
+          type: string
+        type: array
+      description:
+        type: string
+      levelOfEvidence:
+        enum:
+          - LEVEL_0
+          - LEVEL_1
+          - LEVEL_2
+          - LEVEL_2A
+          - LEVEL_2B
+          - LEVEL_3A
+          - LEVEL_3B
+          - LEVEL_4
+          - LEVEL_R1
+          - LEVEL_R2
+          - LEVEL_R3
+          - LEVEL_Px1
+          - LEVEL_Px2
+          - LEVEL_Px3
+          - LEVEL_Dx1
+          - LEVEL_Dx2
+          - LEVEL_Dx3
+          - 'NO'
+        type: string
+      tumorType:
+        $ref: '#/definitions/TumorType'
+    type: object
+  IndicatorQueryResp:
+    properties:
+      alleleExist:
+        example: false
+        type: boolean
+      dataVersion:
+        type: string
+      diagnosticImplications:
+        items:
+          $ref: '#/definitions/Implication'
+        type: array
+      diagnosticSummary:
+        type: string
+      geneExist:
+        example: false
+        type: boolean
+      geneSummary:
+        type: string
+      highestDiagnosticImplicationLevel:
+        enum:
+          - LEVEL_0
+          - LEVEL_1
+          - LEVEL_2
+          - LEVEL_2A
+          - LEVEL_2B
+          - LEVEL_3A
+          - LEVEL_3B
+          - LEVEL_4
+          - LEVEL_R1
+          - LEVEL_R2
+          - LEVEL_R3
+          - LEVEL_Px1
+          - LEVEL_Px2
+          - LEVEL_Px3
+          - LEVEL_Dx1
+          - LEVEL_Dx2
+          - LEVEL_Dx3
+          - 'NO'
+        type: string
+      highestPrognosticImplicationLevel:
+        enum:
+          - LEVEL_0
+          - LEVEL_1
+          - LEVEL_2
+          - LEVEL_2A
+          - LEVEL_2B
+          - LEVEL_3A
+          - LEVEL_3B
+          - LEVEL_4
+          - LEVEL_R1
+          - LEVEL_R2
+          - LEVEL_R3
+          - LEVEL_Px1
+          - LEVEL_Px2
+          - LEVEL_Px3
+          - LEVEL_Dx1
+          - LEVEL_Dx2
+          - LEVEL_Dx3
+          - 'NO'
+        type: string
+      highestResistanceLevel:
+        enum:
+          - LEVEL_0
+          - LEVEL_1
+          - LEVEL_2
+          - LEVEL_2A
+          - LEVEL_2B
+          - LEVEL_3A
+          - LEVEL_3B
+          - LEVEL_4
+          - LEVEL_R1
+          - LEVEL_R2
+          - LEVEL_R3
+          - LEVEL_Px1
+          - LEVEL_Px2
+          - LEVEL_Px3
+          - LEVEL_Dx1
+          - LEVEL_Dx2
+          - LEVEL_Dx3
+          - 'NO'
+        type: string
+      highestSensitiveLevel:
+        enum:
+          - LEVEL_0
+          - LEVEL_1
+          - LEVEL_2
+          - LEVEL_2A
+          - LEVEL_2B
+          - LEVEL_3A
+          - LEVEL_3B
+          - LEVEL_4
+          - LEVEL_R1
+          - LEVEL_R2
+          - LEVEL_R3
+          - LEVEL_Px1
+          - LEVEL_Px2
+          - LEVEL_Px3
+          - LEVEL_Dx1
+          - LEVEL_Dx2
+          - LEVEL_Dx3
+          - 'NO'
+        type: string
+      hotspot:
+        example: false
+        type: boolean
+      lastUpdate:
+        type: string
+      mutationEffect:
+        $ref: '#/definitions/MutationEffectResp'
+      oncogenic:
+        type: string
+      otherSignificantResistanceLevels:
+        items:
+          enum:
+            - LEVEL_0
+            - LEVEL_1
+            - LEVEL_2
+            - LEVEL_2A
+            - LEVEL_2B
+            - LEVEL_3A
+            - LEVEL_3B
+            - LEVEL_4
+            - LEVEL_R1
+            - LEVEL_R2
+            - LEVEL_R3
+            - LEVEL_Px1
+            - LEVEL_Px2
+            - LEVEL_Px3
+            - LEVEL_Dx1
+            - LEVEL_Dx2
+            - LEVEL_Dx3
+            - 'NO'
+          type: string
+        type: array
+      otherSignificantSensitiveLevels:
+        items:
+          enum:
+            - LEVEL_0
+            - LEVEL_1
+            - LEVEL_2
+            - LEVEL_2A
+            - LEVEL_2B
+            - LEVEL_3A
+            - LEVEL_3B
+            - LEVEL_4
+            - LEVEL_R1
+            - LEVEL_R2
+            - LEVEL_R3
+            - LEVEL_Px1
+            - LEVEL_Px2
+            - LEVEL_Px3
+            - LEVEL_Dx1
+            - LEVEL_Dx2
+            - LEVEL_Dx3
+            - 'NO'
+          type: string
+        type: array
+      prognosticImplications:
+        items:
+          $ref: '#/definitions/Implication'
+        type: array
+      prognosticSummary:
+        type: string
+      query:
+        $ref: '#/definitions/Query'
+      treatments:
+        items:
+          $ref: '#/definitions/IndicatorQueryTreatment'
+        type: array
+      tumorTypeSummary:
+        type: string
+      variantExist:
+        example: false
+        type: boolean
+      variantSummary:
+        type: string
+      vus:
+        example: false
+        type: boolean
+    type: object
+  IndicatorQueryTreatment:
+    properties:
+      abstracts:
+        items:
+          $ref: '#/definitions/ArticleAbstract'
+        type: array
+      alterations:
+        items:
+          type: string
+        type: array
+      approvedIndications:
+        items:
+          type: string
+        type: array
+      description:
+        type: string
+      drugs:
+        items:
+          $ref: '#/definitions/Drug'
+        type: array
+      fdaApproved:
+        example: false
+        type: boolean
+      level:
+        enum:
+          - LEVEL_0
+          - LEVEL_1
+          - LEVEL_2
+          - LEVEL_2A
+          - LEVEL_2B
+          - LEVEL_3A
+          - LEVEL_3B
+          - LEVEL_4
+          - LEVEL_R1
+          - LEVEL_R2
+          - LEVEL_R3
+          - LEVEL_Px1
+          - LEVEL_Px2
+          - LEVEL_Px3
+          - LEVEL_Dx1
+          - LEVEL_Dx2
+          - LEVEL_Dx3
+          - 'NO'
+        type: string
+      levelAssociatedCancerType:
+        $ref: '#/definitions/TumorType'
+      pmids:
+        items:
+          type: string
+        type: array
+    type: object
+  IntegerRange:
+    properties:
+      end:
+        format: int32
+        type: integer
+      start:
+        format: int32
+        type: integer
+    type: object
+  IntergenicConsequences:
+    properties:
+      consequenceTerms:
+        description: consequence_terms
+        items:
+          type: string
+        type: array
+      impact:
+        description: impact
+        type: string
+      variantAllele:
+        description: variant_allele
+        type: string
+    required:
+      - consequenceTerms
+      - impact
+      - variantAllele
+    type: object
+  MainType:
+    description: OncoTree Cancer Type
+    properties:
+      id:
+        format: int32
+        type: integer
+      name:
+        type: string
+      tumorForm:
+        enum:
+          - SOLID
+          - LIQUID
+        type: string
+    type: object
+  MutationAssessor:
+    properties:
+      codonStartPosition:
+        description: Codon start position
+        type: string
+      cosmicCount:
+        description: Number of mutations in COSMIC for this protein
+        format: int32
+        type: integer
+      functionalImpact:
+        description: Functional impact
+        type: string
+      functionalImpactScore:
+        description: Functional impact score
+        format: double
+        type: number
+      hgvs:
+        type: string
+      hugoSymbol:
+        description: Hugo gene symbol
+        type: string
+      input:
+        description: User-input variants
+        type: string
+      mappingIssue:
+        description: Mapping issue info
+        type: string
+      msaGaps:
+        description: Portion of gaps in variant position in multiple sequence alignment
+        format: double
+        type: number
+      msaHeight:
+        description: >-
+          Number of diverse sequences in multiple sequence alignment (identical
+          or highly similar sequences filtered out)
+        format: int32
+        type: integer
+      msaLink:
+        description: Link to multiple sequence alignment
+        type: string
+      pdbLink:
+        description: Link to 3d structure browser
+        type: string
+      referenceGenomeVariant:
+        description: Reference genome variant
+        type: string
+      referenceGenomeVariantType:
+        description: Reference genome variant type
+        type: string
+      refseqId:
+        description: Refseq protein ID
+        type: string
+      refseqPosition:
+        description: >-
+          Variant position in Refseq protein, can be different from the one in
+          Uniprot
+        format: int32
+        type: integer
+      refseqResidue:
+        description: >-
+          Reference residue in Refseq protein, can be different from the one in
+          Uniprot
+        type: string
+      snpCount:
+        description: Number of SNPs in dbSNP for this protein
+        format: int32
+        type: integer
+      uniprotId:
+        description: Uniprot protein accession ID
+        type: string
+      uniprotPosition:
+        description: >-
+          Variant position in Uniprot protein, can be different from the one in
+          Refseq
+        format: int32
+        type: integer
+      uniprotResidue:
+        description: >-
+          Reference residue in Uniprot protein, can be different from the one in
+          Refseq
+        type: string
+      variant:
+        description: Amino acid substitution
+        type: string
+      variantConservationScore:
+        description: Variant conservation score
+        format: double
+        type: number
+      variantSpecificityScore:
+        description: Variant specificity score
+        format: double
+        type: number
+    required:
+      - input
+    type: object
+  MutationAssessorAnnotation:
+    properties:
+      annotation:
+        $ref: '#/definitions/MutationAssessor'
+      license:
+        type: string
+    type: object
+  MutationEffectResp:
+    properties:
+      citations:
+        $ref: '#/definitions/Citations'
+      description:
+        type: string
+      knownEffect:
+        type: string
+    type: object
+  Mutdb:
+    properties:
+      alt:
+        description: alt
+        type: string
+      chrom:
+        description: chrom
+        type: string
+      cosmicId:
+        description: cosmic_id
+        type: string
+      hg19:
+        $ref: '#/definitions/Hg19'
+      mutpredScore:
+        description: mutpred_score
+        format: double
+        type: number
+      ref:
+        description: ref
+        type: string
+      rsid:
+        description: rsid
+        type: string
+      uniprotId:
+        description: uniprot_id
+        type: string
+    type: object
+  MyVariantInfo:
+    properties:
+      clinVar:
+        $ref: '#/definitions/ClinVar'
+      cosmic:
+        $ref: '#/definitions/Cosmic'
+      dbsnp:
+        $ref: '#/definitions/Dbsnp'
+      gnomadExome:
+        $ref: '#/definitions/Gnomad'
+      gnomadGenome:
+        $ref: '#/definitions/Gnomad'
+      hgvs:
+        description: hgvs
+        type: string
+      mutdb:
+        $ref: '#/definitions/Mutdb'
+      query:
+        type: string
+      snpeff:
+        $ref: '#/definitions/Snpeff'
+      variant:
+        description: variant
+        type: string
+      vcf:
+        $ref: '#/definitions/Vcf'
+      version:
+        description: version
+        format: int32
+        type: integer
+    type: object
+  MyVariantInfoAnnotation:
+    properties:
+      annotation:
+        $ref: '#/definitions/MyVariantInfo'
+      license:
+        type: string
+    type: object
+  NucleotideContext:
+    properties:
+      hgvs:
+        type: string
+      id:
+        type: string
+      molecule:
+        type: string
+      query:
+        type: string
+      seq:
+        description: Nucleotide context sequence
+        type: string
+    required:
+      - seq
+    type: object
+  NucleotideContextAnnotation:
+    properties:
+      annotation:
+        $ref: '#/definitions/NucleotideContext'
+      license:
+        type: string
+    type: object
+  OncokbAnnotation:
+    properties:
+      annotation:
+        $ref: '#/definitions/IndicatorQueryResp'
+      license:
+        type: string
+    type: object
+  PdbHeader:
+    properties:
+      compound:
+        properties: {}
+        type: object
+      pdbId:
+        description: PDB id
+        type: string
+      source:
+        properties: {}
+        type: object
+      title:
+        description: PDB description
+        type: string
+    required:
+      - pdbId
+      - title
+    type: object
+  PfamDomain:
+    properties:
+      description:
+        description: PFAM domain description
+        type: string
+      name:
+        description: PFAM domain name
+        type: string
+      pfamAccession:
+        description: PFAM domain accession
+        type: string
+    required:
+      - name
+      - pfamAccession
+    type: object
+  PfamDomainRange:
+    properties:
+      pfamDomainEnd:
+        description: Pfam domain end amino acid
+        format: int32
+        type: integer
+      pfamDomainId:
+        description: Pfam domain id
+        type: string
+      pfamDomainStart:
+        description: Pfam domain start amino acid
+        format: int32
+        type: integer
+    required:
+      - pfamDomainEnd
+      - pfamDomainId
+      - pfamDomainStart
+    type: object
+  PostTranslationalModification:
+    properties:
+      ensemblTranscriptIds:
+        items:
+          type: string
+        type: array
+      position:
+        format: int32
+        type: integer
+      pubmedIds:
+        items:
+          type: string
+        type: array
+      sequence:
+        type: string
+      type:
+        type: string
+      uniprotAccession:
+        type: string
+      uniprotEntry:
+        type: string
+    type: object
+  PtmAnnotation:
+    properties:
+      annotation:
+        items:
+          items:
+            $ref: '#/definitions/PostTranslationalModification'
+          type: array
+        type: array
+      license:
+        type: string
+    type: object
+  PtmFilter:
+    properties:
+      transcriptIds:
+        description: >-
+          List of Ensembl transcript IDs. For example ["ENST00000361390",
+          "ENST00000361453", "ENST00000361624"]
+        items:
+          type: string
+        type: array
+    type: object
+  Query:
+    properties:
+      alteration:
+        type: string
+      alterationType:
+        type: string
+      consequence:
+        type: string
+      entrezGeneId:
+        format: int32
+        type: integer
+      hgvs:
+        type: string
+      hugoSymbol:
+        type: string
+      id:
+        type: string
+      proteinEnd:
+        format: int32
+        type: integer
+      proteinStart:
+        format: int32
+        type: integer
+      svType:
+        enum:
+          - DELETION
+          - TRANSLOCATION
+          - DUPLICATION
+          - INSERTION
+          - INVERSION
+          - FUSION
+          - UNKNOWN
+        type: string
+      tumorType:
+        type: string
+      type:
+        type: string
+    type: object
+  Rcv:
+    properties:
+      accession:
+        description: accession
+        type: string
+      clinicalSignificance:
+        description: clinical_significance
+        type: string
+      origin:
+        description: origin
+        type: string
+      preferredName:
+        description: preferred_name
+        type: string
+    type: object
+  SignalAnnotation:
+    properties:
+      annotation:
+        items:
+          $ref: '#/definitions/SignalMutation'
+        type: array
+      license:
+        type: string
+    type: object
+  SignalMutation:
+    properties:
+      biallelicCountsByTumorType:
+        description: Biallelic Counts by Tumor Type
+        items:
+          $ref: '#/definitions/CountByTumorType'
+        type: array
+      chromosome:
+        description: Chromosome
+        type: string
+      countsByTumorType:
+        description: Counts by Tumor Type
+        items:
+          $ref: '#/definitions/CountByTumorType'
+        type: array
+      endPosition:
+        description: End Position
+        format: int64
+        type: integer
+      generalPopulationStats:
+        $ref: '#/definitions/GeneralPopulationStats'
+      hugoGeneSymbol:
+        description: Hugo Gene Symbol
+        type: string
+      mskExperReview:
+        description: Msk Expert Review
+        example: false
+        type: boolean
+      mutationStatus:
+        description: Mutation Status
+        type: string
+      overallNumberOfGermlineHomozygous:
+        format: int32
+        type: integer
+      pathogenic:
+        description: Pathogenic
+        type: string
+      penetrance:
+        description: Penetrance
+        type: string
+      qcPassCountsByTumorType:
+        description: QC Pass Counts by Tumor Type
+        items:
+          $ref: '#/definitions/CountByTumorType'
+        type: array
+      referenceAllele:
+        description: Reference Allele
+        type: string
+      startPosition:
+        description: Start Position
+        format: int64
+        type: integer
+      statsByTumorType:
+        description: Stats By Tumor Type
+        items:
+          $ref: '#/definitions/StatsByTumorType'
+        type: array
+      variantAllele:
+        description: Variant Allele
+        type: string
+    type: object
+  SignalPopulationStats:
+    properties:
+      afr:
+        description: African/African American
+        format: double
+        type: number
+      asj:
+        description: Ashkenazi Jewish
+        format: double
+        type: number
+      asn:
+        description: Asian
+        format: double
+        type: number
+      eur:
+        description: European
+        format: double
+        type: number
+      impact:
+        description: Impact
+        format: double
+        type: number
+      oth:
+        description: Other
+        format: double
+        type: number
+    type: object
+  Snpeff:
+    properties:
+      license:
+        description: license
+        type: string
+    type: object
+  StatsByTumorType:
+    properties:
+      ageAtDx:
+        description: Median Age at Dx
+        format: int32
+        type: integer
+      fBiallelic:
+        description: Frequency Of Biallelic
+        format: double
+        type: number
+      fCancerTypeCount:
+        description: Frequency Of Cancer Type Count
+        format: double
+        type: number
+      hrdScore:
+        $ref: '#/definitions/HrdScore'
+      msiScore:
+        description: Msi Score
+        format: double
+        type: number
+      nCancerTypeCount:
+        description: Number Of Cancer Type Count
+        format: int32
+        type: integer
+      numberOfGermlineHomozygous:
+        description: Number Of Germline Homozygous Per Tumor Type
+        format: int32
+        type: integer
+      numberWithSig:
+        description: Number of Variants with Signature
+        format: int32
+        type: integer
+      tmb:
+        description: Median TMB
+        format: double
+        type: number
+      tumorType:
+        description: Tumor Type
+        type: string
+    type: object
+  TranscriptConsequence:
+    properties:
+      amino_acids:
+        description: Amino acids
+        type: string
+      canonical:
+        description: Canonical transcript indicator
+        type: string
+      codons:
+        description: Codons
+        type: string
+      consequence_terms:
+        description: List of consequence terms
+        items:
+          type: string
+        type: array
+      exon:
+        type: string
+      gene_id:
+        description: Ensembl gene id
+        type: string
+      gene_symbol:
+        description: Hugo gene symbol
+        type: string
+      hgnc_id:
+        description: HGNC id
+        type: string
+      hgvsc:
+        description: HGVSc
+        type: string
+      hgvsg:
+        description: HGVSg
+        type: string
+      hgvsp:
+        description: HGVSp
+        type: string
+      polyphen_prediction:
+        description: Polyphen Prediction
+        type: string
+      polyphen_score:
+        description: Polyphen Score
+        format: double
+        type: number
+      protein_end:
+        description: Protein end position
+        format: int32
+        type: integer
+      protein_id:
+        description: Ensembl protein id
+        type: string
+      protein_start:
+        description: Protein start position
+        format: int32
+        type: integer
+      refseq_transcript_ids:
+        description: List of RefSeq transcript ids
+        items:
+          type: string
+        type: array
+      sift_prediction:
+        description: Sift Prediction
+        type: string
+      sift_score:
+        description: Sift Score
+        format: double
+        type: number
+      transcript_id:
+        description: Ensembl transcript id
+        type: string
+      uniprotId:
+        type: string
+      variant_allele:
+        description: Variant allele
+        type: string
+    required:
+      - transcript_id
+    type: object
+  TranscriptConsequenceSummary:
+    properties:
+      aminoAcidAlt:
+        description: Alt Amino Acid
+        type: string
+      aminoAcidRef:
+        description: Reference Amino Acid
+        type: string
+      aminoAcids:
+        description: Amino acids change
+        type: string
+      codonChange:
+        description: Codon change
+        type: string
+      consequenceTerms:
+        description: Consequence terms (comma separated)
+        type: string
+      entrezGeneId:
+        description: Entrez gene id
+        type: string
+      exon:
+        type: string
+      hgvsc:
+        description: HGVSc
+        type: string
+      hgvsp:
+        description: HGVSp
+        type: string
+      hgvspShort:
+        description: HGVSp short
+        type: string
+      hugoGeneSymbol:
+        description: Hugo gene symbol
+        type: string
+      polyphenPrediction:
+        description: Polyphen Prediction
+        type: string
+      polyphenScore:
+        description: Polyphen Score
+        format: double
+        type: number
+      proteinPosition:
+        $ref: '#/definitions/IntegerRange'
+      refSeq:
+        description: RefSeq id
+        type: string
+      siftPrediction:
+        description: Sift Prediction
+        type: string
+      siftScore:
+        description: Sift Score
+        format: double
+        type: number
+      transcriptId:
+        description: Transcript id
+        type: string
+      uniprotId:
+        description: Uniprot ID
+        type: string
+      variantClassification:
+        description: Variant classification
+        type: string
+    required:
+      - transcriptId
+    type: object
+  TumorType:
+    description: OncoTree Detailed Cancer Type
+    properties:
+      children:
+        properties: {}
+        type: object
+      code:
+        type: string
+      color:
+        type: string
+      id:
+        format: int32
+        type: integer
+      level:
+        format: int32
+        type: integer
+      mainType:
+        $ref: '#/definitions/MainType'
+      name:
+        type: string
+      parent:
+        type: string
+      tissue:
+        type: string
+      tumorForm:
+        enum:
+          - SOLID
+          - LIQUID
+        type: string
+    type: object
+  UntranslatedRegion:
+    properties:
+      end:
+        description: End position of UTR
+        format: int32
+        type: integer
+      start:
+        description: Start position of UTR
+        format: int32
+        type: integer
+      strand:
+        description: 'Strand UTR is on, -1 for - and 1 for +'
+        format: int32
+        type: integer
+      type:
+        description: UTR Type
+        type: string
+    required:
+      - end
+      - start
+      - strand
+      - type
+    type: object
+  VariantAnnotation:
+    properties:
+      allele_string:
+        description: 'Allele string (e.g: A/T)'
+        type: string
+      annotationJSON:
+        description: Annotation data as JSON string
+        type: string
+      annotation_summary:
+        $ref: '#/definitions/VariantAnnotationSummary'
+      assembly_name:
+        description: NCBI build number
+        type: string
+      clinvar:
+        $ref: '#/definitions/ClinvarAnnotation'
+      colocatedVariants:
+        items:
+          $ref: '#/definitions/ColocatedVariant'
+        type: array
+      end:
+        description: End position
+        format: int32
+        type: integer
+      hgvsg:
+        type: string
+      hotspots:
+        $ref: '#/definitions/HotspotAnnotation'
+      id:
+        description: Variant id
+        type: string
+      intergenic_consequences:
+        description: intergenicConsequences
+        items:
+          $ref: '#/definitions/IntergenicConsequences'
+        type: array
+      most_severe_consequence:
+        description: Most severe consequence
+        type: string
+      mutation_assessor:
+        $ref: '#/definitions/MutationAssessorAnnotation'
+      my_variant_info:
+        $ref: '#/definitions/MyVariantInfoAnnotation'
+      nucleotide_context:
+        $ref: '#/definitions/NucleotideContextAnnotation'
+      oncokb:
+        $ref: '#/definitions/OncokbAnnotation'
+      originalVariantQuery:
+        description: Original variant query
+        type: string
+      ptms:
+        $ref: '#/definitions/PtmAnnotation'
+      seq_region_name:
+        description: Chromosome
+        type: string
+      signalAnnotation:
+        $ref: '#/definitions/SignalAnnotation'
+      start:
+        description: Start position
+        format: int32
+        type: integer
+      strand:
+        description: Strand (negative or positive)
+        format: int32
+        type: integer
+      successfully_annotated:
+        description: Status flag indicating whether variant was succesfully annotated
+        example: false
+        type: boolean
+      transcript_consequences:
+        description: List of transcripts
+        items:
+          $ref: '#/definitions/TranscriptConsequence'
+        type: array
+      variant:
+        description: Variant key
+        type: string
+    required:
+      - id
+      - intergenic_consequences
+      - originalVariantQuery
+      - variant
+    type: object
+  VariantAnnotationSummary:
+    properties:
+      assemblyName:
+        description: Assembly name
+        type: string
+      canonicalTranscriptId:
+        description: Canonical transcript id
+        type: string
+      genomicLocation:
+        $ref: '#/definitions/GenomicLocation'
+      strandSign:
+        description: Strand (- or +)
+        type: string
+      transcriptConsequenceSummaries:
+        description: All transcript consequence summaries
+        items:
+          $ref: '#/definitions/TranscriptConsequenceSummary'
+        type: array
+      transcriptConsequenceSummary:
+        $ref: '#/definitions/TranscriptConsequenceSummary'
+      transcriptConsequences:
+        description: >-
+          (Deprecated) Transcript consequence summaries (list of one when using
+          annotation/, multiple when using annotation/summary/
+        items:
+          $ref: '#/definitions/TranscriptConsequenceSummary'
+        type: array
+      variant:
+        description: Variant key
+        type: string
+      variantType:
+        description: Variant type
+        type: string
+    required:
+      - transcriptConsequenceSummaries
+      - transcriptConsequenceSummary
+      - transcriptConsequences
+      - variant
+    type: object
+  Vcf:
+    properties:
+      alt:
+        description: alt
+        type: string
+      position:
+        description: position
+        type: string
+      ref:
+        description: ref
+        type: string
+    type: object
+  Version:
+    properties:
+      version:
+        type: string
+    type: object
+host: 'localhost:9002'
+info:
+  description: >-
+    This page shows how to use HTTP requests to access the Genome Nexus API.
+    There are more high level clients available in Python, R, JavaScript,
+    TypeScript and various other languages as well as a command line client to
+    annotate MAF and VCF. See https://docs.genomenexus.org/api.
+
+
+    Aside from programmatic clients there are web based tools to annotate
+    variants, see https://docs.genomenexus.org/tools.
+
+     We currently only provide long-term support for the '/annotation' endpoint. The other endpoints might change.
+  license:
+    name: MIT License
+    url: 'https://github.com/genome-nexus/genome-nexus/blob/master/LICENSE'
+  title: Genome Nexus API
+  version: '2.0'
+paths:
+  /annotation:
+    post:
+      consumes:
+        - application/json
+      operationId: fetchVariantAnnotationPOST
+      parameters:
+        - description: Isoform override source. For example uniprot
+          enum:
+            - uniprot
+          in: query
+          name: isoformOverrideSource
+          type: string
+        - description: >-
+            Map of tokens. For example
+            {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          enum:
+            - >-
+              {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          in: query
+          name: token
+          type: string
+        - collectionFormat: multi
+          description: >-
+            Comma separated list of fields to include (case-sensitive!). For
+            example: hotspots
+          in: query
+          items:
+            enum:
+              - hotspots
+            type: string
+          name: fields
+          type: array
+        - description: >-
+            List of variants. For example
+            ["X:g.66937331T>A","17:g.41242962_41242963insGA"] (GRCh37) or
+            ["1:g.182712A>C", "2:g.265023C>T", "3:g.319781del",
+            "19:g.110753dup", "1:g.1385015_1387562del"] (GRCh38)
+          in: body
+          name: body
+          required: true
+          schema:
+            items:
+              enum:
+                - 'X:g.66937331T>A'
+                - '17:g.41242962_41242963insGA'
+                - '1:g.182712A>C'
+                - '2:g.265023C>T'
+                - '3:g.319781del'
+                - '19:g.110753dup'
+                - '1:g.1385015_1387562del'
+              type: string
+            type: array
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/VariantAnnotation'
+            type: array
+      summary: Retrieves VEP annotation for the provided list of variants
+      tags:
+        - annotation-controller
+      x-codegen-request-body-name: variants
+  /annotation/dbsnp/:
+    post:
+      consumes:
+        - application/json
+      operationId: fetchVariantAnnotationByIdPOST
+      parameters:
+        - description: Isoform override source. For example uniprot
+          enum:
+            - uniprot
+          in: query
+          name: isoformOverrideSource
+          type: string
+        - description: >-
+            Map of tokens. For example
+            {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          enum:
+            - >-
+              {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          in: query
+          name: token
+          type: string
+        - collectionFormat: multi
+          description: >-
+            Comma separated list of fields to include (case-sensitive!). For
+            example: annotation_summary
+          in: query
+          items:
+            enum:
+              - annotation_summary
+            type: string
+          name: fields
+          type: array
+        - description: 'List of variant IDs. For example ["rs116035550"]'
+          in: body
+          name: body
+          required: true
+          schema:
+            items:
+              enum:
+                - - rs116035550
+              type: string
+            type: array
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/VariantAnnotation'
+            type: array
+      summary: Retrieves VEP annotation for the provided list of dbSNP ids
+      tags:
+        - annotation-controller
+      x-codegen-request-body-name: variantIds
+  '/annotation/dbsnp/{variantId}':
+    get:
+      operationId: fetchVariantAnnotationByIdGET
+      parameters:
+        - description: dbSNP id. For example rs116035550.
+          enum:
+            - rs116035550
+          in: path
+          name: variantId
+          required: true
+          type: string
+        - description: Isoform override source. For example uniprot
+          enum:
+            - uniprot
+          in: query
+          name: isoformOverrideSource
+          type: string
+        - description: >-
+            Map of tokens. For example
+            {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          enum:
+            - >-
+              {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          in: query
+          name: token
+          type: string
+        - collectionFormat: multi
+          description: >-
+            Comma separated list of fields to include (case-sensitive!). For
+            example: annotation_summary
+          in: query
+          items:
+            enum:
+              - annotation_summary
+            type: string
+          name: fields
+          type: array
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/VariantAnnotation'
+      summary: Retrieves VEP annotation for the give dbSNP id
+      tags:
+        - annotation-controller
+  /annotation/genomic:
+    post:
+      consumes:
+        - application/json
+      operationId: fetchVariantAnnotationByGenomicLocationPOST
+      parameters:
+        - description: Isoform override source. For example uniprot
+          enum:
+            - uniprot
+          in: query
+          name: isoformOverrideSource
+          type: string
+        - description: >-
+            Map of tokens. For example
+            {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          enum:
+            - >-
+              {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          in: query
+          name: token
+          type: string
+        - collectionFormat: multi
+          description: >-
+            Comma separated list of fields to include (case-sensitive!). For
+            example: hotspots
+          in: query
+          items:
+            enum:
+              - hotspots
+            type: string
+          name: fields
+          type: array
+        - description: List of Genomic Locations
+          in: body
+          name: body
+          required: true
+          schema:
+            items:
+              $ref: '#/definitions/GenomicLocation'
+            type: array
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/VariantAnnotation'
+            type: array
+      summary: Retrieves VEP annotation for the provided list of genomic locations
+      tags:
+        - annotation-controller
+      x-codegen-request-body-name: genomicLocations
+  '/annotation/genomic/{genomicLocation}':
+    get:
+      operationId: fetchVariantAnnotationByGenomicLocationGET
+      parameters:
+        - description: 'A genomic location. For example 7,140453136,140453136,A,T'
+          enum:
+            - '7140453136140453136'
+            - '7,140453136,140453136'
+            - A
+          in: path
+          name: genomicLocation
+          required: true
+          type: string
+        - description: Isoform override source. For example uniprot
+          enum:
+            - uniprot
+          in: query
+          name: isoformOverrideSource
+          type: string
+        - description: >-
+            Map of tokens. For example
+            {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          enum:
+            - >-
+              {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          in: query
+          name: token
+          type: string
+        - collectionFormat: multi
+          description: >-
+            Comma separated list of fields to include (case-sensitive!). For
+            example: hotspots
+          in: query
+          items:
+            enum:
+              - hotspots
+            type: string
+          name: fields
+          type: array
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/VariantAnnotation'
+      summary: Retrieves VEP annotation for the provided genomic location
+      tags:
+        - annotation-controller
+  '/annotation/{variant}':
+    get:
+      operationId: fetchVariantAnnotationGET
+      parameters:
+        - description: 'Variant. For example 17:g.41242962_41242963insGA'
+          enum:
+            - '17:g.41242962_41242963insGA'
+          in: path
+          name: variant
+          required: true
+          type: string
+        - description: Isoform override source. For example uniprot
+          enum:
+            - uniprot
+          in: query
+          name: isoformOverrideSource
+          type: string
+        - description: >-
+            Map of tokens. For example
+            {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          enum:
+            - >-
+              {"source1":"put-your-token1-here","source2":"put-your-token2-here"}
+          in: query
+          name: token
+          type: string
+        - collectionFormat: multi
+          description: >-
+            Comma separated list of fields to include (case-sensitive!). For
+            example: hotspots
+          in: query
+          items:
+            enum:
+              - hotspots
+            type: string
+          name: fields
+          type: array
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/VariantAnnotation'
+      summary: Retrieves VEP annotation for the provided variant
+      tags:
+        - annotation-controller
+  /ensembl/canonical-gene/entrez:
+    post:
+      consumes:
+        - application/json
+      operationId: fetchCanonicalEnsemblGeneIdByEntrezGeneIdsPOST
+      parameters:
+        - description: 'List of Entrez Gene Ids. For example ["23140","26009","100131879"]'
+          in: body
+          name: body
+          required: true
+          schema:
+            items:
+              enum:
+                - '23140'
+                - '26009'
+                - '100131879'
+              type: string
+            type: array
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/EnsemblGene'
+            type: array
+      summary: Retrieves canonical Ensembl Gene ID by Entrez Gene Ids
+      tags:
+        - ensembl-controller
+      x-codegen-request-body-name: entrezGeneIds
+  '/ensembl/canonical-gene/entrez/{entrezGeneId}':
+    get:
+      operationId: fetchCanonicalEnsemblGeneIdByEntrezGeneIdGET
+      parameters:
+        - description: An Entrez Gene Id. For example 23140
+          enum:
+            - '23140'
+          in: path
+          name: entrezGeneId
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/EnsemblGene'
+      summary: Retrieves Ensembl canonical gene id by Entrez Gene Id
+      tags:
+        - ensembl-controller
+  /ensembl/canonical-gene/hgnc:
+    post:
+      consumes:
+        - application/json
+      operationId: fetchCanonicalEnsemblGeneIdByHugoSymbolsPOST
+      parameters:
+        - description: 'List of Hugo Symbols. For example ["TP53","PIK3CA","BRCA1"]'
+          in: body
+          name: body
+          required: true
+          schema:
+            items:
+              enum:
+                - TP53
+                - PIK3CA
+                - BRCA1
+              type: string
+            type: array
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/EnsemblGene'
+            type: array
+      summary: Retrieves canonical Ensembl Gene ID by Hugo Symbols
+      tags:
+        - ensembl-controller
+      x-codegen-request-body-name: hugoSymbols
+  '/ensembl/canonical-gene/hgnc/{hugoSymbol}':
+    get:
+      operationId: fetchCanonicalEnsemblGeneIdByHugoSymbolGET
+      parameters:
+        - description: A Hugo Symbol. For example TP53
+          enum:
+            - TP53
+          in: path
+          name: hugoSymbol
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/EnsemblGene'
+      summary: Retrieves Ensembl canonical gene id by Hugo Symbol
+      tags:
+        - ensembl-controller
+  /ensembl/canonical-transcript/hgnc:
+    post:
+      consumes:
+        - application/json
+      operationId: fetchCanonicalEnsemblTranscriptsByHugoSymbolsPOST
+      parameters:
+        - default: uniprot
+          description: Isoform override source. For example uniprot
+          in: query
+          name: isoformOverrideSource
+          type: string
+        - description: 'List of Hugo Symbols. For example ["TP53","PIK3CA","BRCA1"]'
+          in: body
+          name: body
+          required: true
+          schema:
+            items:
+              enum:
+                - TP53
+                - PIK3CA
+                - BRCA1
+              type: string
+            type: array
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/EnsemblTranscript'
+            type: array
+      summary: Retrieves Ensembl canonical transcripts by Hugo Symbols
+      tags:
+        - ensembl-controller
+      x-codegen-request-body-name: hugoSymbols
+  '/ensembl/canonical-transcript/hgnc/{hugoSymbol}':
+    get:
+      operationId: fetchCanonicalEnsemblTranscriptByHugoSymbolGET
+      parameters:
+        - description: A Hugo Symbol. For example TP53
+          enum:
+            - TP53
+          in: path
+          name: hugoSymbol
+          required: true
+          type: string
+        - default: uniprot
+          description: Isoform override source. For example uniprot
+          in: query
+          name: isoformOverrideSource
+          type: string
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/EnsemblTranscript'
+      summary: Retrieves Ensembl canonical transcript by Hugo Symbol
+      tags:
+        - ensembl-controller
+  /ensembl/transcript:
+    get:
+      operationId: fetchEnsemblTranscriptsGET
+      parameters:
+        - description: An Ensembl gene ID. For example ENSG00000136999
+          enum:
+            - ENSG00000136999
+          in: query
+          name: geneId
+          type: string
+        - description: An Ensembl protein ID. For example ENSP00000439985
+          enum:
+            - ENSP00000439985
+          in: query
+          name: proteinId
+          type: string
+        - description: A Hugo Symbol For example ARF5
+          enum:
+            - ARF5
+          in: query
+          name: hugoSymbol
+          type: string
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/EnsemblTranscript'
+            type: array
+      summary: >-
+        Retrieves Ensembl Transcripts by protein ID, and gene ID. Retrieves all
+        transcripts in case no query parameter provided
+      tags:
+        - ensembl-controller
+    post:
+      consumes:
+        - application/json
+      operationId: fetchEnsemblTranscriptsByEnsemblFilterPOST
+      parameters:
+        - description: >-
+            List of Ensembl transcript IDs. For example ["ENST00000361390",
+            "ENST00000361453", "ENST00000361624"]<br>OR<br>List of Hugo Symbols.
+            For example ["TP53", "PIK3CA", "BRCA1"]<br>OR<br>List of Ensembl
+            protein IDs. For example ["ENSP00000439985", "ENSP00000478460",
+            "ENSP00000346196"]<br>OR<br>List of Ensembl gene IDs. For example
+            ["ENSG00000136999", "ENSG00000272398", "ENSG00000198695"]
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/EnsemblFilter'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/EnsemblTranscript'
+            type: array
+      summary: >-
+        Retrieves Ensembl Transcripts by Ensembl transcript IDs, hugo Symbols,
+        protein IDs, or gene IDs
+      tags:
+        - ensembl-controller
+      x-codegen-request-body-name: ensemblFilter
+  '/ensembl/transcript/{transcriptId}':
+    get:
+      operationId: fetchEnsemblTranscriptByTranscriptIdGET
+      parameters:
+        - description: An Ensembl transcript ID. For example ENST00000361390
+          enum:
+            - ENST00000361390
+          in: path
+          name: transcriptId
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/EnsemblTranscript'
+      summary: Retrieves the transcript by an Ensembl transcript ID
+      tags:
+        - ensembl-controller
+  /ensembl/xrefs:
+    get:
+      operationId: fetchGeneXrefsGET
+      parameters:
+        - description: Ensembl gene accession. For example ENSG00000169083
+          enum:
+            - ENSG00000169083
+          in: query
+          name: accession
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/GeneXref'
+            type: array
+      summary: >-
+        Perform lookups of Ensembl identifiers and retrieve their external
+        references in other databases
+      tags:
+        - ensembl-controller
+  /pdb/header:
+    post:
+      consumes:
+        - application/json
+      operationId: fetchPdbHeaderPOST
+      parameters:
+        - description: 'List of pdb ids, for example ["1a37","1a4o"]'
+          in: body
+          name: body
+          required: true
+          schema:
+            items:
+              enum:
+                - 1a37
+                - 1a4o
+              type: string
+            type: array
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/PdbHeader'
+            type: array
+      summary: Retrieves PDB header info by a PDB id
+      tags:
+        - pdb-controller
+      x-codegen-request-body-name: pdbIds
+  '/pdb/header/{pdbId}':
+    get:
+      operationId: fetchPdbHeaderGET
+      parameters:
+        - description: 'PDB id, for example 1a37'
+          enum:
+            - 1a37
+          in: path
+          name: pdbId
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/PdbHeader'
+      summary: Retrieves PDB header info by a PDB id
+      tags:
+        - pdb-controller
+  /pfam/domain:
+    post:
+      consumes:
+        - application/json
+      operationId: fetchPfamDomainsByPfamAccessionPOST
+      parameters:
+        - description: >-
+            List of PFAM domain accession IDs. For example
+            ["PF02827","PF00093","PF15276"]
+          in: body
+          name: body
+          required: true
+          schema:
+            items:
+              enum:
+                - PF02827
+                - PF00093
+                - PF15276
+              type: string
+            type: array
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/PfamDomain'
+            type: array
+      summary: Retrieves PFAM domains by PFAM domain accession IDs
+      tags:
+        - pfam-controller
+      x-codegen-request-body-name: pfamAccessions
+  '/pfam/domain/{pfamAccession}':
+    get:
+      operationId: fetchPfamDomainsByAccessionGET
+      parameters:
+        - description: A PFAM domain accession ID. For example PF02827.
+          enum:
+            - PF02827
+          in: path
+          name: pfamAccession
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/PfamDomain'
+      summary: Retrieves a PFAM domain by a PFAM domain ID
+      tags:
+        - pfam-controller
+  /ptm/experimental:
+    get:
+      operationId: fetchPostTranslationalModificationsGET
+      parameters:
+        - description: Ensembl Transcript ID. For example ENST00000646891
+          enum:
+            - ENST00000646891
+          in: query
+          name: ensemblTranscriptId
+          type: string
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/PostTranslationalModification'
+            type: array
+      summary: Retrieves PTM entries by Ensembl Transcript ID
+      tags:
+        - ptm-controller
+    post:
+      consumes:
+        - application/json
+      operationId: fetchPostTranslationalModificationsByPtmFilterPOST
+      parameters:
+        - description: >-
+            List of Ensembl transcript IDs. For example ["ENST00000420316",
+            "ENST00000646891", "ENST00000371953"]
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/PtmFilter'
+            enum:
+              - - ENST00000420316
+              - - ENST00000646891
+              - - ENST00000371953
+              - - ENST00000420316
+              - - ENST00000646891
+              - - ENST00000371953
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/PostTranslationalModification'
+            type: array
+      summary: Retrieves PTM entries by Ensembl Transcript IDs
+      tags:
+        - ptm-controller
+      x-codegen-request-body-name: ptmFilter
+  /version:
+    get:
+      operationId: fetchVersionGET
+      parameters: []
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Version'
+      summary: Retrieve Genome Nexus Version
+      tags:
+        - info-controller
+schemes:
+  - http
+swagger: '2.0'
+tags:
+  - description: Info Controller
+    name: info-controller
+  - description: PDB Controller
+    name: pdb-controller
+  - description: Annotation Controller
+    name: annotation-controller
+  - description: PTM Controller
+    name: ptm-controller
+  - description: PFAM Controller
+    name: pfam-controller
+  - description: Ensembl Controller
+    name: ensembl-controller
+x-components: {}
+

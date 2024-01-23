@@ -1,0 +1,132 @@
+{
+   "openapi": "3.0.1",
+   "info": {
+      "title": "LanguageTool API",
+      "description": "Check texts for style and grammar issues with LanguageTool. See <a\nhref='http://wiki.languagetool.org/public-http-api'>our wiki</a> for access limitations.",
+      "version": "1.0.2"
+   },
+   "servers": [
+      {
+         "url": "http://localhost:9003/v2"
+      }
+   ],
+   "paths": {
+      "/check": {
+         "post": {
+            "summary": "Check a text",
+            "description": "The main feature - check a text with LanguageTool for possible\nstyle and grammar issues.",
+            "requestBody": {
+               "content": {
+                  "application/x-www-form-urlencoded": {
+                     "schema": {
+                        "required": [
+                           "language"
+                        ],
+                        "properties": {
+                           "text": {
+                              "type": "string",
+                              "description": "The text to be checked. This or 'data' is required."
+                           },
+                           "data": {
+                              "type": "string",
+                              "description": "The text to be checked, given as a JSON document that specifies what's text and what's markup. This or 'text' is required. Markup will be ignored when looking for errors. Example text: <pre>A &lt;b>test&lt;/b></pre>JSON for the example text: <pre>{\"annotation\":[\n {\"text\": \"A \"},\n {\"markup\": \"&lt;b>\"},\n {\"text\": \"test\"},\n {\"markup\": \"&lt;/b>\"}\n]}</pre> <p>If you have markup that should be interpreted as whitespace, like <tt>&lt;p&gt;</tt> in HTML, you can have it interpreted like this: <pre>{\"markup\": \"&lt;p&gt;\", \"interpretAs\": \"\\n\\n\"}</pre><p>The 'data' feature is not limited to HTML or XML, it can be used for any kind of markup."
+                           },
+                           "language": {
+                              "type": "string",
+                              "description": "A language code like `en-US`, `de-DE`, `fr`, or `auto`\nto guess the language automatically (see `preferredVariants` below).\nFor languages with variants (English, German, Portuguese) spell\nchecking will only be activated when you specify the variant,\ne.g. `en-GB` instead of just `en`."
+                           },
+                           "altLanguages": {
+                              "type": "string",
+                              "description": "EXPERIMENTAL: Comma-separated list of language codes\nto check if a word is not similar to one of the main language\n(parameter `language`). Unknown words that are similar to a word\nfrom the main language will still be considered errors but with\ntype `Hint`. For languages with variants (English, German, Portuguese)\nyou need to specify the variant, e.g. `en-GB` instead of just\n`en`."
+                           },
+                           "motherTongue": {
+                              "type": "string",
+                              "description": "A language code of the user's native language, enabling\nfalse friends checks for some language pairs."
+                           },
+                           "preferredVariants": {
+                              "type": "string",
+                              "description": "Comma-separated list of preferred language variants.\nThe language detector used with `language=auto` can detect e.g.\nEnglish, but it cannot decide whether British English or American\nEnglish is used. Thus this parameter can be used to specify the\npreferred variants like `en-GB` and `de-AT`. Only available with\n`language=auto`."
+                           },
+                           "enabledRules": {
+                              "type": "string",
+                              "description": "IDs of rules to be enabled, comma-separated"
+                           },
+                           "disabledRules": {
+                              "type": "string",
+                              "description": "IDs of rules to be disabled, comma-separated"
+                           },
+                           "enabledCategories": {
+                              "type": "string",
+                              "description": "IDs of categories to be enabled, comma-separated"
+                           },
+                           "disabledCategories": {
+                              "type": "string",
+                              "description": "IDs of categories to be disabled, comma-separated"
+                           },
+                           "enabledOnly": {
+                              "type": "boolean",
+                              "description": "If true, only the rules and categories whose IDs are\nspecified with `enabledRules` or `enabledCategories` are enabled.",
+                              "default": false
+                           }
+                        }
+                     }
+                  }
+               },
+               "required": true
+            },
+            "responses": {
+               "200": {
+                  "description": "the result of checking the text",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "type": "object"
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "/languages": {
+         "get": {
+            "summary": "Get a list of supported languages.",
+            "responses": {
+               "200": {
+                  "description": "An array of language objects.",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "type": "array",
+                           "items": {
+                              "required": [
+                                 "code",
+                                 "longCode",
+                                 "name"
+                              ],
+                              "type": "object",
+                              "properties": {
+                                 "name": {
+                                    "type": "string",
+                                    "description": "a language name like 'French' or 'English (Australia)'"
+                                 },
+                                 "code": {
+                                    "type": "string",
+                                    "description": "a language code like 'en'"
+                                 },
+                                 "longCode": {
+                                    "type": "string",
+                                    "description": "a language code like 'en-US' or 'ca-ES-valencia'"
+                                 }
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   },
+   "components": {}
+}

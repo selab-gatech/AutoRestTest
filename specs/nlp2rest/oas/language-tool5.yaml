@@ -1,0 +1,70 @@
+openapi: 3.0.1
+info:
+  title: LanguageTool API
+  description: Check texts for style and grammar issues with LanguageTool. See <a
+    href='http://wiki.languagetool.org/public-http-api'>our wiki</a> for access limitations.
+  version: 1.0.2
+servers:
+- url: http://localhost:9003/v2
+paths:
+  /check:
+    post:
+      summary: Check a text
+      description: The main feature - check a text with LanguageTool for possible
+        style and grammar issues.
+      parameters:
+        - name: text
+          in: query
+          description: The text to be checked. This or 'data' is required.
+          required: true
+          schema:
+            type: string
+        - name: language
+          in: query
+          description: A language code like `en-US`, `de-DE`, `fr`, or `auto` to guess
+            the language automatically (see `preferredVariants` below). For languages
+            with variants (English, German, Portuguese) spell checking will only be
+            activated when you specify the variant, e.g. `en-GB` instead of just `en`.
+          required: true
+          schema:
+            type: string
+            enum:
+              - en-US
+              - fr
+              - auto
+              - en-GB
+              - en
+      responses:
+        200:
+          description: the result of checking the text
+          content:
+            '*/*':
+              schema:
+                type: object
+  /languages:
+    get:
+      summary: Get a list of supported languages.
+      responses:
+        200:
+          description: An array of language objects.
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  required:
+                  - code
+                  - longCode
+                  - name
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: a language name like 'French' or 'English (Australia)'
+                    code:
+                      type: string
+                      description: a language code like 'en'
+                    longCode:
+                      type: string
+                      description: a language code like 'en-US' or 'ca-ES-valencia'
+components: {}

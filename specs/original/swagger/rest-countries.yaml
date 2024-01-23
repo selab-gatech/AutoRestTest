@@ -1,0 +1,473 @@
+swagger: '2.0'
+info:
+  description: REST countries API
+  title: REST countries API
+  version: v2.0.5
+host: 'localhost:9007'
+basePath: /
+schemes:
+  - http
+paths:
+  /v2/all:
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v2All
+  /v2/alpha:
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by list of ISO 3166-1 2-letter or 3-letter country codes
+          in: query
+          name: codes
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v2Alphacodes
+  '/v2/alpha/{alphacode}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by ISO 3166-1 2-letter or 3-letter country code
+          in: path
+          name: alphacode
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v2Alphacode
+  '/v2/callingcode/{callingcode}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by calling code
+          in: path
+          name: callingcode
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v2Callingcode
+  '/v2/capital/{capital}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by capital city
+          in: path
+          name: capital
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v2Capital
+  '/v2/currency/{currency}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by ISO 4217 currency code
+          in: path
+          name: currency
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v2Currency
+  '/v2/lang/{lang}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by ISO 639-1 language code
+          in: path
+          name: lang
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v2Lang
+  '/v2/name/{name}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by country name. It can be the native name or partial name
+          in: path
+          name: name
+          required: true
+          type: string
+        - in: query
+          name: fullText
+          required: false
+          type: boolean
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v2Name
+  '/v2/region/{region}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: >-
+            In version 2 regions are continent and subregions are region Search
+            by continent: Africa, Americas, Asia, Europe, Oceania
+          in: path
+          name: region
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v2Region
+  '/v2/regionalbloc/{regionalbloc}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: |
+            Search by regional bloc:
+              - EU (European Union)
+              - EFTA (European Free Trade Association)
+              - CARICOM (Caribbean Community)
+              - PA (Pacific Alliance)
+              - AU (African Union)
+              - USAN (Union of South American Nations)
+              - EEU (Eurasian Economic Union)
+              - AL (Arab League)
+              - ASEAN (Association of Southeast Asian Nations)
+              - CAIS (Central American Integration System)
+              - CEFTA (Central European Free Trade Agreement)
+              - NAFTA (North American Free Trade Agreement)
+              - SAARC (South Asian Association for Regional Cooperation)
+          in: path
+          name: regionalbloc
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v2Regionalbloc
+  '/v3.1/region/{region}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: >-
+            Search by Region: Africa, Americas, Asia, Europe, Oceania. The
+            search can be using the full region’s name or just part of it
+          in: path
+          name: region
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v3Region
+  /v3/all:
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v3All
+  /v3/alpha:
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by list of ISO 3166-1 2-letter or 3-letter country codes
+          in: query
+          name: codes
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v3Alphacodes
+  '/v3/alpha/{alphacode}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by ISO 3166-1 2-letter or 3-letter country code
+          in: path
+          name: alphacode
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v3Alphacode
+  '/v3/capital/{capital}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by capital city
+          in: path
+          name: capital
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v3Capital
+  '/v3/currency/{currency}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by currency code or name
+          in: path
+          name: currency
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v3Currency
+  '/v3/demonym/{demonym}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Now you can search by how a citizen is called.
+          in: path
+          name: demonym
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v3Demonym
+  '/v3/lang/{lang}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by language code or name
+          in: path
+          name: lang
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v3Lang
+  '/v3/name/{name}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: Search by country name. It can be the common or official value
+          in: path
+          name: name
+          required: true
+          type: string
+        - in: query
+          name: fullText
+          required: false
+          type: boolean
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v3Name
+  '/v3/subregion/{subregion}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: >-
+            Search by Subregion: South America, Southern Europe, Central
+            America, Eastern Asia, etc. The search can be using the full
+            subregion’s name or just part of it
+          in: path
+          name: subregion
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v3Subregion
+  '/v3/translation/{translation}':
+    get:
+      parameters:
+        - description: >-
+            You can filter the output of your request to include only the
+            specified fields.
+          in: query
+          name: fields
+          required: false
+          type: string
+        - description: You can search by any translation name
+          in: path
+          name: translation
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successful response
+        default:
+          description: Other responses
+      operationId: v3Translation
+definitions: {}
+x-components: {}
+

@@ -1,0 +1,136 @@
+basePath: /v2
+host: 'localhost:9003'
+info:
+  description: >-
+    Check texts for style and grammar issues with LanguageTool. See <a
+    href='http://wiki.languagetool.org/public-http-api'>our wiki</a> for access
+    limitations.
+  title: LanguageTool API
+  version: 1.0.2
+paths:
+  /check:
+    post:
+      consumes:
+        - application/x-www-form-urlencoded
+      description: >-
+        The main feature - check a text with LanguageTool for possible style and
+        grammar issues.
+      parameters:
+        - in: formData
+          name: body
+          required: true
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: the result of checking the text
+          schema:
+            type: object
+      summary: Check a text
+  /languages:
+    get:
+      parameters: []
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: An array of language objects.
+          schema:
+            items:
+              properties:
+                code:
+                  description: a language code like 'en'
+                  type: string
+                longCode:
+                  description: a language code like 'en-US' or 'ca-ES-valencia'
+                  type: string
+                name:
+                  description: a language name like 'French' or 'English (Australia)'
+                  type: string
+              required:
+                - code
+                - longCode
+                - name
+              type: object
+            type: array
+      summary: Get a list of supported languages.
+  '/{check1}':
+    post:
+      consumes:
+        - application/x-www-form-urlencoded
+      description: >-
+        The main feature - check a text with LanguageTool for possible style and
+        grammar issues.
+      parameters:
+        - enum:
+            - check
+          in: path
+          name: check1
+          required: true
+          type: string
+        - in: formData
+          name: body
+          required: true
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: the result of checking the text
+          schema:
+            type: object
+      summary: Check a text
+  '/{check2}':
+    post:
+      consumes:
+        - application/x-www-form-urlencoded
+      description: >-
+        The main feature - check a text with LanguageTool for possible style and
+        grammar issues.
+      parameters:
+        - enum:
+            - check
+          in: path
+          name: check2
+          required: true
+          type: string
+        - in: formData
+          name: body
+          required: true
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: the result of checking the text
+          schema:
+            type: object
+      summary: Check a text
+  '/{check3}':
+    post:
+      consumes:
+        - application/x-www-form-urlencoded
+      description: >-
+        The main feature - check a text with LanguageTool for possible style and
+        grammar issues.
+      parameters:
+        - enum:
+            - check
+          in: path
+          name: check3
+          required: true
+          type: string
+        - in: formData
+          name: body
+          required: true
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: the result of checking the text
+          schema:
+            type: object
+      summary: Check a text
+schemes:
+  - http
+swagger: '2.0'
+x-components: {}
+
