@@ -5,6 +5,7 @@ Welcome to the Services Directory! This directory contains a Python script (`run
 ## Overview
 
 The Python script operates on various services, from REST APIs like FDIC or YouTube to proxies for an array of applications. The script offers the flexibility to execute a single service or multiple services all at once based on the provided parameters.
+
 ## Prerequisites
 
 Before running the script, ensure that the following dependencies are installed and correctly configured:
@@ -14,8 +15,9 @@ Before running the script, ensure that the following dependencies are installed 
 - Docker
 - Java 8 and Java 11 (depending on the service)
 - mitmproxy
+- Jacoco
 
-Please ensure that "python" is aliased to Python 3.x and the paths for Java 8 and Java 11 are correctly specified in `java8.env` and `java11.env`.
+Please ensure that "python" is aliased to Python 3.x and the paths for Java 8 and Java 11 are correctly specified in `java8.env` and `java11.env`. Refer to `setup.sh` in the root directory to get information how to install these requirements.
 
 ## How to Use
 
