@@ -1,0 +1,10 @@
+class ValueSource:
+    random = 'random'
+    dictionary = 'dictionary'
+    enum = 'enum'
+    example = 'example'
+    reference = 'reference'
+    skip = 'skip'
+    max = 'max'
+    min = 'min'
+    middle = 'middle'

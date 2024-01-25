@@ -1,0 +1,10 @@
+2021/07/10 00:17:46, Fuzzing Time: 1804.665996313095s, Send Msg Count: 1026, Receive Msg Count: 1026, Success Response Sequence Count: 0, Success Sequence Rate: 0.0, Success API: 0.0 (0/10),Error API: 0.0 (0/10),Success Endpoint: 0.0 (0/10),Error Endpoint: 0.0 (0/10), Tested Error and Success Unique API: 0.0 (0/10), Request Count: 1576, Response Count: 1576, Response / Request: 1.0, Request(QPS): 0.8732917909572984, Response(QPS): 0.8732917909572984, Violation Count: 4 Remain Sequence Count: 10 Success Sequence: 0
+success
+set()
+errors
+set()
+==API Curve
+{'success_api': [{'time': 0, 'count': 0}], 'error_api': [], 'success_endpoint': [], 'error_endpoint': []}
+dict_keys([])
+404:1576,1.0 
+sequence source {}

@@ -1,0 +1,4 @@
+{
+  "specificationFileName": "../../../specs/openapi_json/spotify.json",
+  "authCommand": "echo [{\"name\":\"api_key\",\"value\":\"special-key\",\"in\":\"header\",\"timeout\":30}]"
+}

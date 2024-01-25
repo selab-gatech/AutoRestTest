@@ -1,0 +1,627 @@
+openapi: 3.0.1
+info:
+  title: Dynamic API Specification
+  description: This is a dynamicly generated API specification for all endpoints existing on the current .
+  version: 9.0.0-rc.24
+servers:
+  - url: /
+    description: Your current Directus instance.
+tags:
+  - name: Assets
+    description: Image typed files can be dynamically resized and transformed to fit any need.
+  - name: Authentication
+    description: All events that happen within Directus are tracked and stored in the activities collection. This gives you full accountability over everything that happens.
+  - name: Extensions
+    description: 'Directus can easily be extended through the addition of several types of extensions, including layouts, interfaces, and modules.'
+  - name: Server
+    description: 'Access to where Directus runs. Allows you to make sure your server has everything needed to run the platform, and check what kind of latency we''re dealing with.'
+  - name: Utilities
+    description: Directus comes with various utility endpoints you can use to simplify your development flow.
+paths:
+  '/assets/{id}':
+    get:
+      tags:
+        - Assets
+      operationId: getAsset
+      summary: Get an Asset
+      description: Image typed files can be dynamically resized and transformed to fit any need.
+      parameters:
+        - name: id
+          in: path
+          description: The id of the file.
+          required: true
+          schema:
+            type: string
+        - name: key
+          in: query
+          description: The key of the asset size configured in settings.
+          schema:
+            type: string
+        - name: width
+          in: query
+          description: Width of the file in pixels.
+          schema:
+            type: integer
+        - name: height
+          in: query
+          description: Height of the file in pixels.
+          schema:
+            type: integer
+        - name: fit
+          in: query
+          description: Fit of the file
+          schema:
+            type: string
+            enum:
+              - crop
+              - contain
+              - inside
+              - outside
+        - name: withoutEnlargement
+          in: query
+          description: No image upscale.
+          schema:
+            type: boolean
+        - name: quality
+          in: query
+          description: Quality of compression.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: download
+          in: query
+          description: Download the asset to your computer
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successful request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /auth/login:
+    post:
+      summary: Retrieve a Temporary Access Token
+      description: Retrieve a Temporary Access Token
+      tags:
+        - Authentication
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  example: admin@example.com
+                  description: Email address of the user you're retrieving the access token for.
+                password:
+                  type: string
+                  description: Password of the user.
+                  format: password
+                  example: password
+                mode:
+                  type: string
+                  enum:
+                    - json
+                    - cookie
+                  default: json
+                  description: 'Choose between retrieving the token as a string, or setting it as a cookie.'
+                otp:
+                  type: string
+                  description: 'If 2FA is enabled, you need to pass the one time password.'
+      responses:
+        '200':
+          description: Successful authentification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      access_token:
+                        type: string
+                        example: eyJhbGciOiJI...
+                      expires:
+                        type: integer
+                        example: 900
+                      refresh_token:
+                        type: string
+                        example: yuOJkjdPXMd...
+  /auth/refresh:
+    post:
+      summary: Refresh Token
+      description: Refresh a Temporary Access Token.
+      tags:
+        - Authentication
+      operationId: refresh
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                refresh_token:
+                  type: string
+                  example: eyJ0eXAiOiJKV...
+                  description: JWT access token you want to refresh. This token can't be expired.
+      responses:
+        '200':
+          description: Successful request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      access_token:
+                        type: string
+                        example: eyJhbGciOiJI...
+                      expires:
+                        type: integer
+                        example: 900
+                      refresh_token:
+                        type: string
+                        example: Gy-caJMpmGTA...
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /auth/logout:
+    post:
+      summary: Log Out
+      description: Log Out
+      tags:
+        - Authentication
+      operationId: logout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                refresh_token:
+                  type: string
+                  example: eyJ0eXAiOiJKV...
+                  description: JWT access token you want to logout.
+      responses:
+        '200':
+          description: Request successful
+  /auth/password/request:
+    post:
+      tags:
+        - Authentication
+      operationId: passwordRequest
+      summary: Request a Password Reset
+      description: Request a reset password email to be send.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  example: admin@example.com
+                  description: Email address of the user you're requesting a reset for.
+      responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /auth/password/reset:
+    post:
+      tags:
+        - Authentication
+      operationId: passwordReset
+      summary: Reset a Password
+      description: The request a password reset endpoint sends an email with a link to the admin app which in turn uses this endpoint to allow the user to reset their password.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - password
+              properties:
+                token:
+                  type: string
+                  example: eyJ0eXAiOiJKV1Qi...
+                  description: One-time use JWT token that is used to verify the user.
+                password:
+                  type: string
+                  example: password
+                  format: password
+                  description: New password for the user.
+      responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /auth/sso:
+    get:
+      tags:
+        - Authentication
+      operationId: sso
+      summary: List SSO Providers
+      description: List the SSO providers.
+      responses:
+        '200':
+          description: Successful request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  public:
+                    type: boolean
+                  data:
+                    type: array
+                    example:
+                      - github
+                      - facebook
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  '/auth/sso/{provider}':
+    get:
+      summary: List SSO providers
+      description: List the SSO providers.
+      tags:
+        - Authentication
+      operationId: ssoProvider
+      parameters:
+        - name: provider
+          in: path
+          description: Key of the activated SSO provider.
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Mode'
+        - name: redirect_url
+          in: query
+          required: true
+          description: Where to redirect on successful login.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  public:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /extensions/interfaces:
+    get:
+      summary: List Interfaces
+      description: List all installed custom interfaces.
+      operationId: getInterfaces
+      responses:
+        '200':
+          description: Successful request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Extensions
+  /extensions/layouts:
+    get:
+      summary: List Layouts
+      description: List all installed custom layouts.
+      operationId: getLayouts
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+          description: Successful request
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Extensions
+  /extensions/displays:
+    get:
+      summary: List Displays
+      description: List all installed custom displays.
+      operationId: getDisplays
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+          description: Successful request
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Extensions
+  /extensions/modules:
+    get:
+      summary: List Modules
+      description: List all installed custom modules.
+      operationId: getModules
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+          description: Successful request
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Extensions
+  /server/info:
+    get:
+      summary: System Info
+      description: Perform a system status check and return the options.
+      operationId: serverInfo
+      parameters:
+        - description: 'The first time you create a project, the provided token will be saved and required for subsequent project installs. It can also be found and configured in `/config/__api.json` on your server.'
+          in: query
+          name: super_admin_token
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    type: object
+                type: object
+          description: Successful request
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+      tags:
+        - Server
+  /server/ping:
+    get:
+      summary: Ping
+      description: 'Ping, pong. Ping.. pong.'
+      operationId: ping
+      responses:
+        '200':
+          content:
+            application/text:
+              schema:
+                type: string
+                pattern: pong
+                example: pong
+          description: Successful request
+      tags:
+        - Server
+  /utils/random/string:
+    get:
+      summary: Get a Random String
+      description: Returns a random string of given length.
+      operationId: random
+      parameters:
+        - description: Length of the random string.
+          in: query
+          name: length
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    type: string
+                    example: 1>M3+4oh.S
+                type: object
+          description: Successful request
+      tags:
+        - Utilities
+
+components:
+  schemas: {}
+  parameters:
+    Id:
+      description: Index
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    UUId:
+      description: Unique identifier for the object.
+      name: id
+      in: path
+      required: true
+      schema:
+        example: 8cbb43fe-4cdf-4991-8352-c461779cec02
+        type: string
+    Collection:
+      description: Collection of which you want to retrieve the items from.
+      name: collection
+      in: path
+      required: true
+      schema:
+        type: string
+    Search:
+      description: Filter by items that contain the given search query in one of their fields.
+      in: query
+      name: search
+      required: false
+      schema:
+        type: string
+    Page:
+      description: Cursor for use in pagination. Often used in combination with limit.
+      in: query
+      name: page
+      required: false
+      schema:
+        type: integer
+    Offset:
+      description: How many items to skip when fetching data.
+      in: query
+      name: offset
+      required: false
+      schema:
+        type: integer
+    Single:
+      description: Return the result as if it was a single item. Useful for selecting a single item based on filters and search queries.
+      in: query
+      name: single
+      required: false
+      schema:
+        type: integer
+    Sort:
+      description: |
+        How to sort the returned items. `sort` is a CSV of fields used to sort the fetched items. Sorting defaults to ascending (ASC) order but a minus sign (` - `) can be used to reverse this to descending (DESC) order. Fields are prioritized by their order in the CSV. You can also use a ` ? ` to sort randomly.
+      in: query
+      name: sort
+      required: false
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+    Meta:
+      description: What metadata to return in the response.
+      in: query
+      name: meta
+      required: false
+      schema:
+        type: string
+    Limit:
+      description: A limit on the number of objects that are returned.
+      in: query
+      name: limit
+      required: false
+      schema:
+        type: integer
+    Filter:
+      description: Select items in collection by given conditions.
+      in: query
+      name: filter
+      required: false
+      schema:
+        type: array
+        items:
+          type: string
+          pattern: '^(\[[^\[\]]*?\]){1}(\[(_eq|_neq|_lt|_lte|_gt|_gte|_in|_nin|_null|_nnull|_contains|_ncontains|_between|_nbetween|_empty|_nempty)\])?=.*?$'
+    Fields:
+      description: Control what fields are being returned in the object.
+      in: query
+      name: fields
+      required: false
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+    Mode:
+      description: Controls if the API sets a cookie or returns a JWT on successful login.
+      in: query
+      name: mode
+      required: true
+      schema:
+        type: string
+        enum:
+          - jwt
+          - cookie
+  responses:
+    NotFoundError:
+      description: 'Error: Not found.'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    format: int64
+                  message:
+                    type: string
+    UnauthorizedError:
+      description: 'Error: Unauthorized request'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    format: int64
+                  message:
+                    type: string
+  securitySchemes:
+    KeyAuth:
+      type: apiKey
+      in: query
+      name: access_token
+    Auth:
+      type: apiKey
+      in: header
+      name: Authorization
