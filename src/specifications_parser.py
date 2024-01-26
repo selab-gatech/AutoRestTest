@@ -1,6 +1,7 @@
 from typing import List, Dict, Optional, Union
-from prance import ResolvingParser, BaseParser
 from dataclasses import dataclass, field
+
+from prance import ResolvingParser, BaseParser
 
 @dataclass
 class ValueProperties:
@@ -44,19 +45,13 @@ class ParameterProperties:
     content: Dict[str, ValueProperties] = field(default_factory=dict)
 
 @dataclass
-class BaseOperationProperties:
+class OperationProperties:
     operation_id: str = ''
     endpoint_path: str = ''
     http_method: str = ''
-
-@dataclass
-class OperationProperties(BaseOperationProperties):
-    parameters: Dict[str, ParameterProperties] = field(default_factory=dict) # keep a mapping of name to properties
-
-@dataclass
-class RequestBodyOperationProperties(BaseOperationProperties):
-    mime_type: str = ''
-    properties: Dict[str, ValueProperties] = field(default_factory=dict)
+    parameters: Dict[str, ParameterProperties] = field(default_factory=dict)
+    request_body: bool = False
+    request_body_properties: Dict[str, ValueProperties] = field(default_factory=dict)
 
 class SpecificationParser:
     def __init__(self, file_path):
@@ -64,6 +59,46 @@ class SpecificationParser:
         self.resolving_parser = ResolvingParser(file_path, strict=False)
         self.base_parser = BaseParser(file_path, strict=False)
 
-    # will return operationID, and operation values
-    def parse_specification(self) -> Dict[str, BaseOperationProperties]:
+    def process_request_body(self, request_body) -> Dict[str, ValueProperties]:
+        """
+        Process the request body to return a Dictionary with all its properties and values
+        """
+        return None
+
+    def process_operation_details(self, http_method: str, endpoint_path: str, operation_details: Dict) -> OperationProperties:
+        """
+        Process the parameters and request body details within a given operation to return as OperationProperties object
+        """
+        operation_properties = OperationProperties(
+            operation_id=operation_details.get('operationId'),
+            endpoint_path=endpoint_path,
+            http_method=http_method
+        )
+
+        parameter = operation_details.get('parameters')
+
+        if operation_details.get('requestBody'):
+            operation_properties.request_body = True
+            operation_properties.request_body_properties = self.process_request_body(operation_details.get('requestBody'))
+
+        return operation_properties
+
+    def parse_specification(self) -> Dict[str, OperationProperties]:
+        """
+        Parse the specification file to return a dictionary of all the operations and their properties.
+
+        The key of the dictionary is the operationId and the value is an OperationProperties object.
+        """
+        operation_collection = {}
         spec_paths = self.resolving_parser.specification.get('paths', {})
+        for endpoint_path, endpoint_details in spec_paths.items():
+            for http_method, operation_details in endpoint_details.items():
+                operation_properties = self.process_operation_details(http_method, endpoint_path, operation_details)
+                operation_collection.setdefault(operation_properties.operation_id, operation_properties)
+
+        return operation_collection
+
+if __name__ == "__main__":
+    # testing
+    spec_parser = SpecificationParser("../specs/original/oas/youtube.yaml")
+    print(spec_parser.parse_specification())
