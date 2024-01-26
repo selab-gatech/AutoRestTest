@@ -5,6 +5,9 @@ from prance import ResolvingParser, BaseParser
 
 @dataclass
 class ValueProperties:
+    """
+    Class to store the properties of either the schema values, in the case of parameters, or the request body object values
+    """
     type: Optional[str] = None
     format: Optional[str] = None
     description: Optional[str] = None
@@ -30,6 +33,9 @@ class ValueProperties:
 
 @dataclass
 class ParameterProperties:
+    """
+    Class to store the properties of a parameter. Parameters have nested schemas, whereas request bodies do not.
+    """
     name: str = ''
     in_value: Optional[str] = None
     description: Optional[str] = None
@@ -46,6 +52,9 @@ class ParameterProperties:
 
 @dataclass
 class OperationProperties:
+    """
+    Class to store the properties of an operation, considering both its parameters and potential request body.
+    """
     operation_id: str = ''
     endpoint_path: str = ''
     http_method: str = ''
@@ -54,6 +63,9 @@ class OperationProperties:
     request_body_properties: Dict[str, ValueProperties] = field(default_factory=dict)
 
 class SpecificationParser:
+    """
+    Class to parse a specification file and return a dictionary of all the operations and their properties.
+    """
     def __init__(self, file_path):
         self.file_path = file_path
         self.resolving_parser = ResolvingParser(file_path, strict=False)
@@ -62,11 +74,11 @@ class SpecificationParser:
     def process_parameter_object_properties(self, properties: Dict) -> Dict[str, ValueProperties]:
         """
         Process the properties of a parameter of type object to return a dictionary of all the properties and their
-        corresponding parameter values
+        corresponding parameter values.
         """
         object_properties = {}
         for name, values in properties.items():
-            object_properties.setdefault(name, self.process_parameter(values))
+            object_properties.setdefault(name, self.process_parameter_schema(values)) # check if this is correct, or if it should be process_parameter
         return object_properties
 
     def process_parameter_schema(self, schema) -> ValueProperties:
@@ -101,7 +113,7 @@ class SpecificationParser:
 
     def process_parameter(self, parameter) -> ParameterProperties:
         """
-        Process an individual parameter to return a ParameterProperties object
+        Process an individual parameter to return a ParameterProperties object.
         """
         parameter_properties = ParameterProperties(
             name=parameter.get('name'),
@@ -119,9 +131,10 @@ class SpecificationParser:
         # elif parameter.get('content'): # WIP - not sure how to process this yet; will check
         #    parameter_properties.content = self.process_content(parameter.get('content'))
         return parameter_properties
+
     def process_parameters(self, parameter_list) -> Dict[str, ParameterProperties]:
         """
-        Process the parameters list to return a Dictionary with all its properties and values
+        Process the parameters list to return a Dictionary with all its properties and values.
         """
         parameters = {}
         for parameter in parameter_list:
@@ -131,13 +144,13 @@ class SpecificationParser:
 
     def process_request_body(self, request_body) -> Dict[str, ValueProperties]:
         """
-        Process the request body to return a Dictionary with all its properties and values
+        Process the request body to return a Dictionary with all its properties and values.
         """
         return None
 
     def process_operation_details(self, http_method: str, endpoint_path: str, operation_details: Dict) -> OperationProperties:
         """
-        Process the parameters and request body details within a given operation to return as OperationProperties object
+        Process the parameters and request body details within a given operation to return as OperationProperties object.
         """
         operation_properties = OperationProperties(
             operation_id=operation_details.get('operationId'),
