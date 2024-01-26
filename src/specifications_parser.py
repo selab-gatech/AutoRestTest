@@ -59,6 +59,76 @@ class SpecificationParser:
         self.resolving_parser = ResolvingParser(file_path, strict=False)
         self.base_parser = BaseParser(file_path, strict=False)
 
+    def process_parameter_object_properties(self, properties: Dict) -> Dict[str, ValueProperties]:
+        """
+        Process the properties of a parameter of type object to return a dictionary of all the properties and their
+        corresponding parameter values
+        """
+        object_properties = {}
+        for name, values in properties.items():
+            object_properties.setdefault(name, self.process_parameter(values))
+        return object_properties
+
+    def process_parameter_schema(self, schema) -> ValueProperties:
+        """
+        Process the schema of a parameter to return a ValueProperties object
+        """
+        value_properties = ValueProperties(
+            type=schema.get('type'),
+            format=schema.get('format'),
+            description=schema.get('description'),
+            items=self.process_parameter_schema(schema.get('items')), # recursively process items
+            properties=self.process_parameter_object_properties(schema.get('properties')), # WIP
+            required=schema.get('required'),
+            default=schema.get('default'),
+            enum=schema.get('enum'),
+            minimum=schema.get('minimum'),
+            maximum=schema.get('maximum'),
+            min_length=schema.get('minLength'),
+            max_length=schema.get('maxLength'),
+            pattern=schema.get('pattern'),
+            max_items=schema.get('maxItems'),
+            min_items=schema.get('minItems'),
+            unique_items=schema.get('uniqueItems'),
+            additional_properties=schema.get('additionalProperties'),
+            nullable=schema.get('nullable'),
+            read_only=schema.get('readOnly'),
+            write_only=schema.get('writeOnly'),
+            example=schema.get('example'),
+            examples=schema.get('examples')
+        )
+        return value_properties
+
+    def process_parameter(self, parameter) -> ParameterProperties:
+        """
+        Process an individual parameter to return a ParameterProperties object
+        """
+        parameter_properties = ParameterProperties(
+            name=parameter.get('name'),
+            in_value=parameter.get('in'),
+            description=parameter.get('description'),
+            required=parameter.get('required'),
+            deprecated=parameter.get('deprecated'),
+            allow_empty_value=parameter.get('allowEmptyValue'),
+            style=parameter.get('style'),
+            explode=parameter.get('explode'),
+            allow_reserved=parameter.get('allowReserved')
+        )
+        if parameter.get('schema'):
+            parameter_properties.schema = self.process_parameter_schema(parameter.get('schema'))
+        # elif parameter.get('content'): # WIP - not sure how to process this yet; will check
+        #    parameter_properties.content = self.process_content(parameter.get('content'))
+        return parameter_properties
+    def process_parameters(self, parameter_list) -> Dict[str, ParameterProperties]:
+        """
+        Process the parameters list to return a Dictionary with all its properties and values
+        """
+        parameters = {}
+        for parameter in parameter_list:
+            parameter_properties = self.process_parameter(parameter)
+            parameters.setdefault(parameter_properties.name, parameter_properties)
+        return parameters
+
     def process_request_body(self, request_body) -> Dict[str, ValueProperties]:
         """
         Process the request body to return a Dictionary with all its properties and values
@@ -75,7 +145,7 @@ class SpecificationParser:
             http_method=http_method
         )
 
-        parameter = operation_details.get('parameters')
+        operation_properties.parameters = self.process_parameters(operation_details.get('parameters'))
 
         if operation_details.get('requestBody'):
             operation_properties.request_body = True
