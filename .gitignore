@@ -30,3 +30,4 @@ org.jacoco.*
 jacoco_*
 *LOG_PATH*
 test.py
+.DS_Store
