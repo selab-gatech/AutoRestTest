@@ -1,18 +1,19 @@
 from typing import List, Dict, Optional, Union
 from dataclasses import dataclass, field
+import json
 
 from prance import ResolvingParser, BaseParser
 
 @dataclass
-class ValueProperties:
+class ItemProperties:
     """
     Class to store the properties of either the schema values, in the case of parameters, or the request body object values
     """
     type: Optional[str] = None
     format: Optional[str] = None
     description: Optional[str] = None
-    items: 'ValueProperties' = field(default_factory=lambda: ValueProperties())
-    properties: Dict[str, 'ValueProperties'] = field(default_factory=dict)
+    items: 'ItemProperties' = None
+    properties: Dict[str, 'ItemProperties'] = field(default_factory=dict)
     required: List[str] = field(default_factory=list)
     default: Optional[Union[str, int, float, bool, List, Dict]] = None
     enum: Optional[List[str]] = field(default_factory=list)
@@ -24,7 +25,7 @@ class ValueProperties:
     max_items: Optional[int] = None
     min_items: Optional[int] = None
     unique_items: Optional[bool] = None
-    additional_properties: Union[bool, 'ValueProperties', None] = True
+    additional_properties: Union[bool, 'ItemProperties', None] = True
     nullable: Optional[bool] = None
     read_only: Optional[bool] = None
     write_only: Optional[bool] = None
@@ -45,10 +46,10 @@ class ParameterProperties:
     style: Optional[str] = None
     explode: Optional[bool] = None
     allow_reserved: Optional[bool] = None
-    schema: ValueProperties = field(default_factory=lambda: ValueProperties())
+    schema: ItemProperties = None
     example: Optional[Union[str, int, float, bool, List, Dict]] = None
     examples: List[Optional[Union[str, int, float, bool, List, Dict]]] = field(default_factory=list)
-    content: Dict[str, ValueProperties] = field(default_factory=dict)
+    content: Dict[str, ItemProperties] = field(default_factory=dict)
 
 @dataclass
 class OperationProperties:
@@ -60,7 +61,7 @@ class OperationProperties:
     http_method: str = ''
     parameters: Dict[str, ParameterProperties] = field(default_factory=dict)
     request_body: bool = False
-    request_body_properties: Dict[str, ValueProperties] = field(default_factory=dict)
+    request_body_properties: Dict[str, ItemProperties] = field(default_factory=dict)
 
 class SpecificationParser:
     """
@@ -71,26 +72,33 @@ class SpecificationParser:
         self.resolving_parser = ResolvingParser(file_path, strict=False)
         self.base_parser = BaseParser(file_path, strict=False)
 
-    def process_parameter_object_properties(self, properties: Dict) -> Dict[str, ValueProperties]:
+    def process_parameter_object_properties(self, properties: Dict) -> Dict[str, ItemProperties]:
         """
         Process the properties of a parameter of type object to return a dictionary of all the properties and their
         corresponding parameter values.
         """
+        if properties is None:
+            return {}
+
         object_properties = {}
         for name, values in properties.items():
             object_properties.setdefault(name, self.process_parameter_schema(values)) # check if this is correct, or if it should be process_parameter
         return object_properties
 
-    def process_parameter_schema(self, schema) -> ValueProperties:
+    def process_parameter_schema(self, schema: Dict) -> ItemProperties:
         """
         Process the schema of a parameter to return a ValueProperties object
         """
-        value_properties = ValueProperties(
+
+        if not schema:
+            return ItemProperties()
+
+        value_properties = ItemProperties(
             type=schema.get('type'),
             format=schema.get('format'),
             description=schema.get('description'),
             items=self.process_parameter_schema(schema.get('items')), # recursively process items
-            properties=self.process_parameter_object_properties(schema.get('properties')), # WIP
+            properties=self.process_parameter_object_properties(schema.get('properties')),
             required=schema.get('required'),
             default=schema.get('default'),
             enum=schema.get('enum'),
@@ -115,6 +123,7 @@ class SpecificationParser:
         """
         Process an individual parameter to return a ParameterProperties object.
         """
+
         parameter_properties = ParameterProperties(
             name=parameter.get('name'),
             in_value=parameter.get('in'),
@@ -128,8 +137,6 @@ class SpecificationParser:
         )
         if parameter.get('schema'):
             parameter_properties.schema = self.process_parameter_schema(parameter.get('schema'))
-        # elif parameter.get('content'): # WIP - not sure how to process this yet; will check
-        #    parameter_properties.content = self.process_content(parameter.get('content'))
         return parameter_properties
 
     def process_parameters(self, parameter_list) -> Dict[str, ParameterProperties]:
@@ -142,11 +149,25 @@ class SpecificationParser:
             parameters.setdefault(parameter_properties.name, parameter_properties)
         return parameters
 
-    def process_request_body(self, request_body) -> Dict[str, ValueProperties]:
+    def process_request_body(self, request_body) -> Dict[str, Dict[str, ItemProperties]]:
         """
-        Process the request body to return a Dictionary with all its properties and values.
+        Process the request body to return a Dictionary with mime type and its properties and values.
         """
-        return None
+
+        request_body_properties = {}
+        content = request_body.get('content')
+        if content:
+            for mime_type, mime_details in content.items():
+                # if we need to check required list, do it here
+                schema = mime_details.get('schema')
+                if schema:
+                    properties = schema.get('properties')
+                    if properties:
+                        request_body_properties[mime_type] = self.process_parameter_object_properties(properties)
+                    else:
+                        request_body_properties[mime_type] = self.process_parameter_schema(schema)
+
+        return request_body_properties
 
     def process_operation_details(self, http_method: str, endpoint_path: str, operation_details: Dict) -> OperationProperties:
         """
@@ -163,6 +184,9 @@ class SpecificationParser:
         if operation_details.get('requestBody'):
             operation_properties.request_body = True
             operation_properties.request_body_properties = self.process_request_body(operation_details.get('requestBody'))
+            # add response details if need-be here
+
+        # maybe add security details?
 
         return operation_properties
 
@@ -183,5 +207,6 @@ class SpecificationParser:
 
 if __name__ == "__main__":
     # testing
-    spec_parser = SpecificationParser("../specs/original/oas/youtube.yaml")
+    spec_parser = SpecificationParser("../specs/original/oas/spotify.yaml")
     print(spec_parser.parse_specification())
+    #spec_parser.parse_specification()
