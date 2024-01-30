@@ -1,0 +1,179 @@
+<?xml version="1.0"?>
+<xs:schema 
+   xmlns:xs="http://www.w3.org/2001/XMLSchema"
+   targetNamespace="http://www.cornutum.org/tcases"
+   xmlns="http://www.cornutum.org/tcases"
+   >
+  <!-- 
+  //////////////////////////////////////////////////////////////////////////////
+  // 
+  //                    Copyright 2012, Cornutum Project
+  //                             www.cornutum.org
+  //
+  //////////////////////////////////////////////////////////////////////////////
+  -->
+  <!-- Defines the schema for a system input specification document -->
+  <!-- Version: 4.0.1  -->
+
+  <!-- Annotations -->
+  <xs:complexType name="annotationType">
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="value" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <!-- Conditions -->
+  <xs:complexType name="conditionExprType">
+    <xs:sequence minOccurs="0" maxOccurs="unbounded">
+      <xs:choice>
+        <xs:element name="AllOf" type="conditionExprType"/>
+        <xs:element name="AnyOf" type="conditionExprType"/>
+        <xs:element name="Not" type="conditionExprType"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="property" type="xs:string"/>
+  </xs:complexType>
+  
+  <xs:complexType name="upperBoundType">
+    <xs:attribute name="property" type="xs:string" use="required"/>
+    <xs:attribute name="max" type="xs:integer" use="required"/>
+  </xs:complexType>
+  
+  <xs:complexType name="lowerBoundType">
+    <xs:attribute name="property" type="xs:string" use="required"/>
+    <xs:attribute name="min" type="xs:integer" use="required"/>
+  </xs:complexType>
+  
+  <xs:complexType name="equalsBoundType">
+    <xs:attribute name="property" type="xs:string" use="required"/>
+    <xs:attribute name="count" type="xs:integer" use="required"/>
+  </xs:complexType>
+  
+  <xs:complexType name="betweenBoundType">
+    <xs:attribute name="property" type="xs:string" use="required"/>
+    <xs:attribute name="min" type="xs:integer"/>
+    <xs:attribute name="max" type="xs:integer"/>
+    <xs:attribute name="exclusiveMin" type="xs:integer"/>
+    <xs:attribute name="exclusiveMax" type="xs:integer"/>
+  </xs:complexType>
+
+  <xs:complexType name="conditionType">
+    <xs:choice>
+      <xs:element name="AllOf" type="conditionExprType"/>
+      <xs:element name="AnyOf" type="conditionExprType"/>
+      <xs:element name="Not" type="conditionExprType"/>
+      <xs:element name="LessThan" type="upperBoundType"/>
+      <xs:element name="NotMoreThan" type="upperBoundType"/>
+      <xs:element name="MoreThan" type="lowerBoundType"/>
+      <xs:element name="NotLessThan" type="lowerBoundType"/>
+      <xs:element name="Equals" type="equalsBoundType"/>
+      <xs:element name="Between" type="betweenBoundType"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <!-- Variables -->
+  <xs:attributeGroup name="varDefAttrs">
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="when" type="xs:string"/>
+    <xs:attribute name="whenNot" type="xs:string"/>
+  </xs:attributeGroup>
+
+  <xs:complexType name="varType">
+    <xs:sequence>
+
+      <xs:element name="When" minOccurs="0" maxOccurs="1" type="conditionType"/>
+
+      <xs:element name="Has" minOccurs="0" maxOccurs="unbounded" type="annotationType"/>
+
+      <xs:element name="Value" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+
+            <xs:element name="When" minOccurs="0" maxOccurs="1" type="conditionType"/>
+
+            <xs:element name="Has" minOccurs="0" maxOccurs="unbounded" type="annotationType"/>
+
+            <xs:element name="Property" minOccurs="0" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:attribute name="name" type="xs:string" use="required"/>
+              </xs:complexType>
+            </xs:element>
+
+          </xs:sequence>
+
+          <xs:attribute name="name" type="xs:string" use="required"/>
+          <xs:attribute name="failure" type="xs:boolean" default="false"/>
+          <xs:attribute name="once" type="xs:boolean" default="false"/>
+          <xs:attribute name="property" type="xs:string"/>
+          <xs:attribute name="when" type="xs:string"/>
+          <xs:attribute name="whenNot" type="xs:string"/>
+        </xs:complexType>
+      </xs:element>
+
+    </xs:sequence>
+
+    <xs:attributeGroup ref="varDefAttrs"/>
+  </xs:complexType>
+
+  <xs:complexType name="varSetType">
+    <xs:sequence>
+
+      <xs:element name="When" minOccurs="0" maxOccurs="1" type="conditionType"/>
+
+      <xs:element name="Has" minOccurs="0" maxOccurs="unbounded" type="annotationType"/>
+
+      <xs:sequence maxOccurs="unbounded">
+        <xs:choice>
+          <xs:element name="Var" type="varType"/>
+          <xs:element name="VarSet" type="varSetType"/>
+        </xs:choice>
+      </xs:sequence>
+
+    </xs:sequence>
+
+    <xs:attributeGroup ref="varDefAttrs"/>
+  </xs:complexType>
+
+  <!-- System functions -->
+  <xs:element name="System">
+    <xs:complexType>
+
+      <xs:sequence maxOccurs="unbounded">
+        <xs:element name="Has" minOccurs="0" maxOccurs="unbounded" type="annotationType"/>
+
+        <xs:element name="Function">
+          <xs:complexType>
+
+            <xs:sequence maxOccurs="unbounded">
+              
+              <xs:element name="Has" minOccurs="0" maxOccurs="unbounded" type="annotationType"/>
+
+              <xs:element name="Input">
+                <xs:complexType>
+                  <xs:sequence maxOccurs="unbounded">
+
+                    <xs:element name="Has" minOccurs="0" maxOccurs="unbounded" type="annotationType"/>
+
+                    <xs:choice>
+                      <xs:element name="Var" type="varType"/>
+                      <xs:element name="VarSet" type="varSetType"/>
+                    </xs:choice>
+
+                  </xs:sequence>
+
+                  <xs:attribute name="type" type="xs:string" default="arg"/>
+                </xs:complexType>
+              </xs:element>
+
+            </xs:sequence>
+
+            <xs:attribute name="name" type="xs:string" use="required"/>
+          </xs:complexType>
+        </xs:element>
+
+      </xs:sequence>
+
+      <xs:attribute name="name" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

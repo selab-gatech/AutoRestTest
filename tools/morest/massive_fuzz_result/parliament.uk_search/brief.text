@@ -1,0 +1,10 @@
+2021/07/09 23:47:41, Fuzzing Time: 1803.14053273201s, Send Msg Count: 951, Receive Msg Count: 951, Success Response Sequence Count: 768, Success Sequence Rate: 0.807570977917981, Success API: 1.0 (3/3),Error API: 0.6666666666666666 (2/3),Success Endpoint: 1.0 (3/3),Error Endpoint: 0.6666666666666666 (2/3), Tested Error and Success Unique API: 1.0 (3/3), Request Count: 956, Response Count: 956, Response / Request: 1.0, Request(QPS): 0.5301860740446706, Response(QPS): 0.5301860740446706, Violation Count: 4 Remain Sequence Count: 2 Success Sequence: 4
+success
+{'get-/query.{extension}', 'get-/query', 'get-/description'}
+errors
+{'get-/query.{extension}', 'get-/query'}
+==API Curve
+{'success_api': [{'time': 0, 'count': 0}, {'time': 1.193984031677246, 'count': 1}, {'time': 2.877887725830078, 'count': 2}, {'time': 3.788585901260376, 'count': 3}], 'error_api': [{'time': 37.85348200798035, 'count': 1}, {'time': 57.37443709373474, 'count': 2}], 'success_endpoint': [{'time': 1.193986415863037, 'count': 1}, {'time': 2.877890110015869, 'count': 2}, {'time': 3.788588047027588, 'count': 3}], 'error_endpoint': [{'time': 37.85348415374756, 'count': 1}, {'time': 57.37443923950195, 'count': 2}]}
+dict_keys([])
+200:772,0.8075313807531381 500:184,0.19246861924686193 
+sequence source {'ODG': 3, 'DYNAMIC_FIX_ADD': 1}

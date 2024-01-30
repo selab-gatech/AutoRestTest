@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<xs:schema 
+   xmlns:xs="http://www.w3.org/2001/XMLSchema"
+   targetNamespace="http://www.cornutum.org/tcases"
+   xmlns="http://www.cornutum.org/tcases"
+   >
+  <!-- 
+  //////////////////////////////////////////////////////////////////////////////
+  // 
+  //                    Copyright 2012, Cornutum Project
+  //                             www.cornutum.org
+  //
+  //////////////////////////////////////////////////////////////////////////////
+  -->
+  <!-- Defines the schema for a system test case specification document -->
+  <!-- Version: 4.0.1  -->
+
+  <!-- Annotations -->
+  <xs:complexType name="annotationType">
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="value" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <!-- System test cases -->
+  <xs:element name="TestCases">
+    <xs:complexType>
+      <xs:sequence maxOccurs="unbounded">
+
+        <xs:element name="Has" minOccurs="0" maxOccurs="unbounded" type="annotationType"/>
+
+        <xs:element name="Function">
+          <xs:complexType>
+            <xs:sequence maxOccurs="unbounded">
+
+              <xs:element name="TestCase">
+                <xs:complexType>
+
+                  <xs:sequence maxOccurs="unbounded">
+
+                    <xs:element name="Has" minOccurs="0" maxOccurs="unbounded" type="annotationType"/>
+
+                    <xs:element name="Input">
+                      <xs:complexType>
+                        <xs:sequence maxOccurs="unbounded">
+
+                          <xs:element name="Var">
+                            <xs:complexType>
+                              <xs:sequence maxOccurs="unbounded">
+                                <xs:element name="Has" minOccurs="0" maxOccurs="unbounded" type="annotationType"/>
+                              </xs:sequence>
+
+                              <xs:attribute name="name" type="xs:string" use="required"/>
+                              <xs:attribute name="value" type="xs:string" use="required"/>
+                              <xs:attribute name="failure" type="xs:boolean"/>
+                              <xs:attribute name="NA" type="xs:boolean"/>
+                            </xs:complexType>
+                          </xs:element>
+
+                        </xs:sequence>
+
+                        <xs:attribute name="type" type="xs:string" default="arg"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                  </xs:sequence>
+
+                  <xs:attribute name="id" type="xs:nonNegativeInteger" use="required"/>
+                  <xs:attribute name="failure" type="xs:boolean"/>
+                  <xs:attribute name="name" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+            </xs:sequence>
+
+            <xs:attribute name="name" type="xs:string" use="required"/>
+          </xs:complexType>
+        </xs:element>
+
+      </xs:sequence>
+
+      <xs:attribute name="system" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -1,0 +1,10 @@
+2021/07/09 20:46:33, Fuzzing Time: 1803.219678401947s, Send Msg Count: 952, Receive Msg Count: 952, Success Response Sequence Count: 0, Success Sequence Rate: 0.0, Success API: 0.0 (0/9),Error API: 0.1111111111111111 (1/9),Success Endpoint: 0.0 (0/7),Error Endpoint: 0.14285714285714285 (1/7), Tested Error and Success Unique API: 0.1111111111111111 (1/9), Request Count: 954, Response Count: 954, Response / Request: 1.0, Request(QPS): 0.5290536762805604, Response(QPS): 0.5290536762805604, Violation Count: 5 Remain Sequence Count: 9 Success Sequence: 0
+success
+set()
+errors
+{'wkhtmltopdfFromHtmlPost'}
+==API Curve
+{'success_api': [{'time': 0, 'count': 0}], 'error_api': [{'time': 412.34031200408936, 'count': 1}], 'success_endpoint': [], 'error_endpoint': [{'time': 412.34031438827515, 'count': 1}]}
+dict_keys([])
+401:739,0.7746331236897275 400:214,0.22431865828092243 524:1,0.0010482180293501049 
+sequence source {}

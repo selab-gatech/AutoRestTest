@@ -1,0 +1,10 @@
+2021/07/09 18:15:24, Fuzzing Time: 1803.2277553081512s, Send Msg Count: 3916, Receive Msg Count: 3916, Success Response Sequence Count: 328, Success Sequence Rate: 0.08375893769152196, Success API: 1.0 (12/12),Error API: 0.0 (0/12),Success Endpoint: 1.0 (12/12),Error Endpoint: 0.0 (0/12), Tested Error and Success Unique API: 1.0 (12/12), Request Count: 3916, Response Count: 3916, Response / Request: 1.0, Request(QPS): 2.171661338104681, Response(QPS): 2.171661338104681, Violation Count: 10 Remain Sequence Count: 1 Success Sequence: 12
+success
+{'get-/timezone/{area}.txt', 'get-/ip/{ipv4}', 'get-/timezone/{area}/{location}.txt', 'get-/ip/{ipv4}.txt', 'get-/ip', 'get-/timezone/{area}/{location}/{region}', 'get-/ip.txt', 'get-/timezone/{area}/{location}/{region}.txt', 'get-/timezone/{area}/{location}', 'get-/timezone/{area}', 'get-/timezone.txt', 'get-/timezone'}
+errors
+set()
+==API Curve
+{'success_api': [{'time': 0, 'count': 0}, {'time': 0.3969993591308594, 'count': 1}, {'time': 1.1868762969970703, 'count': 2}, {'time': 1.7586514949798584, 'count': 3}, {'time': 1.9539175033569336, 'count': 4}, {'time': 2.3628742694854736, 'count': 5}, {'time': 4.6858909130096436, 'count': 6}, {'time': 6.2399537563323975, 'count': 7}, {'time': 11.576604843139648, 'count': 8}, {'time': 12.141454219818115, 'count': 9}, {'time': 20.816524028778076, 'count': 10}, {'time': 21.88668727874756, 'count': 11}, {'time': 26.55117106437683, 'count': 12}], 'error_api': [], 'success_endpoint': [{'time': 0.3970024585723877, 'count': 1}, {'time': 1.1868793964385986, 'count': 2}, {'time': 1.7586538791656494, 'count': 3}, {'time': 1.9539198875427246, 'count': 4}, {'time': 2.362877130508423, 'count': 5}, {'time': 4.685893535614014, 'count': 6}, {'time': 6.2399561405181885, 'count': 7}, {'time': 11.576607704162598, 'count': 8}, {'time': 12.141456842422485, 'count': 9}, {'time': 20.816527128219604, 'count': 10}, {'time': 21.886690139770508, 'count': 11}, {'time': 26.5511736869812, 'count': 12}], 'error_endpoint': []}
+dict_keys([])
+404:3588,0.916241062308478 200:328,0.08375893769152196 
+sequence source {'ODG': 5, 'DYNAMIC_FIX_DELETE': 7}
