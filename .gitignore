@@ -19,6 +19,7 @@ RestlerLogs/
 restler/
 rest-gitlab/
 
+test.json
 cp.txt
 *.log
 log_*
