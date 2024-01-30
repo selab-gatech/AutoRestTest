@@ -13,7 +13,7 @@ class ItemProperties:
     format: Optional[str] = None
     description: Optional[str] = None
     items: 'ItemProperties' = None
-    properties: Dict[str, 'ItemProperties'] = field(default_factory=dict)
+    properties: Dict[str, 'ItemProperties'] = None
     required: List[str] = field(default_factory=list)
     default: Optional[Union[str, int, float, bool, List, Dict]] = None
     enum: Optional[List[str]] = field(default_factory=list)
@@ -61,7 +61,7 @@ class OperationProperties:
     http_method: str = ''
     parameters: Dict[str, ParameterProperties] = field(default_factory=dict)
     request_body: bool = False
-    request_body_properties: Dict[str, ItemProperties] = field(default_factory=dict)
+    request_body_properties: Dict[str, Dict[str, ItemProperties]] = None # MIME type as first key, then each parameter with its properties as second dict
 
 class SpecificationParser:
     """
@@ -78,7 +78,7 @@ class SpecificationParser:
         corresponding parameter values.
         """
         if properties is None:
-            return {}
+            return None
 
         object_properties = {}
         for name, values in properties.items():
@@ -91,7 +91,7 @@ class SpecificationParser:
         """
 
         if not schema:
-            return ItemProperties()
+            return None
 
         value_properties = ItemProperties(
             type=schema.get('type'),
@@ -208,5 +208,8 @@ class SpecificationParser:
 if __name__ == "__main__":
     # testing
     spec_parser = SpecificationParser("../specs/original/oas/spotify.yaml")
-    print(spec_parser.parse_specification())
+    output = spec_parser.parse_specification()
+    print(output["endpoint-add-tracks-to-playlist"])
+    print(output["endpoint-get-playlist"])
+    print(output["endpoint-remove-tracks-playlist"])
     #spec_parser.parse_specification()
