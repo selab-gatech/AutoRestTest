@@ -1,0 +1,10 @@
+#######################################################################
+#
+#                     Copyright 2020, Cornutum Project
+#                              www.cornutum.org
+# 
+#######################################################################
+
+pgm=`basename "$0"`
+binDir=`dirname "$0"`
+exec $binDir/tcases-exec $pgm org.cornutum.tcases.openapi.ApiTestCommand "$@"

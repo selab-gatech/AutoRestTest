@@ -1,0 +1,10 @@
+2021/07/09 16:59:58, Fuzzing Time: 1803.8523099422455s, Send Msg Count: 910, Receive Msg Count: 910, Success Response Sequence Count: 3, Success Sequence Rate: 0.0032967032967032967, Success API: 0.3 (3/10),Error API: 0.1 (1/10),Success Endpoint: 0.375 (3/8),Error Endpoint: 0.125 (1/8), Tested Error and Success Unique API: 0.4 (4/10), Request Count: 912, Response Count: 912, Response / Request: 1.0, Request(QPS): 0.5055846285049799, Response(QPS): 0.5055846285049799, Violation Count: 15 Remain Sequence Count: 7 Success Sequence: 3
+success
+{'listServices', 'listActions', 'describeService'}
+errors
+{'logout'}
+==API Curve
+{'success_api': [{'time': 0, 'count': 0}, {'time': 6.951203107833862, 'count': 1}, {'time': 25.32888960838318, 'count': 2}, {'time': 27.31572961807251, 'count': 3}], 'error_api': [{'time': 7.950000762939453, 'count': 1}], 'success_endpoint': [{'time': 6.951207160949707, 'count': 1}, {'time': 25.328903913497925, 'count': 2}, {'time': 27.315732955932617, 'count': 3}], 'error_endpoint': [{'time': 7.950003385543823, 'count': 1}]}
+dict_keys([])
+400:275,0.30153508771929827 401:388,0.42543859649122806 200:4,0.0043859649122807015 500:129,0.14144736842105263 404:116,0.12719298245614036 
+sequence source {'DYNAMIC_FIX_DELETE': 3}

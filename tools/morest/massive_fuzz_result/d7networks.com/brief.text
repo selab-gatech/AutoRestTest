@@ -1,0 +1,10 @@
+2021/07/09 19:46:20, Fuzzing Time: 1803.4431343078613s, Send Msg Count: 860, Receive Msg Count: 860, Success Response Sequence Count: 0, Success Sequence Rate: 0.0, Success API: 0.0 (0/3),Error API: 0.6666666666666666 (2/3),Success Endpoint: 0.0 (0/3),Error Endpoint: 0.6666666666666666 (2/3), Tested Error and Success Unique API: 0.6666666666666666 (2/3), Request Count: 860, Response Count: 860, Response / Request: 1.0, Request(QPS): 0.4768656042653971, Response(QPS): 0.4768656042653971, Violation Count: 6 Remain Sequence Count: 3 Success Sequence: 0
+success
+set()
+errors
+{'SendPost', 'SendbatchPost'}
+==API Curve
+{'success_api': [{'time': 0, 'count': 0}], 'error_api': [{'time': 2.272632360458374, 'count': 1}, {'time': 3.348118782043457, 'count': 2}], 'success_endpoint': [], 'error_endpoint': [{'time': 2.272634983062744, 'count': 1}, {'time': 3.348121404647827, 'count': 2}]}
+dict_keys([])
+401:297,0.3453488372093023 500:563,0.6546511627906977 
+sequence source {}

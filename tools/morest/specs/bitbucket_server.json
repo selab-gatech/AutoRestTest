@@ -1,0 +1,3698 @@
+{
+  "openapi": "3.0.0",
+  "tags": [
+    {
+      "name": "projects",
+      "description": "Operations focusing on projects"
+    },
+    {
+      "name": "repositories",
+      "description": "Operations focusing on repositories"
+    },
+    {
+      "name": "webhook",
+      "description": "Operations focusing on webhooks"
+    },
+    {
+      "name": "branches",
+      "description": "Operations focusing on branches"
+    },
+    {
+      "name": "commits",
+      "description": "Operations focusing on commits"
+    },
+    {
+      "name": "buildStatus",
+      "description": "Operations focusing on buildStatus"
+    },
+    {
+      "name": "postWebhook",
+      "description": "Operations focusing on postWebhooks"
+    },
+    {
+      "name": "pullRequests",
+      "description": "Operations focusing on pull requests"
+    }
+  ],
+  "info": {
+    "title": "bitbucket-server-api",
+    "version": "7.3.1"
+  },
+  "servers": [
+    {
+      "url": "https://example.com",
+      "description": ""
+    }
+  ],
+  "paths": {
+    "/rest/api/1.0/projects": {
+      "get": {
+        "summary": "Get Projects",
+        "tags": [
+          "projects"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {},
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/projectsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getProjectsPaged",
+        "description": "Retrieve a page of projects.\n\nOnly projects for which the authenticated user has the PROJECT_VIEW permission will be returned.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "name",
+            "description": "name to filter by"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "permission",
+            "description": "permission to filter by"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "start"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit"
+          }
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}": {
+      "get": {
+        "summary": "REST resource for working with projects",
+        "tags": [
+          "projects"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/project"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getProject",
+        "description": "Retrieve the project matching the supplied projectKey.\n\nThe authenticated user must have PROJECT_VIEW permission for the specified project to call this resource."
+      },
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        }
+      ]
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get Repositories",
+        "tags": [
+          "repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/repositoriesPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getRepositoriesPaged",
+        "description": "Retrieve repositories from the project corresponding to the supplied projectKey.\n\n\nThe authenticated user must have REPO_READ permission for the specified project to call this resource.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "start"
+          }
+        ]
+      },
+      "post": {
+        "summary": "Create repository",
+        "operationId": "createRepository",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/repository"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "description": "Create a new repository. Requires an existing project in which this repository will be created. The only parameters which will be used are name and scmId.\n\nThe authenticated user must have PROJECT_ADMIN permission for the context project to call this resource.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/createRepository"
+              },
+              "examples": {
+                "example": {
+                  "value": {
+                    "name": "My repo",
+                    "scmId": "git",
+                    "forkable": true,
+                    "defaultBranch": "main"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "repositories"
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get Repository",
+        "tags": [
+          "repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/repository"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getRepository",
+        "description": "Retrieve the repository matching the supplied projectKey and repositorySlug.\n\nThe authenticated user must have REPO_READ permission for the specified repository to call this resource."
+      }
+    },
+    "/rest/api/1.0/repos": {
+      "get": {
+        "summary": "Search repositories",
+        "tags": [
+          "repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/repositoriesPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "searchRepositoriesPaged",
+        "description": "Retrieve a page of repositories based on query parameters that control the search. See the documentation of the parameters for more details.\n\nThis resource is anonymously accessible.\n\nNote on permissions. In absence of the permission query parameter the implicit 'read' permission is assumed. Please note that this permission is lower than the REPO_READ permission rather than being equal to it. The implicit 'read' permission for a given repository is assigned to any user that has any of the higher permissions, such as REPO_READ, as well as to anonymous users if the repository is marked as public. The important implication of the above is that an anonymous request to this resource with a permission level REPO_READ is guaranteed to receive an empty list of repositories as a result. For anonymous requests it is therefore recommended to not specify the permission parameter at all.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "name",
+            "description": "(optional) if specified, this will limit the resulting repository list to ones whose name matches this parameter's value. The match will be done case-insensitive and any leading and/or trailing whitespace characters on the name parameter will be stripped."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "projectname",
+            "description": "(optional) if specified, this will limit the resulting repository list to ones whose project's name matches this parameter's value. The match will be done case-insensitive and any leading and/or trailing whitespace characters on the projectname parameter will be stripped."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "REPO_READ",
+                "REPO_WRITE",
+                "REPO_ADMIN"
+              ]
+            },
+            "in": "query",
+            "name": "permission",
+            "description": "(optional) if specified, it must be a valid repository permission level name and will limit the resulting repository list to ones that the requesting user has the specified permission level to. If not specified, the default implicit 'read' permission level will be assumed. The currently supported explicit permission values are REPO_READ, REPO_WRITE and REPO_ADMIN."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "AVAILABLE",
+                "INITIALISING",
+                "INITIALISATION_FAILED"
+              ]
+            },
+            "in": "query",
+            "name": "state",
+            "description": "(optional) if specified, it must be a valid repository state name and will limit the resulting repository list to ones that are in the specified state. The currently supported explicit state values are AVAILABLE, INITIALISING and INITIALISATION_FAILED.\nAvailable since 5.13"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "public",
+                "private"
+              ]
+            },
+            "in": "query",
+            "name": "visibility",
+            "description": "(optional) if specified, this will limit the resulting repository list based on the repositories visibility. Valid values are public or private."
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "start"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit"
+          }
+        ],
+        "security": [
+          {
+            "usernamePassword": []
+          }
+        ]
+      },
+      "parameters": []
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/branches": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get Branches",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/branchesPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getBranchesPaged",
+        "description": "Retrieve the branches matching the supplied filterText param.\n\nThe authenticated user must have REPO_READ permission for the specified repository to call this resource.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "base",
+            "description": "base branch or tag to compare each branch to (for the metadata providers that uses that information)"
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "details",
+            "description": "whether to retrieve plugin-provided metadata about each branch"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "filterText",
+            "description": "the text to match on"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALPHABETICAL",
+                "MODIFICATION"
+              ]
+            },
+            "in": "query",
+            "name": "orderBy",
+            "description": "ordering of refs either ALPHABETICAL (by name) or MODIFICATION (last updated)",
+            "explode": false
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "boostMatches",
+            "description": "controls whether exact and prefix matches will be boosted to the top"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "start"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit"
+          }
+        ],
+        "tags": [
+          "branches"
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/browse": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "browseRepository",
+        "tags": [
+          "repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/directory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "browseRepositoryPaged",
+        "description": "Retrieve a page of content for a file path at a specified revision.\n\nThe authenticated user must have REPO_READ permission for the specified repository to call this resource.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "at",
+            "description": "the commit ID or ref to retrieve the content for."
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "start"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit"
+          }
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/browse/{path}": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string",
+            "pattern": ".*"
+          },
+          "name": "path",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "browseRepositoryPath",
+        "description": "Retrieve a page of content for a file path at a specified revision.\n\nThe authenticated user must have REPO_READ permission for the specified repository to call this resource.",
+        "tags": [
+          "repositories"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fileOrDirectory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "browseRepositoryPathPaged",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "at",
+            "description": "the commit ID or ref to retrieve the content for."
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "start"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit"
+          }
+        ]
+      }
+    },
+    "/rest/webhook/1.0/projects/{projectKey}/repos/{repositorySlug}/configurations": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get Post Webhooks",
+        "tags": [
+          "postWebhook"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/postWebhook"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getPostWebhooks",
+        "description": "Returns the registered post webhooks for the repository."
+      }
+    },
+    "/rest/webhook/1.0/projects/{projectKey}/repos/{repositorySlug}/configurations/{ID}": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "integer"
+          },
+          "name": "ID",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "delete": {
+        "summary": "Delete post webhook",
+        "operationId": "deletePostWebhook",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "description": "Deletes the post webhook from the repository",
+        "tags": [
+          "postWebhook"
+        ]
+      }
+    },
+    "/rest/build-status/1.0/commits/{commitHash}": {
+      "post": {
+        "summary": "Post build-result",
+        "operationId": "postBuildResult",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "description": "Associates a build status with a commit.\n\nThe state, the key and the url are mandatory. The name and description fields are optional.\n\nAll fields (mandatory or optional) are limited to 255 characters, except for the url, which is limited to 450 characters.\n\nSupported values for the state are SUCCESSFUL, FAILED and INPROGRESS.\n\nThe authenticated user must have LICENSED permission or higher to call this resource.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/buildStatus"
+              }
+            }
+          },
+          "description": "Associates a build status with a commit.\n\nThe state, the key and the url are mandatory. The name and description fields are optional.\n\nAll fields (mandatory or optional) are limited to 255 characters, except for the url, which is limited to 450 characters.\n\nSupported values for the state are SUCCESSFUL, FAILED and INPROGRESS.\n\nThe authenticated user must have LICENSED permission or higher to call this resource."
+        },
+        "tags": [
+          "buildStatus"
+        ]
+      },
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "commitHash",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get build statuses",
+        "operationId": "getBuildStatusesPaged",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/buildStatusPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "description": "Gets the build statuses associated with a commit.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest",
+                "status"
+              ]
+            },
+            "in": "query",
+            "name": "orderBy",
+            "description": "how the results should be ordered. Options are NEWEST, OLDEST, STATUS. Defaults to NEWEST if not provided."
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "start"
+          }
+        ],
+        "tags": [
+          "buildStatus"
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/branches/default": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get default branch",
+        "tags": [
+          "branches"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/branch"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getDefaultBranch",
+        "description": "Get the default branch of the repository.\n\nThe authenticated user must have REPO_READ permission for the specified repository to call this resource."
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/commits/{commitId}": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "commitId",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get commit",
+        "tags": [
+          "commits"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/commit"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getCommit",
+        "description": "This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nRetrieve a single commit identified by its ID. In general, that ID is a SHA1. From 2.11, ref names like \"refs/heads/master\" are no longer accepted by this resource.\n\nThe authenticated user must have REPO_READ permission for the specified repository to call this resource.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "path",
+            "description": "an optional path to filter the commit by. If supplied the details returned may not be for the specified commit. Instead, starting from the specified commit, they will be the details for the first commit affecting the specified path."
+          }
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/commits": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get commits",
+        "tags": [
+          "commits"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/commitsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getCommitsPaged",
+        "description": "This is a paged API. This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nRetrieve a page of commits from a given starting commit or \"between\" two commits. If no explicit commit is specified, the tip of the repository's default branch is assumed. commits may be identified by branch or tag name or by ID. A path may be supplied to restrict the returned commits to only those which affect that path.\n\nThe authenticated user must have REPO_READ permission for the specified repository to call this resource.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "in": "query",
+            "name": "followRenames",
+            "description": "if true, the commit history of the specified file will be followed past renames. Only valid for a path to a single file."
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "in": "query",
+            "name": "ignoreMissing",
+            "description": "true to ignore missing commits, false otherwise"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "exclude",
+                "include",
+                "only"
+              ]
+            },
+            "in": "query",
+            "name": "merges",
+            "description": "\t\nif present, controls how merge commits should be filtered. Can be either exclude, to exclude merge commits, include, to include both merge commits and non-merge commits or only, to only return merge commits."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "path",
+            "description": "an optional path to filter commits by"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "since",
+            "description": "the commit ID or ref (exclusively) to retrieve commits after"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "until",
+            "description": "the commit ID (SHA1) or ref (inclusively) to retrieve commits before"
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "in": "query",
+            "name": "withCounts",
+            "description": "optionally include the total number of commits and total number of unique authors"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "start"
+          }
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/webhooks": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get webhooks",
+        "tags": [
+          "webhook"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhooksPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getWebhooksPaged",
+        "description": "This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nFind webhooks in this repository.\n\nThe authenticated user must have REPO_ADMIN permission for the specified repository to call this resource.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "start"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "repo:refs_changed",
+                "repo:comment:added",
+                "repo:modified",
+                "repo:forked",
+                "repo:comment:edited",
+                "repo:comment:deleted",
+                "mirror:repo_synchronized",
+                "pr:opened",
+                "pr:from_ref_updated",
+                "pr:modified",
+                "pr:reviewer:updated",
+                "pr:reviewer:approved",
+                "pr:reviewer:unapproved",
+                "pr:reviewer:needs_work",
+                "pr:merged",
+                "pr:declined",
+                "pr:deleted",
+                "pr:comment:added",
+                "pr:comment:edited",
+                "pr:comment:deleted"
+              ]
+            },
+            "in": "query",
+            "name": "event",
+            "description": "list of {@link com.atlassian.webhooks.WebhookEvent} ids to filter for"
+          }
+        ]
+      },
+      "post": {
+        "summary": "Create webhook",
+        "operationId": "createWebhook",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "description": "This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nCreate a webhook for the repository specified via the URL.\n\nThe authenticated user must have REPO_ADMIN permission for the specified repository to call this resource.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/webhook"
+              }
+            }
+          }
+        },
+        "tags": [
+          "webhook"
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/webhooks/{webhookId}": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "integer"
+          },
+          "name": "webhookId",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get Webhook",
+        "tags": [
+          "webhook"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getWebhook",
+        "description": "This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nGet a webhook by id.\n\nThe authenticated user must have REPO_ADMIN permission for the specified repository to call this resource."
+      },
+      "delete": {
+        "summary": "Delete Webhook",
+        "operationId": "deleteWebhook",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "description": "This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nDelete a webhook for the repository specified via the URL.\n\nThe authenticated user must have REPO_ADMIN permission for the specified repository to call this resource.",
+        "tags": [
+          "webhook"
+        ]
+      },
+      "put": {
+        "summary": "Update webhook",
+        "operationId": "updateWebhook",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "description": "This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nUpdate an existing webhook.\n\nThe authenticated user must have REPO_ADMIN permission for the specified repository to call this resource.\n",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/webhook"
+              }
+            }
+          }
+        },
+        "tags": [
+          "webhook"
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/pull-requests": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get Pull Request Page",
+        "tags": [
+          "pullRequests"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pullRequestsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getPullRequestsPaged",
+        "description": "Retrieve a page of pull requests to or from the specified repository.\n\nThe authenticated user must have REPO_READ permission for the specified repository to call this resource. Optionally clients can specify PR participant filters. Each filter has a mandatory username.N parameter, and the optional role.N and approved.N parameters.\n\nusername.N - the \"root\" of a single participant filter, where \"N\" is a natural number starting from 1. This allows clients to specify multiple participant filters, by providing consecutive filters as username.1, username.2 etc. Note that the filters numbering has to start with 1 and be continuous for all filters to be processed. The total allowed number of participant filters is 10 and all filters exceeding that limit will be dropped.\nrole.N(optional) the role associated with username.N. This must be one of AUTHOR, REVIEWER, orPARTICIPANT\napproved.N(optional) the approved status associated with username.N. That is whether username.N has approved the PR. Either true, or false",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "start"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "OPEN",
+                "MERGED",
+                "DECLINED"
+              ]
+            },
+            "in": "query",
+            "name": "state",
+            "description": "(optional, defaults to OPEN). Supply ALL to return pull request in any state. If a state is supplied only pull requests in the specified state will be returned. Either OPEN, DECLINED or MERGED"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NEWEST",
+                "OLDEST"
+              ]
+            },
+            "in": "query",
+            "name": "order",
+            "description": "(optional, defaults to NEWEST) the order to return pull requests in, either OLDEST (as in: \"oldest first\") or NEWEST."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "at",
+            "description": "(optional) a fully-qualified branch ID to find pull requests to or from, such as refs/heads/master"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INCOMING",
+                "OUTGOING"
+              ]
+            },
+            "in": "query",
+            "name": "direction",
+            "description": "(optional, defaults to INCOMING) the direction relative to the specified repository. Either INCOMING or OUTGOING."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "filterText",
+            "description": "(optional) If specified, only pull requests where the title or description contains the supplied string will be returned."
+          }
+        ]
+      },
+      "post": {
+        "summary": "Create Pull Request",
+        "operationId": "createPullRequest",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pullRequest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "description": "This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nCreate a new pull request between two branches. The branches may be in the same repository, or different ones. When using different repositories, they must still be in the same {@link Repository#getHierarchyId() hierarchy}.\n\nThe authenticated user must have REPO_READ permission for the \"from\" and \"to\"repositories to call this resource.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/pullRequest"
+              }
+            }
+          }
+        },
+        "tags": [
+          "pullRequests"
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "integer"
+          },
+          "name": "pullRequestId",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get pull request",
+        "tags": [
+          "pullRequests"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pullRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getPullRequest",
+        "parameters": [],
+        "description": "This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nRetrieve a pull request.\n\nThe authenticated user must have REPO_READ permission for the repository that this pull request targets to call this resource.\n"
+      },
+      "put": {
+        "summary": "Update pull request",
+        "operationId": "updatePullRequest",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pullRequest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "description": "Update the title, description, reviewers or destination branch of an existing pull request.\n\nNote: the reviewers list may be updated using this resource. However the author and participants list may not.\n\nThe authenticated user must either:\n* be the author of the pull request and have the REPO_READ permission for the repository that this pull request targets; or\n* have the REPO_WRITE permission for the repository that this pull request targets\nto call this resource.\n",
+        "tags": [
+          "pullRequests"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/pullRequestUpdate"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete pull request",
+        "operationId": "deletePullRequest",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "description": "This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nDeletes a pull request.\n\nTo call this resource, users must be authenticated and have permission to view the pull request. Additionally, they must:\n\nbe the pull request author, if the system is configured to allow authors to delete their own pull requests (this is the default) OR\nhave repository administrator permission for the repository the pull request is targeting\nA body containing the version of the pull request must be provided with this request.",
+        "tags": [
+          "pullRequests"
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}.diff": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "integer"
+          },
+          "name": "pullRequestId",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get PR Diff",
+        "tags": [
+          "pullRequests"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getDiff",
+        "description": "This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nStreams the raw diff for a pull request.\n\nThe authenticated user must have REPO_READ permission for the repository that this pull request targets to call this resource.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "default": -1
+            },
+            "in": "query",
+            "name": "contextLines",
+            "description": "the number of context lines to include around added/removed lines in the diff"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ignore-all"
+              ]
+            },
+            "in": "query",
+            "name": "whitespaces",
+            "description": "optional whitespace flag which can be set to ignore-all"
+          }
+        ]
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}.patch": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "pullRequestId",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get PR Patch",
+        "tags": [
+          "pullRequests"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-rest-api-1.0-projects-projectKey-repos-repositorySlug-pull-requests-pullRequestId-.patch",
+        "description": "This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nStreams a patch representing a pull request.\n\nThe authenticated user must have REPO_READ permission for the repository that this pull request targets to call this resource.\n"
+      }
+    },
+    "/rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/default-branch": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get default branch",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/defaultBranch"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getConfiguredDefaultBranch",
+        "description": "This is a paged API. This API can also be invoked via a user-centric URL when addressing repositories in personal projects.\n\nRetrieves the repository's configured default branch.\n\nEvery repository has a configured default branch, but that branch may not actually exist in the repository. For example, a newly-created repository will have a configured default branch even though no branches have been pushed yet.\n\nThe authenticated user must have REPO_READ permission for the specified repository to call this resource.",
+        "tags": [
+          "repositories"
+        ]
+      }
+    },
+    "/rest/branch-utils/1.0/projects/{projectKey}/repos/{repositorySlug}/branches": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "post": {
+        "summary": "Delete branch",
+        "operationId": "createBranch",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/branch"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "description": "Creates a branch in the specified repository.\n\nThe authenticated user must have an effective REPO_WRITE permission to call this resource. If branch permissions are set up in the repository, the authenticated user must also have access to the branch name that is to be created.",
+        "tags": [
+          "branches"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/createBranch"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "",
+        "operationId": "deleteBranch",
+        "responses": {
+          "204": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "description": "Deletes a branch in the specified repository.\n\nIf the branch does not exist, this operation will not raise an error. In other words after calling this resource and receiving a 204 response the branch provided in the request is guaranteed to not exist in the specified repository any more, regardless of its existence beforehand.\n\nThe optional 'endPoint' parameter of the request may contain a commit ID that the provided ref name is expected to point to. Should the ref point to a different commit ID, a 400 response will be returned with appropriate error details.\n\nThe authenticated user must have an effective REPO_WRITE permission to call this resource. If branch permissions are set up in the repository, the authenticated user must also have access to the branch name that is to be deleted.",
+        "tags": [
+          "branches"
+        ]
+      }
+    },
+    "/rest/default-reviewers/1.0/projects/{projectKey}/repos/{repositorySlug}/reviewers": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "projectKey",
+          "in": "path",
+          "required": true
+        },
+        {
+          "schema": {
+            "type": "string"
+          },
+          "name": "repositorySlug",
+          "in": "path",
+          "required": true
+        }
+      ],
+      "get": {
+        "summary": "Get default reviewers",
+        "tags": [
+          "pullRequests"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/user"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getDefaultReviewers",
+        "description": "Return a set of users who are required reviewers for pull requests created from the given source repository and ref to the given target ref in this repository.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "sourceRepoId",
+            "required": true,
+            "description": "The ID of the repository in which the source ref exists"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "targetRepoId",
+            "required": true,
+            "description": "The ID of the repository in which the target ref exists"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "sourceRefId",
+            "required": true,
+            "description": "The ID of the source ref"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "targetRefId",
+            "description": "The ID of the target ref\n"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "page": {
+        "title": "page",
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "start": {
+            "type": "integer"
+          },
+          "isLastPage": {
+            "type": "boolean"
+          },
+          "nextPageStart": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "size",
+          "limit",
+          "start",
+          "isLastPage"
+        ]
+      },
+      "project": {
+        "title": "project",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "self": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/link"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "description",
+          "public",
+          "type"
+        ]
+      },
+      "projectsPage": {
+        "title": "projects",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/page"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/project"
+                }
+              }
+            },
+            "required": [
+              "values"
+            ]
+          }
+        ],
+        "x-examples": {
+          "Example": {
+            "size": 1,
+            "limit": 25,
+            "isLastPage": true,
+            "values": [
+              {
+                "key": "PRJ",
+                "id": 1,
+                "name": "My Cool Project",
+                "description": "The description for my cool project.",
+                "public": true,
+                "type": "NORMAL",
+                "links": {
+                  "self": [
+                    {
+                      "href": "http://link/to/project"
+                    }
+                  ]
+                }
+              }
+            ],
+            "start": 0
+          }
+        },
+        "description": "A page of projects."
+      },
+      "errors": {
+        "title": "errors",
+        "type": "object",
+        "x-examples": {
+          "example": {
+            "errors": [
+              {
+                "context": null,
+                "message": "A detailed error message.",
+                "exceptionName": null
+              }
+            ]
+          }
+        },
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "context": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "exceptionName": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "repository": {
+        "title": "repository",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "hierarchyId": {
+            "type": "string"
+          },
+          "scmId": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "statusMessage": {
+            "type": "string"
+          },
+          "forkable": {
+            "type": "boolean"
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "project": {
+            "$ref": "#/components/schemas/project"
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "clone": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/link"
+                }
+              },
+              "self": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/link"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "description",
+          "forkable",
+          "public",
+          "project"
+        ]
+      },
+      "link": {
+        "title": "link",
+        "type": "object",
+        "properties": {
+          "href": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "href"
+        ]
+      },
+      "repositoriesPage": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/page"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/repository"
+                }
+              }
+            },
+            "required": [
+              "values"
+            ]
+          }
+        ],
+        "title": "repositoriesPage"
+      },
+      "branch": {
+        "title": "branch",
+        "type": "object",
+        "x-examples": {
+          "branch": {
+            "id": "refs/heads/master",
+            "displayId": "master",
+            "type": "BRANCH",
+            "latestCommit": "8d51122def5632836d1cb1026e879069e10a1e13",
+            "latestChangeset": "8d51122def5632836d1cb1026e879069e10a1e13",
+            "isDefault": true
+          }
+        },
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "BRANCH"
+            ]
+          },
+          "latestCommit": {
+            "type": "string",
+            "pattern": "[A-Fa-f0-9]+"
+          },
+          "latestChangeset": {
+            "type": "string",
+            "pattern": "[A-Fa-f0-9]+"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/branchMetadata"
+          }
+        },
+        "required": [
+          "id",
+          "displayId",
+          "type",
+          "latestCommit",
+          "latestChangeset",
+          "isDefault"
+        ]
+      },
+      "branchesPage": {
+        "title": "branches",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/page"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/branch"
+                }
+              }
+            },
+            "required": [
+              "values"
+            ]
+          }
+        ]
+      },
+      "file": {
+        "title": "file",
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "integer"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "isLastPage": {
+            "type": "boolean"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "directory": {
+        "title": "directory",
+        "type": "object",
+        "properties": {
+          "path": {
+            "$ref": "#/components/schemas/path"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "children": {
+            "$ref": "#/components/schemas/children"
+          }
+        }
+      },
+      "path": {
+        "title": "path",
+        "type": "object",
+        "properties": {
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "parent": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "extension": {
+            "type": "string"
+          },
+          "toString": {
+            "type": "string"
+          }
+        }
+      },
+      "fileOrDirectory": {
+        "title": "fileOrDirectory",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/file"
+          },
+          {
+            "$ref": "#/components/schemas/directory"
+          }
+        ]
+      },
+      "children": {
+        "title": "children",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/page"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "$ref": "#/components/schemas/path"
+                    },
+                    "contentId": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "FILE"
+                      ]
+                    },
+                    "size": {
+                      "type": "string"
+                    },
+                    "node": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "postWebhook": {
+        "properties": {
+          "branchCreated": {
+            "type": "boolean"
+          },
+          "branchDeleted": {
+            "type": "boolean"
+          },
+          "branchesToIgnore": {
+            "type": "string"
+          },
+          "buildStatus": {
+            "type": "boolean"
+          },
+          "committersToIgnore": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "prCommented": {
+            "type": "boolean"
+          },
+          "prCreated": {
+            "type": "boolean"
+          },
+          "prDeclined": {
+            "type": "boolean"
+          },
+          "prMerged": {
+            "type": "boolean"
+          },
+          "prReopened": {
+            "type": "boolean"
+          },
+          "prRescoped": {
+            "type": "boolean"
+          },
+          "prUpdated": {
+            "type": "boolean"
+          },
+          "repoPush": {
+            "type": "boolean"
+          },
+          "tagCreated": {
+            "type": "boolean"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "url",
+          "committersToIgnore",
+          "branchesToIgnore",
+          "enabled"
+        ],
+        "title": "Post Webhook",
+        "type": "object",
+        "x-examples": {
+          "example": {
+            "id": 1136,
+            "title": "Jenkins hook",
+            "url": "https://jenkins.core.build.vwn.cloud/bitbucket-scmsource-hook/notify",
+            "committersToIgnore": "",
+            "branchesToIgnore": "",
+            "enabled": true,
+            "tagCreated": false,
+            "branchDeleted": true,
+            "branchCreated": true,
+            "repoPush": true,
+            "prDeclined": true,
+            "prRescoped": true,
+            "prMerged": true,
+            "prReopened": true,
+            "prUpdated": true,
+            "prCreated": true,
+            "prCommented": false,
+            "buildStatus": false
+          }
+        }
+      },
+      "buildStatus": {
+        "title": "buildStatus",
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "SUCCESSFUL",
+              "FAILED",
+              "INPROGRESS"
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "key",
+          "name",
+          "url",
+          "description"
+        ],
+        "x-examples": {
+          "example-1": {
+            "state": "SUCCESSFUL",
+            "key": "REPO-MASTER",
+            "name": "REPO-MASTER-42",
+            "url": "https://bamboo.example.com/browse/REPO-MASTER-42",
+            "description": "Changes by John Doe"
+          }
+        }
+      },
+      "commit": {
+        "title": "commit",
+        "type": "object",
+        "x-examples": {
+          "example": {
+            "id": "abcdef0123abcdef4567abcdef8987abcdef6543",
+            "displayId": "abcdef0123a",
+            "author": {
+              "name": "charlie",
+              "emailAddress": "charlie@example.com"
+            },
+            "authorTimestamp": 1597071215598,
+            "committer": {
+              "name": "charlie",
+              "emailAddress": "charlie@example.com"
+            },
+            "committerTimestamp": 1597071215598,
+            "message": "WIP on feature 1",
+            "parents": [
+              {
+                "id": "abcdef0123abcdef4567abcdef8987abcdef6543",
+                "displayId": "abcdef0"
+              }
+            ]
+          }
+        },
+        "description": "A commit",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayId": {
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/user"
+          },
+          "authorTimestamp": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "commiter": {
+            "$ref": "#/components/schemas/user"
+          },
+          "commiterTimestamp": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "message": {
+            "type": "string"
+          },
+          "parents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "displayId": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "id",
+          "displayId",
+          "author",
+          "authorTimestamp",
+          "commiter",
+          "commiterTimestamp",
+          "message"
+        ]
+      },
+      "commitsPage": {
+        "title": "commits",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/page"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/commit"
+                }
+              },
+              "authorCount": {
+                "type": "integer"
+              },
+              "totalCount": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "values"
+            ]
+          }
+        ],
+        "description": "A list of commits"
+      },
+      "createRepository": {
+        "title": "createRepository",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "scmId": {
+            "type": "string",
+            "default": "git",
+            "enum": [
+              "git",
+              "mercurial"
+            ]
+          },
+          "forkable": {
+            "type": "boolean"
+          },
+          "defaultBranch": {
+            "type": "string"
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "x-examples": {
+          "example": {
+            "value": {
+              "name": "My repo",
+              "scmId": "git",
+              "forkable": true,
+              "defaultBranch": "main"
+            }
+          }
+        }
+      },
+      "webhook": {
+        "title": "webhook",
+        "type": "object",
+        "x-examples": {
+          "example-1": {
+            "id": 10,
+            "name": "Webhook Name",
+            "createdDate": 1513106011000,
+            "updatedDate": 1513106011000,
+            "events": [
+              "repo:refs_changed",
+              "repo:modified"
+            ],
+            "configuration": {
+              "secret": "password"
+            },
+            "url": "http://example.com",
+            "active": true
+          }
+        },
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createDate": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updatedDate": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "events": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/webhookEvent"
+            }
+          },
+          "configuration": {
+            "type": "object",
+            "properties": {
+              "secret": {
+                "type": "string"
+              }
+            }
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "events",
+          "url"
+        ]
+      },
+      "webhookEvent": {
+        "type": "string",
+        "title": "webhookEvent",
+        "enum": [
+          "repo:refs_changed",
+          "repo:comment:added",
+          "repo:modified",
+          "repo:forked",
+          "repo:comment:edited",
+          "repo:comment:deleted",
+          "mirror:repo_synchronized",
+          "pr:opened",
+          "pr:from_ref_updated",
+          "pr:modified",
+          "pr:reviewer:updated",
+          "pr:reviewer:approved",
+          "pr:reviewer:unapproved",
+          "pr:reviewer:needs_work",
+          "pr:merged",
+          "pr:declined",
+          "pr:deleted",
+          "pr:comment:added",
+          "pr:comment:edited",
+          "pr:comment:deleted"
+        ]
+      },
+      "webhooksPage": {
+        "title": "webhooks",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/page"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/webhook"
+                }
+              }
+            },
+            "required": [
+              "values"
+            ]
+          }
+        ],
+        "description": "A list of webhooks"
+      },
+      "buildStatusPage": {
+        "title": "buildStatusPage",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/page"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/buildStatus"
+                }
+              }
+            },
+            "required": [
+              "values"
+            ]
+          }
+        ]
+      },
+      "branchMetadata": {
+        "title": "branchMetadata",
+        "type": "object",
+        "properties": {
+          "com.atlassian.bitbucket.server.bitbucket-branch:ahead-behind-metadata-provider": {
+            "$ref": "#/components/schemas/branchMetadataAheadBehind"
+          },
+          "com.atlassian.bitbucket.server.bitbucket-branch:latest-commit-metadata": {
+            "$ref": "#/components/schemas/commit"
+          },
+          "com.atlassian.bitbucket.server.bitbucket-build:build-status-metadata": {
+            "$ref": "#/components/schemas/branchMetadataBuildStatus"
+          },
+          "com.atlassian.bitbucket.server.bitbucket-ref-metadata:outgoing-pull-request-metadata": {
+            "$ref": "#/components/schemas/branchMetadataOutgoingPullRequest"
+          },
+          "com.atlassian.bitbucket.server.bitbucket-jira:branch-list-jira-issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/branchMetadataJiraIssue"
+            }
+          }
+        }
+      },
+      "branchMetadataAheadBehind": {
+        "title": "branchMetadataAheadBehind",
+        "type": "object",
+        "properties": {
+          "ahead": {
+            "type": "integer"
+          },
+          "behind": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ahead",
+          "behind"
+        ]
+      },
+      "branchMetadataBuildStatus": {
+        "title": "branchMetadataBuildStatus",
+        "type": "object",
+        "properties": {
+          "successful": {
+            "type": "integer"
+          },
+          "inProgress": {
+            "type": "integer"
+          },
+          "failed": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "successful",
+          "inProgress",
+          "failed"
+        ]
+      },
+      "branchMetadataJiraIssue": {
+        "title": "branchMetadataJiraIssue",
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "url"
+        ]
+      },
+      "pullRequestsPage": {
+        "title": "pullRequests",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/page"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/pullRequest"
+                }
+              }
+            },
+            "required": [
+              "values"
+            ]
+          }
+        ],
+        "x-examples": {
+          "example-1": {}
+        }
+      },
+      "pullRequest": {
+        "title": "pullRequest",
+        "type": "object",
+        "x-examples": {
+          "example-1": {}
+        },
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/pullRequestState"
+          },
+          "open": {
+            "type": "boolean"
+          },
+          "closed": {
+            "type": "boolean"
+          },
+          "createdDate": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updatedDate": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "fromRef": {
+            "$ref": "#/components/schemas/repositoryRef"
+          },
+          "toRef": {
+            "$ref": "#/components/schemas/repositoryRef"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "author": {
+            "$ref": "#/components/schemas/userRole"
+          },
+          "reviewers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/userRole"
+            }
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/userRole"
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "self": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/link"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "fromRef",
+          "toRef"
+        ]
+      },
+      "user": {
+        "title": "user",
+        "type": "object",
+        "x-examples": {
+          "example-1": {
+            "name": "jcitizen",
+            "emailAddress": "jane@example.com",
+            "id": 101,
+            "displayName": "Jane Citizen",
+            "active": true,
+            "slug": "jcitizen",
+            "type": "NORMAL",
+            "directoryName": "Bitbucket Internal Directory",
+            "deletable": true,
+            "lastAuthenticationTimestamp": 1368145580548,
+            "mutableDetails": true,
+            "mutableGroups": true
+          }
+        },
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "emailAddress": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "userRole": {
+        "title": "userRole",
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/user"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "PARTICIPANT",
+              "REVIEWER",
+              "AUTHOR"
+            ]
+          },
+          "approved": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UNAPPROVED",
+              "APPROVED"
+            ]
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "repositoryRef": {
+        "title": "repositoryRef",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "repository": {
+            "type": "object",
+            "required": [
+              "slug",
+              "project"
+            ],
+            "properties": {
+              "slug": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "project": {
+                "type": "object",
+                "required": [
+                  "key"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "id",
+          "repository"
+        ]
+      },
+      "pullRequestState": {
+        "type": "string",
+        "title": "pullRequestState",
+        "enum": [
+          "OPEN",
+          "MERGED",
+          "DECLINED"
+        ]
+      },
+      "pullRequestUpdate": {
+        "title": "pullRequestUpdate",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "reviewers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/userRole"
+            }
+          },
+          "toRef": {
+            "$ref": "#/components/schemas/repositoryRef"
+          }
+        }
+      },
+      "pullRequestDelete": {
+        "title": "pullRequestDelete",
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "defaultBranch": {
+        "title": "defaultBranch",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "displayId",
+          "type"
+        ]
+      },
+      "branchMetadataOutgoingPullRequest": {
+        "title": "branchMetadataOutgoingPullRequest",
+        "oneOf": [
+          {
+            "properties": {
+              "pullRequest": {
+                "$ref": "#/components/schemas/pullRequest"
+              }
+            },
+            "required": [
+              "pullRequest"
+            ]
+          },
+          {
+            "properties": {
+              "open": {
+                "type": "integer"
+              },
+              "merged": {
+                "type": "integer"
+              },
+              "declined": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "open",
+              "merged",
+              "declined"
+            ]
+          }
+        ],
+        "type": "object"
+      },
+      "createBranch": {
+        "title": "createBranch",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "startPoint": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "startPoint"
+        ]
+      },
+      "deleteBranch": {
+        "title": "deleteBranch",
+        "type": "object",
+        "x-examples": {
+          "example-1": {
+            "name": "refs/heads/my-branch",
+            "dryRun": false,
+            "endPoint": "master"
+          }
+        },
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "dryRun": {
+            "type": "boolean"
+          },
+          "endPoint": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "dryRun"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "usernamePassword": {
+        "type": "http",
+        "scheme": "basic",
+        "description": ""
+      }
+    }
+  }
+}

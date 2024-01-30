@@ -1,0 +1,368 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://www.cornutum.org/tcases/system-input-schema.json",
+    "title": "System Input Model",
+    "description": "Defines the input space for a system (version: 4.0.1)",
+
+    "type": "object",
+    "properties": {
+        "system": {
+            "type": "string"
+        },
+        "has": {
+            "$ref": "#/definitions/annotation"
+        }
+    },
+    "required": [ "system" ],
+    "additionalProperties": {
+        "$ref": "#/definitions/function"
+    },
+
+    "definitions": {
+        "annotation": {
+            "description": "Defines a set of output annotations",
+            "type": "object",
+            "patternProperties": {
+                ".": {
+                    "type": "string"
+                }
+            },
+            "minProperties": 1
+        },
+        "function": {
+            "description": "Defines the input space for a system function",
+            "type": "object",
+            "properties": {
+                "has": {
+                    "$ref": "#/definitions/annotation"
+                }
+            },
+            "additionalProperties": {
+                "$ref": "#/definitions/inputDef"
+            }
+        },
+        "inputDef": {
+            "description": "Defines a collection of input variables of the same type",
+            "type": "object",
+            "properties": {
+                "has": {
+                    "$ref": "#/definitions/annotation"
+                }
+            },
+            "additionalProperties": {
+                "$ref": "#/definitions/varDef"
+            }
+        },
+        "varDef": {
+            "type": "object",
+            "properties": {
+                "has": {
+                    "$ref": "#/definitions/annotation"
+                },
+                "when": {
+                    "$ref": "#/definitions/condition"
+                },
+                "values": {
+                    "type": "object",
+                    "minProperties": 0,
+                    "patternProperties": {
+                        ".": {
+                            "$ref": "#/definitions/valueDef"
+                        }
+                    }
+                },
+                "members": {
+                    "type": "object",
+                    "minProperties": 1,
+                    "patternProperties": {
+                        ".": {
+                            "$ref": "#/definitions/varDef"
+                        }
+                    }
+                }
+            },
+            "oneOf": [
+                {
+                    "required": [ "values" ],
+                    "properties": {
+                        "members": false
+                    },
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/schema"
+                        }
+                    ]
+                },
+                {
+                    "required": [ "members" ],
+                    "properties": {
+                        "values": false
+                    }
+                },
+                {
+                    "properties": {
+                        "values": false,
+                        "members": false
+                    },
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/schema"
+                        }
+                    ]
+                }
+            ]
+        },
+        "valueDef": {
+            "description": "Defines a value for an input variable",
+            "type": "object",
+            "properties": {
+                "has": {
+                    "$ref": "#/definitions/annotation"
+                },
+                "when": {
+                    "$ref": "#/definitions/condition"
+                },
+                "failure": {
+                    "type": "boolean"
+                },
+                "once": {
+                    "type": "boolean"
+                },
+                "properties": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "allOf": [
+                {
+                    "$ref": "#/definitions/schema"
+                }
+            ]
+        },
+        "condition": {
+            "description": "Defines a constraint on the values allowed for an input variable",
+            "type": "object",
+            "properties": {
+                "hasAll": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "hasAny": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "hasNone": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "allOf": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "$ref": "#/definitions/condition"
+                    }
+                },
+                "anyOf": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "$ref": "#/definitions/condition"
+                    }
+                },
+                "not": {
+                    "$ref": "#/definitions/condition"
+                },
+                "lessThan": {
+                    "type": "object",
+                    "properties": {
+                        "property": {
+                            "type": "string"
+                        },
+                        "max": {
+                            "type": "integer",
+                            "minimum": 0
+                        } 
+                    },
+                    "required": [ "property", "max" ]
+                },
+                "notLessThan": {
+                    "type": "object",
+                    "properties": {
+                        "property": {
+                            "type": "string"
+                        },
+                        "min": {
+                            "type": "integer",
+                            "minimum": 0
+                        } 
+                    },
+                    "required": [ "property", "min" ]
+                },
+                "moreThan": {
+                    "type": "object",
+                    "properties": {
+                        "property": {
+                            "type": "string"
+                        },
+                        "min": {
+                            "type": "integer",
+                            "minimum": 0
+                        } 
+                    },
+                    "required": [ "property", "min" ]
+                },
+                "notMoreThan": {
+                    "type": "object",
+                    "properties": {
+                        "property": {
+                            "type": "string"
+                        },
+                        "max": {
+                            "type": "integer",
+                            "minimum": 0
+                        } 
+                    },
+                    "required": [ "property", "max" ]
+                },
+                "equals": {
+                    "type": "object",
+                    "properties": {
+                        "property": {
+                            "type": "string"
+                        },
+                        "count": {
+                            "type": "integer",
+                            "minimum": 0
+                        } 
+                    },
+                    "required": [ "property", "count" ]
+                },
+                "between": {
+                    "type": "object",
+                    "properties": {
+                        "property": {
+                            "type": "string"
+                        },
+                        "min": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "exclusiveMin": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "max": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "exclusiveMax": {
+                            "type": "integer",
+                            "minimum": 0
+                        } 
+                    },
+                    "required": [ "property" ],
+                    "minProperties": 3,
+                    "maxProperties": 3,
+                    "dependencies": {
+                        "min": {
+                            "properties": {
+                                "exclusiveMin": false
+                            }
+                        },
+                        "max": {
+                            "properties": {
+                                "exclusiveMax": false
+                            }
+                        }
+                    }
+                }
+            },
+            "minProperties": 1,
+            "maxProperties": 1,
+            "additionalProperties": false
+        },
+        "schema": {
+            "description": "Defines requirements for the values allowed for an input variable",
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [ "array", "boolean", "integer", "number", "string"]
+                },
+                "const": {
+                    "$ref": "#/definitions/const"
+                },
+                "enum": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "$ref": "#/definitions/const"
+                    }
+                },
+                "format": {
+                    "type": "string"
+                },
+                "minimum": {
+                    "type": "number"
+                },
+                "maximum": {
+                    "type": "number"
+                },
+                "exclusiveMinimum": {
+                    "type": "number"
+                },
+                "exclusiveMaximum": {
+                    "type": "number"
+                },
+                "multipleOf": {
+                    "type": "number"
+                },
+                "minLength": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "maxLength": {
+                    "type": "integer"
+                },
+                "pattern": {
+                    "type": "string"
+                },
+                "minItems": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "maxItems": {
+                    "type": "integer"
+                },
+                "uniqueItems": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "$ref": "#/definitions/schema"
+                }
+            }
+        },
+        "const": {
+            "description": "A constant data value",
+            "type": [ "array", "boolean", "integer", "number", "string", "null"]
+        }
+    }
+}
