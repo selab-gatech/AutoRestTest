@@ -179,11 +179,11 @@ class SpecificationParser:
             http_method=http_method
         )
 
-        operation_properties.parameters = self.process_parameters(operation_details.get('parameters'))
+        operation_properties.parameters = self.process_parameters(parameter_list=operation_details.get('parameters'))
 
         if operation_details.get('requestBody'):
             operation_properties.request_body = True
-            operation_properties.request_body_properties = self.process_request_body(operation_details.get('requestBody'))
+            operation_properties.request_body_properties = self.process_request_body(request_body=operation_details.get('requestBody'))
             # add response details if need-be here
 
         # maybe add security details?
