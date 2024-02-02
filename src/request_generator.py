@@ -1,11 +1,13 @@
 import random
 import string
+import requests
 from src.specification_parser import SpecificationParser
 
 class RequestsGenerator:
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, api_url: str):
         self.file_path = file_path
+        self.api_url = api_url
 
     def randomize_parameters(self, parameter_dict):
         """
@@ -31,6 +33,39 @@ class RequestsGenerator:
         ]
         return random.choice(generators)()
 
+    def send_request(self, endpoint_path, http_method, query_parameters):
+        """
+        Send the request to the API.
+        """
+
+        if http_method == "get":
+            try:
+                response = requests.get(self.api_url + endpoint_path, params=query_parameters)
+            except requests.exceptions.RequestException as e:
+                return None
+
+        elif http_method == "post":
+            try:
+                response = requests.post(self.api_url + endpoint_path, params=query_parameters)
+            except requests.exceptions.RequestException as e:
+                return None
+
+        elif http_method == "put":
+            try:
+                response = requests.put(self.api_url + endpoint_path, params=query_parameters)
+            except requests.exceptions.RequestException as e:
+                return None
+
+        elif http_method == "delete":
+            try:
+                response = requests.delete(self.api_url + endpoint_path, params=query_parameters)
+            except requests.exceptions.RequestException as e:
+                return None
+
+        else:
+            raise ValueError("Invalid HTTP method")
+
+        return response
 
     def process_operation(self, operation_properties):
         """
@@ -40,11 +75,18 @@ class RequestsGenerator:
         http_method = operation_properties.http_method
         selected_parameters = self.randomize_parameters(operation_properties.parameters)
 
+        if operation_properties.request_body:
+            # WIP process req body
+            pass
+
         query_parameters = []
         for parameter_name, parameter_values in selected_parameters:
             randomized_value = self.randomize_parameter_value()
-            query_parameters.append({"parameter_name": parameter_name, "parameter_value": randomized_value})
-
+            query_parameters.append({
+                "parameter_name": parameter_name,
+                "parameter_value": randomized_value,
+                "in_value": parameter_values.in_value
+            })
 
     def requests_generate(self):
         """
