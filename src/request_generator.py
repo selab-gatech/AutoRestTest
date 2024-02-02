@@ -9,35 +9,10 @@ class RequestsGenerator:
         self.file_path = file_path
         self.api_url = api_url
 
-    def randomize_parameters(self, parameter_dict):
-        """
-        Randomly select parameters from the dictionary.
-        """
-        parameter_list = list(parameter_dict.items())
-        random_selection = random.sample(parameter_list, k=random.randint(0, len(parameter_list)))
-        # care: we allow for 0 parameters to be selected; check if this is okay
-        return random_selection
-
-    def randomize_parameter_value(self):
-        """
-        Randomly generate values of any type
-        """
-        generators = [
-            lambda: random.randint(-9999, 9999),
-            lambda: random.uniform(-9e99, 9e99),
-            lambda: random.choice([True, False]),
-            lambda: ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 9999))),
-            lambda: [random.randint(-9999, 9999) for _ in range(random.randint(1, 9999))],
-            lambda: {random.choice(string.ascii_letters): random.randint(-9999, 9999) for _ in range(random.randint(1, 9999))},
-            lambda: None
-        ]
-        return random.choice(generators)()
-
     def send_request(self, endpoint_path, http_method, query_parameters):
         """
         Send the request to the API.
         """
-
         if http_method == "get":
             try:
                 response = requests.get(self.api_url + endpoint_path, params=query_parameters)
@@ -66,6 +41,49 @@ class RequestsGenerator:
             raise ValueError("Invalid HTTP method")
 
         return response
+
+    def randomize_integer(self):
+        return random.randint(-9999, 9999)
+
+    def randomize_float(self):
+        return random.uniform(-9e99, 9e99)
+
+    def randomize_boolean(self):
+        return random.choice([True, False])
+
+    def randomize_string(self):
+        return ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 9999)))
+
+    def randomize_array(self):
+        return [random.randint(-9999, 9999) for _ in range(random.randint(1, 9999))]
+
+    def randomize_object(self):
+        return {random.choice(string.ascii_letters): random.randint(-9999, 9999) for _ in range(random.randint(1, 9999))}
+
+    def randomize_null(self):
+        return None
+
+    def randomize_parameter_value(self):
+        """
+        Randomly generate values of any type
+        """
+        generators = [self.randomize_integer,
+                      self.randomize_float,
+                      self.randomize_boolean,
+                      self.randomize_string,
+                      self.randomize_array,
+                      self.randomize_object,
+                      self.randomize_null]
+        return random.choice(generators)()
+
+    def randomize_parameters(self, parameter_dict):
+        """
+        Randomly select parameters from the dictionary.
+        """
+        parameter_list = list(parameter_dict.items())
+        random_selection = random.sample(parameter_list, k=random.randint(0, len(parameter_list)))
+        # care: we allow for 0 parameters to be selected; check if this is okay
+        return random_selection
 
     def process_operation(self, operation_properties):
         """
