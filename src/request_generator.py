@@ -93,9 +93,12 @@ class RequestsGenerator:
         http_method = operation_properties.http_method
         selected_parameters = self.randomize_parameters(operation_properties.parameters)
 
+        request_body_construct = {} 
         if operation_properties.request_body:
-            # WIP process req body
-            pass
+            for request_body_parameter_name, request_body_parameter_spec in operation_properties.request_body.items():
+                request_body_construct[request_body_parameter_name] = self.randomize_parameter_value()
+                
+
 
         query_parameters = []
         for parameter_name, parameter_values in selected_parameters:
