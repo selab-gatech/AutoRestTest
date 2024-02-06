@@ -8,7 +8,18 @@ class RequestsGenerator:
     def __init__(self, file_path: str, api_url: str):
         self.file_path = file_path
         self.api_url = api_url
+        self.successful_query_parameters = [] #list that will store successfuly query_parameters
+        self.status_code_counts = {} #dictionary to track status code occurrences
 
+    def process_response(self, response, query_parameters):
+    
+        if response:
+        # Increment the count for the received status code
+            self.status_code_counts[response.status_code] = self.status_code_counts.get(response.status_code, 0) + 1
+
+            if response.status_code >= 200 and response.status_code < 300:
+                self.successful_query_parameters.append(query_parameters)
+    
     def send_request(self, endpoint_path, http_method, query_parameters):
         """
         Send the request to the API.
@@ -18,29 +29,25 @@ class RequestsGenerator:
                 response = requests.get(self.api_url + endpoint_path, params=query_parameters)
             except requests.exceptions.RequestException as e:
                 return None
-
         elif http_method == "post":
             try:
                 response = requests.post(self.api_url + endpoint_path, params=query_parameters)
             except requests.exceptions.RequestException as e:
                 return None
-
         elif http_method == "put":
             try:
                 response = requests.put(self.api_url + endpoint_path, params=query_parameters)
             except requests.exceptions.RequestException as e:
                 return None
-
         elif http_method == "delete":
             try:
                 response = requests.delete(self.api_url + endpoint_path, params=query_parameters)
             except requests.exceptions.RequestException as e:
                 return None
-
         else:
             raise ValueError("Invalid HTTP method")
 
-        return response
+        return response, query_parameters
 
     def randomize_integer(self):
         return random.randint(-9999, 9999)
@@ -103,11 +110,25 @@ class RequestsGenerator:
         query_parameters = []
         for parameter_name, parameter_values in selected_parameters:
             randomized_value = self.randomize_parameter_value()
-            query_parameters.append({
-                "parameter_name": parameter_name,
-                "parameter_value": randomized_value,
-                "in_value": parameter_values.in_value
-            })
+            if parameter_values.get("in_value") == "path":
+                endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(randomized_value))
+            else:
+                query_parameters.append({
+                    "parameter_name": parameter_name,
+                    "parameter_value": randomized_value
+                })
+        
+        #converting query_parameters to a dictionary because send_request expects a dict
+        # query_parameters_dict = {}
+        # for parameter_name, parameter_values in selected_parameters:
+        #     randomized_value = self.randomize_parameter_value()
+        #     query_parameters_dict[parameter_name] = randomized_value
+        
+        #making request and storing return value in variables
+        response, used_query_parameters = self.send_request(endpoint_path, http_method, query_parameters)
+
+        #processing the response
+        self.process_response(response, used_query_parameters)
 
     def requests_generate(self):
         """
