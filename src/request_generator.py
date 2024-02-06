@@ -29,25 +29,21 @@ class RequestsGenerator:
                 response = requests.get(self.api_url + endpoint_path, params=query_parameters)
             except requests.exceptions.RequestException as e:
                 return None
-
         elif http_method == "post":
             try:
                 response = requests.post(self.api_url + endpoint_path, params=query_parameters)
             except requests.exceptions.RequestException as e:
                 return None
-
         elif http_method == "put":
             try:
                 response = requests.put(self.api_url + endpoint_path, params=query_parameters)
             except requests.exceptions.RequestException as e:
                 return None
-
         elif http_method == "delete":
             try:
                 response = requests.delete(self.api_url + endpoint_path, params=query_parameters)
             except requests.exceptions.RequestException as e:
                 return None
-
         else:
             raise ValueError("Invalid HTTP method")
 
@@ -111,11 +107,13 @@ class RequestsGenerator:
         query_parameters = []
         for parameter_name, parameter_values in selected_parameters:
             randomized_value = self.randomize_parameter_value()
-            query_parameters.append({
-                "parameter_name": parameter_name,
-                "parameter_value": randomized_value,
-                "in_value": parameter_values.in_value
-            })
+            if parameter_values.get("in_value") == "path":
+                endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(randomized_value))
+            else:
+                query_parameters.append({
+                    "parameter_name": parameter_name,
+                    "parameter_value": randomized_value
+                })
         
         #converting query_parameters to a dictionary because send_request expects a dict
         # query_parameters_dict = {}

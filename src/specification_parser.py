@@ -123,7 +123,6 @@ class SpecificationParser:
         """
         Process an individual parameter to return a ParameterProperties object.
         """
-
         parameter_properties = ParameterProperties(
             name=parameter.get('name'),
             in_value=parameter.get('in'),
