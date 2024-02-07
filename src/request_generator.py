@@ -13,9 +13,12 @@ class RequestsGenerator:
 
     def process_response(self, response, query_parameters):
     
-        if response:
+        if response is not None:
         # Increment the count for the received status code
-            self.status_code_counts[response.status_code] = self.status_code_counts.get(response.status_code, 0) + 1
+            if response.status_code in self.status_code_counts:
+                self.status_code_counts[response.status_code] += 1
+            else:
+                self.status_code_counts[response.status_code] = 1
 
             if response.status_code >= 200 and response.status_code < 300:
                 self.successful_query_parameters.append(query_parameters)
@@ -125,7 +128,9 @@ class RequestsGenerator:
         
         #making request and storing return value in variables
         response, used_query_parameters = self.send_request(endpoint_path, http_method, query_parameters)
-
+        print("Response -->")
+        print(response.status_code)
+        print("End Response-->")
         #processing the response
         self.process_response(response, used_query_parameters)
 
