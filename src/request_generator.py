@@ -83,7 +83,7 @@ class RequestsGenerator:
                       self.randomize_null]
         return random.choice(generators)()
 
-    def randomize_parameters(self, parameter_dict):
+    def randomize_parameters(self, parameter_dict) -> list:
         """
         Randomly select parameters from the dictionary.
         """
@@ -104,16 +104,14 @@ class RequestsGenerator:
             # WIP process req body
             pass
 
-        query_parameters = []
+        query_parameters = {}
         for parameter_name, parameter_values in selected_parameters:
             randomized_value = self.randomize_parameter_value()
-            if parameter_values.get("in_value") == "path":
+            if parameter_values.in_value == "path":
                 endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(randomized_value))
             else:
-                query_parameters.append({
-                    "parameter_name": parameter_name,
-                    "parameter_value": randomized_value
-                })
+                query_parameters[parameter_name] = randomized_value
+
         
         #converting query_parameters to a dictionary because send_request expects a dict
         # query_parameters_dict = {}
