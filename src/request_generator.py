@@ -1,53 +1,49 @@
 import random
 import string
+from dataclasses import dataclass
+
 import requests
 from specification_parser import SpecificationParser
 
-class RequestsGenerator:
+@dataclass
+class RequestData:
+    endpoint_path: str
+    http_method: str
+    parameters: dict
+    request_body: dict
 
+class RequestsGenerator:
     def __init__(self, file_path: str, api_url: str):
         self.file_path = file_path
         self.api_url = api_url
-        self.successful_query_parameters = [] #list that will store successfuly query_parameters
-        self.status_code_counts = {} #dictionary to track status code occurrences
+        self.successful_query_data = [] # list that will store successfuly query_parameters
+        self.status_code_counts = {} # dictionary to track status code occurrences
 
-    def process_response(self, response, query_parameters):
-    
-        if response:
+    def process_response(self, response, endpoint_path, http_method, query_parameters, request_body=None):
         # Increment the count for the received status code
-            self.status_code_counts[response.status_code] = self.status_code_counts.get(response.status_code, 0) + 1
+        self.status_code_counts[response.status_code] = self.status_code_counts.get(response.status_code, 0) + 1
+        if response.status_code // 100 == 2:
+            self.successful_query_data.append(RequestData(
+                endpoint_path=endpoint_path,
+                http_method=http_method,
+                parameters=query_parameters,
+                request_body=request_body
+            ))
 
-            if response.status_code >= 200 and response.status_code < 300:
-                self.successful_query_parameters.append(query_parameters)
-    
-    def send_request(self, endpoint_path, http_method, query_parameters):
+    def send_request(self, endpoint_path, http_method, query_parameters, request_body=None):
         """
         Send the request to the API.
         """
-        if http_method == "get":
-            try:
-                response = requests.get(self.api_url + endpoint_path, params=query_parameters)
-            except requests.exceptions.RequestException as e:
-                return None
-        elif http_method == "post":
-            try:
-                response = requests.post(self.api_url + endpoint_path, params=query_parameters)
-            except requests.exceptions.RequestException as e:
-                return None
-        elif http_method == "put":
-            try:
-                response = requests.put(self.api_url + endpoint_path, params=query_parameters)
-            except requests.exceptions.RequestException as e:
-                return None
-        elif http_method == "delete":
-            try:
-                response = requests.delete(self.api_url + endpoint_path, params=query_parameters)
-            except requests.exceptions.RequestException as e:
-                return None
-        else:
-            raise ValueError("Invalid HTTP method")
-
-        return response, query_parameters
+        try:
+            method = getattr(requests, http_method)
+            if http_method in {"put", "post"}:
+                response = method(self.api_url + endpoint_path, params=query_parameters, json=request_body)
+            else:
+                response = method(self.api_url + endpoint_path, params=query_parameters)
+        except requests.exceptions.RequestException:
+            print("Request failed")
+            return None
+        return response
 
     def randomize_integer(self):
         return random.randint(-9999, 9999)
@@ -91,7 +87,6 @@ class RequestsGenerator:
         random_selection = random.sample(parameter_list, k=random.randint(0, len(parameter_list)))
         # care: we allow for 0 parameters to be selected; check if this is okay
         return random_selection
-
     
     def process_operation(self, operation_properties):
         """
@@ -101,35 +96,24 @@ class RequestsGenerator:
         http_method = operation_properties.http_method
         selected_parameters = self.randomize_parameters(operation_properties.parameters)
 
+        request_body = {}
         if operation_properties.request_body:
-            # WIP process req body
-            pass
+            request_body = self.randomize_object()
 
         query_parameters = {}
-        # request_body_construct = {} 
-        # if operation_properties.request_body:
-        #     for request_body_parameter_name, _ in operation_properties.request_body.items():
-        #         request_body_construct[request_body_parameter_name] = self.randomize_parameter_value()
-
         for parameter_name, parameter_values in selected_parameters:
             randomized_value = self.randomize_parameter_value()
             if parameter_values.in_value == "path":
                 endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(randomized_value))
             else:
                 query_parameters[parameter_name] = randomized_value
-
         
-        #converting query_parameters to a dictionary because send_request expects a dict
-        # query_parameters_dict = {}
-        # for parameter_name, parameter_values in selected_parameters:
-        #     randomized_value = self.randomize_parameter_value()
-        #     query_parameters_dict[parameter_name] = randomized_value
-        
-        #making request and storing return value in variables
-        response, used_query_parameters = self.send_request(endpoint_path, http_method, query_parameters)
+        #making request and storing return value
+        response = self.send_request(endpoint_path, http_method, query_parameters, request_body)
 
-        #processing the response
-        self.process_response(response, used_query_parameters)
+        if response is not None:
+            #processing the response if request was successful
+            self.process_response(response, endpoint_path, http_method, query_parameters, request_body)
 
     def requests_generate(self):
         """
@@ -141,6 +125,7 @@ class RequestsGenerator:
         for operation_id, operation_properties in operations.items():
             self.process_operation(operation_properties)
         print("Generated Request!")
+
 #testing code
 if __name__ == "__main__":
     request_generator = RequestsGenerator(file_path="../specs/original/oas/genome-nexus.yaml", api_url="http://localhost:50110")
