@@ -1,7 +1,7 @@
 import random
 import string
 import requests
-from src.specification_parser import SpecificationParser
+from specification_parser import SpecificationParser
 
 class RequestsGenerator:
 
@@ -92,6 +92,7 @@ class RequestsGenerator:
         # care: we allow for 0 parameters to be selected; check if this is okay
         return random_selection
 
+    
     def process_operation(self, operation_properties):
         """
         Process the operation properties to generate the request.
@@ -100,17 +101,15 @@ class RequestsGenerator:
         http_method = operation_properties.http_method
         selected_parameters = self.randomize_parameters(operation_properties.parameters)
 
-        request_body_construct = {} 
-        if operation_properties.request_body:
-            for request_body_parameter_name, request_body_parameter_spec in operation_properties.request_body.items():
-                request_body_construct[request_body_parameter_name] = self.randomize_parameter_value()
+        # request_body_construct = {} 
+        # if operation_properties.request_body:
+        #     for request_body_parameter_name, _ in operation_properties.request_body.items():
+        #         request_body_construct[request_body_parameter_name] = self.randomize_parameter_value()
                 
-
-
         query_parameters = []
         for parameter_name, parameter_values in selected_parameters:
             randomized_value = self.randomize_parameter_value()
-            if parameter_values.get("in_value") == "path":
+            if parameter_values.in_value == "path":
                 endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(randomized_value))
             else:
                 query_parameters.append({
@@ -134,13 +133,15 @@ class RequestsGenerator:
         """
         Generate the randomized requests based on the specification file.
         """
+        print("Generating Request...")
         specification_parser = SpecificationParser(self.file_path)
         operations = specification_parser.parse_specification()
         for operation_id, operation_properties in operations.items():
             self.process_operation(operation_properties)
-
+        print("Generated Request!")
+#testing code
 if __name__ == "__main__":
-    request_generator = RequestsGenerator(file_path="../specs/original/oas/spotify.yaml")
+    request_generator = RequestsGenerator(file_path="../specs/original/oas/genome-nexus.yaml", api_url="http://localhost:50110")
     request_generator.requests_generate()
     #for i in range(10):
     #    print(request_generator.randomize_parameter_value())
