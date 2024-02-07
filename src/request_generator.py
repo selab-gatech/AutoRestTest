@@ -143,5 +143,7 @@ class RequestsGenerator:
 if __name__ == "__main__":
     request_generator = RequestsGenerator(file_path="../specs/original/oas/genome-nexus.yaml", api_url="http://localhost:50110")
     request_generator.requests_generate()
+    #generate histogram using self.status_code_counts
+    print(request_generator.status_code_counts)
     #for i in range(10):
     #    print(request_generator.randomize_parameter_value())
