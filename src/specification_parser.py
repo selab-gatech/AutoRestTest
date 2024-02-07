@@ -143,9 +143,10 @@ class SpecificationParser:
         Process the parameters list to return a Dictionary with all its properties and values.
         """
         parameters = {}
-        for parameter in parameter_list:
-            parameter_properties = self.process_parameter(parameter)
-            parameters.setdefault(parameter_properties.name, parameter_properties)
+        if parameter_list:
+            for parameter in parameter_list:
+                parameter_properties = self.process_parameter(parameter)
+                parameters.setdefault(parameter_properties.name, parameter_properties)
         return parameters
 
     def process_request_body(self, request_body) -> Dict[str, Dict[str, ItemProperties]]:
