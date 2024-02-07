@@ -177,8 +177,8 @@ class SpecificationParser:
             endpoint_path=endpoint_path,
             http_method=http_method
         )
-
-        operation_properties.parameters = self.process_parameters(parameter_list=operation_details.get('parameters'))
+        if operation_details.get("parameters"):
+            operation_properties.parameters = self.process_parameters(parameter_list=operation_details.get('parameters'))
 
         if operation_details.get('requestBody'):
             operation_properties.request_body = True
@@ -206,9 +206,10 @@ class SpecificationParser:
 
 if __name__ == "__main__":
     # testing
-    spec_parser = SpecificationParser("../specs/original/oas/spotify.yaml")
+    spec_parser = SpecificationParser("../specs/original/oas/genome-nexus.yaml")
     output = spec_parser.parse_specification()
-    print(output["endpoint-add-tracks-to-playlist"])
-    print(output["endpoint-get-playlist"])
-    print(output["endpoint-remove-tracks-playlist"])
+    print(output)
+    #print(output["endpoint-add-tracks-to-playlist"])
+    #print(output["endpoint-get-playlist"])
+    #print(output["endpoint-remove-tracks-playlist"])
     #spec_parser.parse_specification()
