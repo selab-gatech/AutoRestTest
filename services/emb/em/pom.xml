@@ -15,7 +15,6 @@
         <module>embedded</module>
     </modules>
 
-
     <dependencies>
         <dependency>
             <groupId>org.evomaster</groupId>
