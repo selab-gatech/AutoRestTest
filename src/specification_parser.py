@@ -12,7 +12,7 @@ class ItemProperties:
     type: Optional[str] = None
     format: Optional[str] = None
     description: Optional[str] = None
-    items: 'ItemProperties' = None
+    items: 'ItemProperties' = None #if it is an array
     properties: Dict[str, 'ItemProperties'] = None
     required: List[str] = field(default_factory=list)
     default: Optional[Union[str, int, float, bool, List, Dict]] = None
