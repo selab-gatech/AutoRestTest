@@ -258,6 +258,14 @@ class SpecificationParser:
 
         return self.all_specs
 
+    def json_spec_output(self, output_directory: Path, file_name: str, spec: Dict):
+        """
+        Create a testing JSON file from the specification parsing output.
+        """
+        output_file = output_directory / file_name
+        with output_file.open('w', encoding='utf-8') as file:
+            json.dump(spec, file, ensure_ascii=False, indent=4)
+
     def all_json_spec_output(self):
         """
         Create a testing JSON file from the specification parsing output.
@@ -268,9 +276,7 @@ class SpecificationParser:
         output_directory.mkdir(parents=True, exist_ok=True)
 
         for file_name, spec in all_specs.items():
-            output_file = output_directory / file_name
-            with output_file.open('w', encoding='utf-8') as file:
-                json.dump(spec, file, ensure_ascii=False, indent=4)
+            self.json_spec_output(output_directory, file_name, spec)
 
 if __name__ == "__main__":
     # testing
