@@ -218,4 +218,8 @@ if __name__ == "__main__":
     #print(output["endpoint-add-tracks-to-playlist"])
     #print(output["endpoint-get-playlist"])
     #print(output["endpoint-remove-tracks-playlist"])
+<<<<<<< HEAD
     #spec_parser.parse_specification()
+=======
+    #spec_parser.parse_specification()
+>>>>>>> req-gen
