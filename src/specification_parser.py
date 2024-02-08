@@ -1,3 +1,4 @@
+import os
 from typing import List, Dict, Optional, Union
 from dataclasses import dataclass, field
 import json
@@ -12,7 +13,7 @@ class ItemProperties:
     type: Optional[str] = None
     format: Optional[str] = None
     description: Optional[str] = None
-    items: 'ItemProperties' = None #if it is an array
+    items: 'ItemProperties' = None
     properties: Dict[str, 'ItemProperties'] = None
     required: List[str] = field(default_factory=list)
     default: Optional[Union[str, int, float, bool, List, Dict]] = None
@@ -149,7 +150,7 @@ class SpecificationParser:
                 parameters.setdefault(parameter_properties.name, parameter_properties)
         return parameters
 
-    def process_request_body(self, request_body) -> Dict[str, Dict[str, ItemProperties]]:
+    def process_request_body(self, request_body) -> Dict[str, ItemProperties]:
         """
         Process the request body to return a Dictionary with mime type and its properties and values.
         """
@@ -161,11 +162,7 @@ class SpecificationParser:
                 # if we need to check required list, do it here
                 schema = mime_details.get('schema')
                 if schema:
-                    properties = schema.get('properties')
-                    if properties:
-                        request_body_properties[mime_type] = self.process_parameter_object_properties(properties)
-                    else:
-                        request_body_properties[mime_type] = self.process_parameter_schema(schema)
+                    request_body_properties[mime_type] = self.process_parameter_schema(schema)
 
         return request_body_properties
 
@@ -178,8 +175,8 @@ class SpecificationParser:
             endpoint_path=endpoint_path,
             http_method=http_method
         )
-
-        operation_properties.parameters = self.process_parameters(parameter_list=operation_details.get('parameters'))
+        if operation_details.get("parameters"):
+            operation_properties.parameters = self.process_parameters(parameter_list=operation_details.get('parameters'))
 
         if operation_details.get('requestBody'):
             operation_properties.request_body = True
@@ -207,9 +204,18 @@ class SpecificationParser:
 
 if __name__ == "__main__":
     # testing
-    spec_parser = SpecificationParser("../specs/original/oas/spotify.yaml")
-    output = spec_parser.parse_specification()
-    print(output["endpoint-add-tracks-to-playlist"])
-    print(output["endpoint-get-playlist"])
-    print(output["endpoint-remove-tracks-playlist"])
+    DIRECTORY_PATH = '../specs/original/oas/'
+    for file_name in os.listdir(DIRECTORY_PATH):
+        print("Specification parsing for file: ", file_name)
+        file_path = os.path.join(DIRECTORY_PATH, file_name)
+        spec_parser = SpecificationParser(file_path)
+        output = spec_parser.parse_specification()
+        print("Output: " + str(output))
+
+    #spec_parser = SpecificationParser("../specs/original/oas/genome-nexus.yaml")
+    # output = spec_parser.parse_specification()
+    #print(output["fetchPostTranslationalModificationsByPtmFilterPOST"])
+    #print(output["endpoint-add-tracks-to-playlist"])
+    #print(output["endpoint-get-playlist"])
+    #print(output["endpoint-remove-tracks-playlist"])
     #spec_parser.parse_specification()

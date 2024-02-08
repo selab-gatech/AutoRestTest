@@ -109,6 +109,11 @@ class RequestsGenerator:
 
         if operation_properties.request_body:
                 parsed_request_body = operation_properties.request_body_properties
+                print("__BEGIN REQUEST BODY__")
+                print()
+                print(parsed_request_body)
+                print()
+                print("___END REQUEST BODY__")
                 #request_body = self.convert_request_body(parsed_request_body)
                 #two cases: parsed_request_body has structure: {MIMETYPE: ItemProperties} or 
                 #structure: {MIMETYPE: {KEY: ITEMPROPERTIES}}
