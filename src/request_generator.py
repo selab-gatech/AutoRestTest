@@ -14,7 +14,6 @@ class RequestsGenerator:
         self.status_code_counts = {} #dictionary to track status code occurrences
 
     def process_response(self, response, query_parameters):
-    
         if response is not None:
         # Increment the count for the received status code
             if response.status_code in self.status_code_counts:
@@ -106,16 +105,10 @@ class RequestsGenerator:
         http_method = operation_properties.http_method
         selected_parameters = self.randomize_parameters(operation_properties.parameters)
 
-
         if operation_properties.request_body:
                 parsed_request_body = operation_properties.request_body_properties
-                #request_body = self.convert_request_body(parsed_request_body)
-                #two cases: parsed_request_body has structure: {MIMETYPE: ItemProperties} or 
-                #structure: {MIMETYPE: {KEY: ITEMPROPERTIES}}
-                #either way you need to resolve ITEMPROPERTIES based on if it is an item or an array of items, or some other sturcture
-                unpacked_request_body = self.convert_request_body(parsed_request_body)
-                print(unpacked_request_body)
-
+                constructued_request_body = self.convert_request_body(parsed_request_body)
+        
         query_parameters = []
         for parameter_name, parameter_values in selected_parameters:
             randomized_value = self.randomize_parameter_value()
