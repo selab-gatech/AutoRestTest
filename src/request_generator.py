@@ -109,16 +109,13 @@ class RequestsGenerator:
 
         if operation_properties.request_body:
                 parsed_request_body = operation_properties.request_body_properties
-                print("__BEGIN REQUEST BODY__")
-                print()
-                print(parsed_request_body)
-                print()
-                print("___END REQUEST BODY__")
                 #request_body = self.convert_request_body(parsed_request_body)
                 #two cases: parsed_request_body has structure: {MIMETYPE: ItemProperties} or 
                 #structure: {MIMETYPE: {KEY: ITEMPROPERTIES}}
                 #either way you need to resolve ITEMPROPERTIES based on if it is an item or an array of items, or some other sturcture
-                
+                unpacked_request_body = self.convert_request_body(parsed_request_body)
+                print(unpacked_request_body)
+
         query_parameters = []
         for parameter_name, parameter_values in selected_parameters:
             randomized_value = self.randomize_parameter_value()
@@ -143,27 +140,44 @@ class RequestsGenerator:
 
     def convert_properties(self, object: ItemProperties):
         if object.type == "array":
-            pass
+            num_objects = random.randint(0, 5)
+            obj_arr = []
+            for _ in range(num_objects):
+                obj_arr.append(self.convert_properties(object.items))
+            return obj_arr
+        elif object.type == "object":
+            object_structure = {}
+            for key, value in object.properties.items():
+                object_structure[key] = self.convert_properties(value)
+            return object_structure
         else:
-            return 
+            return self.randomize_parameter_value()
     
     def convert_request_body(self, parsed_request_body):
         if 'application/json' in parsed_request_body:
-            # json_body = {key: self.convert_properties(properties) for key, properties in parsed_request_body['application/json'].items()}
-            # return json_body
             object = parsed_request_body['application/json']
             if isinstance(object, ItemProperties):
                 constructed_body = self.convert_properties(object)
                 return json.dumps(constructed_body)
             elif isinstance(object, list):
-                pass 
-            elif isinstance(object, dict):
-                pass
+                arr = []
+                for obj in object:
+                    arr.append(self.convert_properties(obj))
+                return json.dumps(arr)
             else:
                 raise SyntaxError("Request Body Schema Parsing Error")
         elif 'application/x-www-form-urlencoded' in parsed_request_body:
-            form_data = {key: self.convert_properties(properties) for key, properties in parsed_request_body['application/x-www-form-urlencoded'].items()}
-            return urllib.urlencode(form_data)
+            object = parsed_request_body['application/x-www-form-urlencoded']
+            if isinstance(object, ItemProperties):
+                constructed_body = self.convert_properties(object)
+                return urllib.urlencode(constructed_body)
+            elif isinstance(object, list):
+                arr = []
+                for obj in object:
+                    arr.append(self.convert_properties(obj))
+                return urllib.urlencode(arr)
+            else:
+                raise SyntaxError("Request Body Schema Parsing Error")
         else:
           keys = list(parsed_request_body.keys())
           if len(keys) == 1:
