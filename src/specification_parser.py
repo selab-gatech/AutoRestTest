@@ -1,9 +1,24 @@
 import os
-from typing import List, Dict, Optional, Union
+from pathlib import Path
+from typing import List, Dict, Optional, Union, Iterable
 from dataclasses import dataclass, field
 import json
 
 from prance import ResolvingParser, BaseParser
+
+def to_dict_helper(item):
+    """
+    Helper method for parsing in to a dictionary. Handles the case where the item is a dictionary, list, or object with
+    a to_dict method.
+    """
+    if hasattr(item, 'to_dict'):
+        return item.to_dict()
+    elif isinstance(item, dict):
+        return {k: to_dict_helper(v) for k, v in item.items()}
+    elif isinstance(item, Iterable) and not isinstance(item, (str, bytes)):
+        return [to_dict_helper(i) for i in item]
+    else:
+        return item
 
 @dataclass
 class ItemProperties:
@@ -33,6 +48,16 @@ class ItemProperties:
     example: Optional[Union[str, int, float, bool, List, Dict]] = None
     examples: List[Optional[Union[str, int, float, bool, List, Dict]]] = field(default_factory=list)
 
+    def to_dict(self):
+        result = {k: to_dict_helper(v) for k, v in self.__dict__.items() if v is not None}
+        if 'items' in result and self.items is not None:
+            result['items'] = self.items.to_dict()
+        if 'properties' in result and self.properties:
+            result['properties'] = {k: v.to_dict() for k, v in self.properties.items()}
+        if 'additional_properties' in result and isinstance(self.additional_properties, ItemProperties):
+            result['additional_properties'] = self.additional_properties.to_dict()
+        return result
+
 @dataclass
 class ParameterProperties:
     """
@@ -52,6 +77,14 @@ class ParameterProperties:
     examples: List[Optional[Union[str, int, float, bool, List, Dict]]] = field(default_factory=list)
     content: Dict[str, ItemProperties] = field(default_factory=dict)
 
+    def to_dict(self):
+        result = {k: to_dict_helper(v) for k, v in self.__dict__.items() if v is not None}
+        if 'schema' in result and self.schema is not None:
+            result['schema'] = self.schema.to_dict()
+        if 'content' in result and self.content:
+            result['content'] = {k: v.to_dict() for k, v in self.content.items()}
+        return result
+
 @dataclass
 class OperationProperties:
     """
@@ -62,16 +95,27 @@ class OperationProperties:
     http_method: str = ''
     parameters: Dict[str, ParameterProperties] = field(default_factory=dict)
     request_body: bool = False
-    request_body_properties: Dict[str, Dict[str, ItemProperties]] = None # MIME type as first key, then each parameter with its properties as second dict
+    request_body_properties: Dict[str, ItemProperties] = None # MIME type as first key, then each parameter with its properties as second dict
+
+    def to_dict(self):
+        result = {k: to_dict_helper(v) for k, v in self.__dict__.items() if v is not None}
+        if 'parameters' in result and self.parameters:
+            result['parameters'] = {k: v.to_dict() for k, v in self.parameters.items()}
+        if 'request_body_properties' in result and self.request_body_properties:
+            result['request_body_properties'] = {k: v.to_dict() for k, v in self.request_body_properties.items()}
+        return result
 
 class SpecificationParser:
     """
     Class to parse a specification file and return a dictionary of all the operations and their properties.
     """
-    def __init__(self, file_path):
+    def __init__(self, file_path=None):
         self.file_path = file_path
-        self.resolving_parser = ResolvingParser(file_path, strict=False)
-        self.base_parser = BaseParser(file_path, strict=False)
+        if file_path is not None:
+            self.resolving_parser = ResolvingParser(file_path, strict=False)
+            self.base_parser = BaseParser(file_path, strict=False)
+        self.directory_path = '../specs/original/oas/'
+        self.all_specs = {}
 
     def process_parameter_object_properties(self, properties: Dict) -> Dict[str, ItemProperties]:
         """
@@ -199,19 +243,40 @@ class SpecificationParser:
             for http_method, operation_details in endpoint_details.items():
                 operation_properties = self.process_operation_details(http_method, endpoint_path, operation_details)
                 operation_collection.setdefault(operation_properties.operation_id, operation_properties)
-
         return operation_collection
+
+    def parse_all_specifications(self) -> dict:
+        """
+        Parse all the specification files in the directory to return a dictionary of all the operations and their properties.
+        """
+        for file_name in os.listdir(self.directory_path):
+            print("Specification parsing for file: ", file_name)
+            self.file_path = os.path.join(self.directory_path, file_name)
+            self.resolving_parser = ResolvingParser(self.file_path, strict=False)
+            self.all_specs[file_name]  = self.parse_specification()
+            #print("Output: " + str(output))
+
+        return self.all_specs
+
+    def all_json_spec_output(self):
+        """
+        Create a testing JSON file from the specification parsing output.
+        """
+        all_specs = {file_name: to_dict_helper(spec) for file_name, spec in self.all_specs.items()}
+
+        output_directory = Path("./testing_output")
+        output_directory.mkdir(parents=True, exist_ok=True)
+
+        for file_name, spec in all_specs.items():
+            output_file = output_directory / file_name
+            with output_file.open('w', encoding='utf-8') as file:
+                json.dump(spec, file, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     # testing
-    DIRECTORY_PATH = '../specs/original/oas/'
-    for file_name in os.listdir(DIRECTORY_PATH):
-        print("Specification parsing for file: ", file_name)
-        file_path = os.path.join(DIRECTORY_PATH, file_name)
-        spec_parser = SpecificationParser(file_path)
-        output = spec_parser.parse_specification()
-        print("Output: " + str(output))
-
+    spec_parser = SpecificationParser()
+    spec_parser.parse_all_specifications()
+    spec_parser.all_json_spec_output()
     #spec_parser = SpecificationParser("../specs/original/oas/genome-nexus.yaml")
     # output = spec_parser.parse_specification()
     #print(output["fetchPostTranslationalModificationsByPtmFilterPOST"])
