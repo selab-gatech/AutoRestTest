@@ -1,10 +1,12 @@
 import random
 import string
 import requests
-from specification_parser import SpecificationParser
+import urllib
+import json
+from specification_parser import SpecificationParser, ItemProperties
+
 
 class RequestsGenerator:
-
     def __init__(self, file_path: str, api_url: str):
         self.file_path = file_path
         self.api_url = api_url
@@ -53,10 +55,10 @@ class RequestsGenerator:
         return response, query_parameters
 
     def randomize_integer(self):
-        return random.randint(-9999, 9999)
+        return random.randint(-2**32, 2**32)
 
     def randomize_float(self):
-        return random.uniform(-9e99, 9e99)
+        return random.uniform(-2**32, 2**32)
 
     def randomize_boolean(self):
         return random.choice([True, False])
@@ -85,14 +87,14 @@ class RequestsGenerator:
                       self.randomize_object,
                       self.randomize_null]
         return random.choice(generators)()
-
+    
     def randomize_parameters(self, parameter_dict):
         """
         Randomly select parameters from the dictionary.
         """
         parameter_list = list(parameter_dict.items())
         random_selection = random.sample(parameter_list, k=random.randint(0, len(parameter_list)))
-        # care: we allow for 0 parameters to be selected; check if this is okay
+        # careful: we allow for 0 parameters to be selected; check if this is okay
         return random_selection
 
     
@@ -104,10 +106,13 @@ class RequestsGenerator:
         http_method = operation_properties.http_method
         selected_parameters = self.randomize_parameters(operation_properties.parameters)
 
-        # request_body_construct = {} 
-        # if operation_properties.request_body:
-        #     for request_body_parameter_name, _ in operation_properties.request_body.items():
-        #         request_body_construct[request_body_parameter_name] = self.randomize_parameter_value()
+
+        if operation_properties.request_body:
+                parsed_request_body = operation_properties.request_body_properties
+                #request_body = self.convert_request_body(parsed_request_body)
+                #two cases: parsed_request_body has structure: {MIMETYPE: ItemProperties} or 
+                #structure: {MIMETYPE: {KEY: ITEMPROPERTIES}}
+                #either way you need to resolve ITEMPROPERTIES based on if it is an item or an array of items, or some other sturcture
                 
         query_parameters = []
         for parameter_name, parameter_values in selected_parameters:
@@ -128,21 +133,49 @@ class RequestsGenerator:
         
         #making request and storing return value in variables
         response, used_query_parameters = self.send_request(endpoint_path, http_method, query_parameters)
-        print("Response -->")
-        print(response.status_code)
-        print("End Response-->")
         #processing the response
         self.process_response(response, used_query_parameters)
 
+    def convert_properties(self, object: ItemProperties):
+        if object.type == "array":
+            pass
+        else:
+            return 
+    
+    def convert_request_body(self, parsed_request_body):
+        if 'application/json' in parsed_request_body:
+            # json_body = {key: self.convert_properties(properties) for key, properties in parsed_request_body['application/json'].items()}
+            # return json_body
+            object = parsed_request_body['application/json']
+            if isinstance(object, ItemProperties):
+                constructed_body = self.convert_properties(object)
+                return json.dumps(constructed_body)
+            elif isinstance(object, list):
+                pass 
+            elif isinstance(object, dict):
+                pass
+            else:
+                raise SyntaxError("Request Body Schema Parsing Error")
+        elif 'application/x-www-form-urlencoded' in parsed_request_body:
+            form_data = {key: self.convert_properties(properties) for key, properties in parsed_request_body['application/x-www-form-urlencoded'].items()}
+            return urllib.urlencode(form_data)
+        else:
+          keys = list(parsed_request_body.keys())
+          if len(keys) == 1:
+            raise ValueError("Unsupported MIME type: " + keys[0] + " in Request Body Specification")
+          else:
+              raise SyntaxError("Formatting Error in Specification")
     def requests_generate(self):
         """
         Generate the randomized requests based on the specification file.
         """
         print("Generating Request...")
+        print()
         specification_parser = SpecificationParser(self.file_path)
         operations = specification_parser.parse_specification()
         for operation_id, operation_properties in operations.items():
             self.process_operation(operation_properties)
+        print()
         print("Generated Request!")
 #testing code
 if __name__ == "__main__":
