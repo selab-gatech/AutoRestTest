@@ -283,10 +283,11 @@ if __name__ == "__main__":
     spec_parser = SpecificationParser()
     spec_parser.parse_all_specifications()
     spec_parser.all_json_spec_output()
+
     #spec_parser = SpecificationParser("../specs/original/oas/genome-nexus.yaml")
     # output = spec_parser.parse_specification()
     #print(output["fetchPostTranslationalModificationsByPtmFilterPOST"])
     #print(output["endpoint-add-tracks-to-playlist"])
     #print(output["endpoint-get-playlist"])
     #print(output["endpoint-remove-tracks-playlist"])
-    #spec_parser.parse_specification()
+
