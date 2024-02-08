@@ -29,7 +29,7 @@ rm evomaster.jar.zip
 cd $DEFAULT_DIR
 source ./java11_mac.env && cd tools/resttestgen && ./gradlew install
 
-#docker installa
+#docker install
 brew install --cask docker
 
 #Install Jacoco
