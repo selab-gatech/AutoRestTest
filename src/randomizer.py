@@ -38,11 +38,11 @@ class RandomizedSelector:
         if item_properties.properties is None:
             self.use_primitive_generator(item_properties)
         randomized_object = {}
-        for item_name, item_properties in item_properties.properties.items():
+        for item_name, item_values in item_properties.properties.items():
             if self.is_dropped():
                 continue
             else:
-                randomized_object[item_name] = self.randomize_item(item_properties)
+                randomized_object[item_name] = self.randomize_item(item_values)
         return randomized_object
 
     def generate_randomized_array(self, item_properties: ItemProperties) -> List:
