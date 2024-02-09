@@ -7,6 +7,7 @@ import requests
 import urllib
 import json
 from specification_parser import SpecificationParser, ItemProperties, ParameterProperties
+from choice import RandomizedSelector
 
 @dataclass
 class RequestData:
@@ -57,7 +58,7 @@ class RequestsGenerator:
         indices = list(range(len(self.successful_query_data)))
         random.shuffle(indices)
         for i in indices:
-            if response.status_code // 100 == 2 or retries > 5:
+            if (200 <= response.status_code < 300) or retries > 5:
                 break
             old_request = self.successful_query_data[i]
             if old_request.http_method in {"put", "post"}:
@@ -130,10 +131,11 @@ class RequestsGenerator:
                       self.randomize_null]
         return random.choice(generators)()
 
-    def randomize_values(self, parameters, request_body) -> (Dict[str: any], Dict):
+    def randomize_values(self, parameters, request_body):
         # create randomize object here and return after Object.randomize_parameters() and Object.randomize_request_body() is called
         # do randomize parameter selection, then randomize the values for both parameters and request_body
-        pass
+        randomized_selector = RandomizedSelector()
+        return randomized_selector.randomize_parameters(parameters), randomized_selector.randomize_request_body(request_body)
 
     def randomize_parameters(self, parameter_dict) -> Dict[str, ParameterProperties]:
         """
@@ -193,37 +195,7 @@ class RequestsGenerator:
         else:
             return self.randomize_parameter_value()
 
-    def convert_request_body(self, parsed_request_body):
-        if 'application/json' in parsed_request_body:
-            object = parsed_request_body['application/json']
-            if isinstance(object, ItemProperties):
-                constructed_body = self.convert_properties(object)
-                return json.dumps(constructed_body)
-            elif isinstance(object, list):
-                arr = []
-                for obj in object:
-                    arr.append(self.convert_properties(obj))
-                return json.dumps(arr)
-            else:
-                raise SyntaxError("Request Body Schema Parsing Error")
-        elif 'application/x-www-form-urlencoded' in parsed_request_body:
-            object = parsed_request_body['application/x-www-form-urlencoded']
-            if isinstance(object, ItemProperties):
-                constructed_body = self.convert_properties(object)
-                return urllib.urlencode(constructed_body)
-            elif isinstance(object, list):
-                arr = []
-                for obj in object:
-                    arr.append(self.convert_properties(obj))
-                return urllib.urlencode(arr)
-            else:
-                raise SyntaxError("Request Body Schema Parsing Error")
-        else:
-          keys = list(parsed_request_body.keys())
-          if len(keys) == 1:
-            raise ValueError("Unsupported MIME type: " + keys[0] + " in Request Body Specification")
-          else:
-              raise SyntaxError("Formatting Error in Specification")
+    
     def requests_generate(self):
         """
         Generate the randomized requests based on the specification file.
