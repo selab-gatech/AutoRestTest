@@ -14,7 +14,7 @@ from randomizer import RandomizedSelector
 class RequestData:
     endpoint_path: str
     http_method: str
-    parameters: Dict[str: any]
+    parameters: Dict[str, any]
     request_body: Dict
     content_type: str
     operation_id: str
@@ -115,7 +115,7 @@ class RequestsGenerator:
                     http_method=request_data.http_method,
                     parameters=old_request.request_body, # use old request body as new query parameters to check for producer-consumer dependency
                     request_body=old_request.request_body,
-                    content_type=old_request.content_type
+                    content_type=old_request.content_type, 
                 )
                 response = self.send_request(new_request)
                 self.process_response(response, new_request)
@@ -145,11 +145,11 @@ class RequestsGenerator:
             return None
         return response
 
-    def randomize_values(self, parameters: Dict[str, ParameterProperties], request_body) -> (Dict[str: any], any):
+    def randomize_values(self, parameters: Dict[str, ParameterProperties], request_body) -> (Dict[str, any], any):
         # create randomize object here and return after Object.randomize_parameters() and Object.randomize_request_body() is called
         # do randomize parameter selection, then randomize the values for both parameters and request_body
         randomizer = RandomizedSelector(parameters, request_body)
-        return randomizer.randomize_parameters(), randomizer.randomize_request_body()
+        return randomizer.randomize_parameters() if parameters else None, randomizer.randomize_request_body() if request_body else None
 
     def randomize_parameters(self, parameter_dict) -> Dict[str, ParameterProperties]:
         """
