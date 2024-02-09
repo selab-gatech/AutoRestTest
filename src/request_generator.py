@@ -131,11 +131,7 @@ class RequestsGenerator:
                       self.randomize_null]
         return random.choice(generators)()
 
-<<<<<<< HEAD
     def randomize_values(self, parameters, request_body):
-=======
-    def randomize_values(self, parameters: Dict[str, ParameterProperties], request_body) -> (Dict[str: any], Dict):
->>>>>>> 5e27fd00ac279aad54205ed615fce3280baa589a
         # create randomize object here and return after Object.randomize_parameters() and Object.randomize_request_body() is called
         # do randomize parameter selection, then randomize the values for both parameters and request_body
         randomized_selector = RandomizedSelector()
@@ -184,20 +180,7 @@ class RequestsGenerator:
         self.process_response(response, request_data)
         self.attempt_retry(response, request_data)
 
-    def convert_properties(self, object: ItemProperties):
-        if object.type == "array":
-            num_objects = random.randint(0, 5)
-            obj_arr = []
-            for _ in range(num_objects):
-                obj_arr.append(self.convert_properties(object.items))
-            return obj_arr
-        elif object.type == "object":
-            object_structure = {}
-            for key, value in object.properties.items():
-                object_structure[key] = self.convert_properties(value)
-            return object_structure
-        else:
-            return self.randomize_parameter_value()
+    
 
     
     def requests_generate(self):
