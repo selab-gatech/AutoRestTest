@@ -52,27 +52,41 @@ class RequestsGenerator:
         var_type = type(variable)
         return type_mapping.get(var_type, str(var_type))
 
-    def create_operation_for_mutation(self, query: RequestData, operation_properties: OperationProperties) -> OperationProperties:
+    def determine_composite_items(self, item_properties: ItemProperties, curr_value) -> ItemProperties:
+        if item_properties.type == "array" and len(curr_value) > 0:
+            item_properties.items = ItemProperties(
+                type=self.get_simple_type(curr_value[0])
+            )
+        elif item_properties.type == "object":
+            item_properties.properties = {}
+            for key, value in curr_value.items():
+                item_properties.properties[key] = ItemProperties(
+                    type=self.get_simple_type(value)
+                )
+        return item_properties
+
+    def create_operation_for_mutation(self, query_value: RequestData, operation_properties: OperationProperties) -> OperationProperties:
         """
         Create a new operation for mutation
         """
-        if query.request_body and operation_properties.request_body_properties:
+        if query_value.request_body and operation_properties.request_body_properties:
             for content_type, request_body_properties in operation_properties.request_body_properties.items():
                 request_body_properties = ItemProperties(
-                    type=self.get_simple_type(query.request_body)
+                    type=self.get_simple_type(query_value.request_body)
                 )
+                request_body_properties = self.determine_composite_items(request_body_properties, query_value.request_body)
                 operation_properties.request_body_properties[content_type] = request_body_properties
 
         endpoint_path = operation_properties.endpoint_path
         for parameter_name, parameter_properties in operation_properties.parameters.items():
             if parameter_properties.in_value == "path":
-                manual_randomizer = RandomizedSelector(operation_properties.parameters, query.request_body)
+                manual_randomizer = RandomizedSelector(operation_properties.parameters, query_value.request_body)
                 operation_properties.endpoint_path = endpoint_path.replace(
                     "{" + parameter_name + "}", str(manual_randomizer.randomize_item(parameter_properties.schema)))
 
         operation_properties.parameters = {}
-        if query.parameters:
-            for parameter_name, parameter_value in query.parameters.items():
+        if query_value.parameters:
+            for parameter_name, parameter_value in query_value.parameters.items():
                 parameter_properties = ParameterProperties(
                     name=parameter_name,
                     in_value="query",
@@ -80,6 +94,7 @@ class RequestsGenerator:
                         type=self.get_simple_type(parameter_value)
                     )
                 )
+                parameter_properties.schema = self.determine_composite_items(parameter_properties.schema, parameter_value)
                 operation_properties.parameters[parameter_name] = parameter_properties
 
         return operation_properties
