@@ -6,8 +6,9 @@ from typing import List, Dict
 import requests
 import urllib
 import json
-from specification_parser import SpecificationParser, ItemProperties, ParameterProperties
-from choice import RandomizedSelector
+from specification_parser import SpecificationParser, ItemProperties, ParameterProperties, OperationProperties
+from src.randomizer import RandomizedSelector
+
 
 @dataclass
 class RequestData:
@@ -134,8 +135,8 @@ class RequestsGenerator:
     def randomize_values(self, parameters, request_body):
         # create randomize object here and return after Object.randomize_parameters() and Object.randomize_request_body() is called
         # do randomize parameter selection, then randomize the values for both parameters and request_body
-        randomized_selector = RandomizedSelector()
-        return randomized_selector.randomize_parameters(parameters), randomized_selector.randomize_request_body(request_body)
+        randomizer = RandomizedSelector(parameters, request_body)
+        return randomizer.randomize_parameters(), randomizer.randomize_request_body()
 
     def randomize_parameters(self, parameter_dict) -> Dict[str, ParameterProperties]:
         """
@@ -149,7 +150,7 @@ class RequestsGenerator:
                 random_selection[parameter_name] = parameter_properties
         return random_selection
 
-    def process_operation(self, operation_properties):
+    def process_operation(self, operation_properties: OperationProperties):
         """
         Process the operation properties to generate the request.
         """
@@ -180,9 +181,6 @@ class RequestsGenerator:
         self.process_response(response, request_data)
         self.attempt_retry(response, request_data)
 
-    
-
-    
     def requests_generate(self):
         """
         Generate the randomized requests based on the specification file.
@@ -193,7 +191,7 @@ class RequestsGenerator:
         operations = specification_parser.parse_specification()
         for operation_id, operation_properties in operations.items():
             self.process_operation(operation_properties)
-        print()
+
         print("Generated Request!")
 
 #testing code
