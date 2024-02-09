@@ -53,6 +53,8 @@ class RandomizedSelector:
         return randomized_array
 
     def randomize_item(self, item_properties: ItemProperties):
+        if item_properties is None:
+            return self.use_primitive_generator(item_properties)
         if item_properties.type == "object" and (self.generate_accurate or not self.randomize_type()):
             return self.generate_randomized_object(item_properties)
         elif item_properties.type == "array" and (self.generate_accurate or not self.randomize_type()):
