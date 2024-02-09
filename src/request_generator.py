@@ -1,11 +1,13 @@
 import random
 import string
 from dataclasses import dataclass
+from typing import List
 
 import requests
 import urllib
 import json
-from specification_parser import SpecificationParser, ItemProperties
+from specification_parser import SpecificationParser, ItemProperties, ParameterProperties
+
 
 @dataclass
 class RequestData:
@@ -14,23 +16,40 @@ class RequestData:
     parameters: dict
     request_body: dict
 
+@dataclass
+class StatusCode:
+    status_code: int
+    count: int
+    requests: list[RequestData]
+
 class RequestsGenerator:
     def __init__(self, file_path: str, api_url: str):
         self.file_path = file_path
         self.api_url = api_url
         self.successful_query_data = [] # list that will store successfuly query_parameters
-        self.status_code_counts = {} # dictionary to track status code occurrences
+        self.status_codes = {} # dictionary to track status code occurrences
 
     def process_response(self, response, endpoint_path, http_method, query_parameters, request_body=None):
         # Increment the count for the received status code
-        self.status_code_counts[response.status_code] = self.status_code_counts.get(response.status_code, 0) + 1
+        request_data = RequestData(
+            endpoint_path=endpoint_path,
+            http_method=http_method,
+            parameters=query_parameters,
+            request_body=request_body
+        )
+
+        if response.status_code not in self.status_codes:
+            self.status_codes[response.status_code] = StatusCode(
+                status_code=response.status_code,
+                count=0,
+                requests=[]
+            )
+        else:
+            self.status_codes[response.status_code].count += 1
+            self.status_codes[response.status_code].requests.append(request_data)
+
         if response.status_code // 100 == 2:
-            self.successful_query_data.append(RequestData(
-                endpoint_path=endpoint_path,
-                http_method=http_method,
-                parameters=query_parameters,
-                request_body=request_body
-            ))
+            self.successful_query_data.append(request_data)
 
     def send_request(self, endpoint_path, http_method, query_parameters, request_body=None):
         """
@@ -81,43 +100,43 @@ class RequestsGenerator:
                       self.randomize_null]
         return random.choice(generators)()
 
-    def randomize_parameters(self, parameter_dict) -> list:
+    def randomize_values(self, parameters, request_body) -> (dict[str: any], dict):
+        # create randomize object here and return after Object.randomize_parameters() and Object.randomize_request_body() is called
+        # do randomize parameter selection, then randomize the values for both parameters and request_body
+        pass
+
+    def randomize_parameters(self, parameter_dict) -> dict[str, ParameterProperties]:
         """
         Randomly select parameters from the dictionary.
         """
-        parameter_list = list(parameter_dict.items())
-        random_selection = random.sample(parameter_list, k=random.randint(0, len(parameter_list)))
-        # careful: we allow for 0 parameters to be selected; check if this is okay
+        random_selection = {}
+        for parameter_name, parameter_properties in parameter_dict.items():
+            if parameter_properties.in_value == "path":
+                random_selection[parameter_name] = parameter_properties
+            elif random.choice([True, False]):
+                random_selection[parameter_name] = parameter_properties
         return random_selection
-    
+
     def process_operation(self, operation_properties):
         """
         Process the operation properties to generate the request.
         """
         endpoint_path = operation_properties.endpoint_path
         http_method = operation_properties.http_method
-        selected_parameters = self.randomize_parameters(operation_properties.parameters)
 
-
+        request_body = None
+        content_type = None
         if operation_properties.request_body:
-                parsed_request_body = operation_properties.request_body_properties
-                #request_body = self.convert_request_body(parsed_request_body)
-                #two cases: parsed_request_body has structure: {MIMETYPE: ItemProperties} or 
-                #structure: {MIMETYPE: {KEY: ITEMPROPERTIES}}
-                #either way you need to resolve ITEMPROPERTIES based on if it is an item or an array of items, or some other sturcture
-                unpacked_request_body = self.convert_request_body(parsed_request_body)
-                print(unpacked_request_body)
+            for content_type_value, request_body_properties in operation_properties.request_body_properties.items():
+                content_type = content_type_value
+                request_body = request_body_properties
 
-        query_parameters = []
+        query_parameters, request_body = self.randomize_values(operation_properties.parameters, request_body)
 
-        for parameter_name, parameter_values in selected_parameters:
-            randomized_value = self.randomize_parameter_value()
-            if parameter_values.in_value == "path":
-                endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(randomized_value))
-            else:
-                query_parameters[parameter_name] = randomized_value
+        for parameter_name, parameter_properties in query_parameters.items():
+            if parameter_properties.in_value == "path":
+                endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(self.randomize_parameter_value()))
 
-        #making request and storing return value
         response = self.send_request(endpoint_path, http_method, query_parameters, request_body)
 
         if response is not None:
@@ -138,7 +157,7 @@ class RequestsGenerator:
             return object_structure
         else:
             return self.randomize_parameter_value()
-    
+
     def convert_request_body(self, parsed_request_body):
         if 'application/json' in parsed_request_body:
             object = parsed_request_body['application/json']
