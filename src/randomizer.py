@@ -2,7 +2,7 @@ import random
 import string
 from typing import Dict, List
 
-from src.specification_parser import ParameterProperties, ItemProperties
+from specification_parser import ParameterProperties, ItemProperties
 
 
 class RandomizedSelector:
@@ -38,8 +38,11 @@ class RandomizedSelector:
         if item_properties.properties is None:
             self.use_primitive_generator(item_properties)
         randomized_object = {}
-        for item_name, item_values in item_properties.properties.items():
-            randomized_object[item_name] = self.randomize_item(item_values)
+        for item_name, item_properties in item_properties.properties.items():
+            if self.is_dropped():
+                continue
+            else:
+                randomized_object[item_name] = self.randomize_item(item_properties)
         return randomized_object
 
     def generate_randomized_array(self, item_properties: ItemProperties) -> List:
@@ -67,8 +70,22 @@ class RandomizedSelector:
         return query_parameters
 
     def randomize_request_body(self):
-        pass
-
+            if isinstance(self.request_body,list):
+                if self.is_dropped():
+                    return []
+                request_arr = []
+                for item in self.request_body:
+                    request_arr.append(self.randomize_item(item))
+                return request_arr
+            elif isinstance(self.request_body, ItemProperties):
+                if self.is_dropped():
+                    return []
+                else:
+                    return self.randomize_item(self.request_body)
+            else:
+                raise ValueError("Error parsing request body")
+            
+            
     def randomize_type(self):
         return random.randint(1, self.randomization_max_val) < self.randomized_weight * self.randomization_max_val # return accurate
 
