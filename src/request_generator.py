@@ -6,7 +6,9 @@ from typing import List, Dict
 import requests
 import urllib
 import json
-from specification_parser import SpecificationParser, ItemProperties, ParameterProperties
+from specification_parser import SpecificationParser, ItemProperties, ParameterProperties, OperationProperties
+from src.randomizer import RandomizedSelector
+
 
 @dataclass
 class RequestData:
@@ -133,7 +135,8 @@ class RequestsGenerator:
     def randomize_values(self, parameters: Dict[str, ParameterProperties], request_body) -> (Dict[str: any], Dict):
         # create randomize object here and return after Object.randomize_parameters() and Object.randomize_request_body() is called
         # do randomize parameter selection, then randomize the values for both parameters and request_body
-        pass
+        randomizer = RandomizedSelector(parameters, request_body)
+        return randomizer.randomize_parameters(), randomizer.randomize_request_body()
 
     def randomize_parameters(self, parameter_dict) -> Dict[str, ParameterProperties]:
         """
@@ -147,7 +150,7 @@ class RequestsGenerator:
                 random_selection[parameter_name] = parameter_properties
         return random_selection
 
-    def process_operation(self, operation_properties):
+    def process_operation(self, operation_properties: OperationProperties):
         """
         Process the operation properties to generate the request.
         """
@@ -178,52 +181,7 @@ class RequestsGenerator:
         self.process_response(response, request_data)
         self.attempt_retry(response, request_data)
 
-    def convert_properties(self, object: ItemProperties):
-        if object.type == "array":
-            num_objects = random.randint(0, 5)
-            obj_arr = []
-            for _ in range(num_objects):
-                obj_arr.append(self.convert_properties(object.items))
-            return obj_arr
-        elif object.type == "object":
-            object_structure = {}
-            for key, value in object.properties.items():
-                object_structure[key] = self.convert_properties(value)
-            return object_structure
-        else:
-            return self.randomize_parameter_value()
 
-    def convert_request_body(self, parsed_request_body):
-        if 'application/json' in parsed_request_body:
-            object = parsed_request_body['application/json']
-            if isinstance(object, ItemProperties):
-                constructed_body = self.convert_properties(object)
-                return json.dumps(constructed_body)
-            elif isinstance(object, list):
-                arr = []
-                for obj in object:
-                    arr.append(self.convert_properties(obj))
-                return json.dumps(arr)
-            else:
-                raise SyntaxError("Request Body Schema Parsing Error")
-        elif 'application/x-www-form-urlencoded' in parsed_request_body:
-            object = parsed_request_body['application/x-www-form-urlencoded']
-            if isinstance(object, ItemProperties):
-                constructed_body = self.convert_properties(object)
-                return urllib.urlencode(constructed_body)
-            elif isinstance(object, list):
-                arr = []
-                for obj in object:
-                    arr.append(self.convert_properties(obj))
-                return urllib.urlencode(arr)
-            else:
-                raise SyntaxError("Request Body Schema Parsing Error")
-        else:
-          keys = list(parsed_request_body.keys())
-          if len(keys) == 1:
-            raise ValueError("Unsupported MIME type: " + keys[0] + " in Request Body Specification")
-          else:
-              raise SyntaxError("Formatting Error in Specification")
     def requests_generate(self):
         """
         Generate the randomized requests based on the specification file.
@@ -234,7 +192,7 @@ class RequestsGenerator:
         operations = specification_parser.parse_specification()
         for operation_id, operation_properties in operations.items():
             self.process_operation(operation_properties)
-        print()
+
         print("Generated Request!")
 
 #testing code
