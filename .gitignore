@@ -18,6 +18,7 @@ services/jdk8/erc20-rest-service/bin/
 RestlerLogs/
 restler/
 rest-gitlab/
+**/testing_output/
 
 test.json
 cp.txt
