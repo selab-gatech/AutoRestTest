@@ -12,9 +12,9 @@ class RandomizedSelector:
         self.randomized_weight = 0.8
         self.max_arr_length = 2**32
         self.randomization_max_val = 100
-        self.generators = {"int": self.randomize_integer,
+        self.generators = {"integer": self.randomize_integer,
                            "float" : self.randomize_float,
-                           "bool": self.randomize_boolean,
+                           "boolean": self.randomize_boolean,
                            "string" : self.randomize_string,
                            "array" : self.randomize_array,
                            "object" : self.randomize_object,

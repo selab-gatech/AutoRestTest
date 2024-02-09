@@ -136,6 +136,7 @@ class RequestsGenerator:
                     parameters=old_request.request_body, # use old request body as new query parameters to check for producer-consumer dependency
                     request_body=old_request.request_body,
                     content_type=old_request.content_type, 
+                    operation_id=request_data.operation_id
                 )
                 response = self.send_request(new_request)
                 self.process_response(response, new_request)
@@ -155,7 +156,7 @@ class RequestsGenerator:
             select_method = getattr(requests, http_method)
             if http_method in {"put", "post"}:
                 if content_type == "json":
-                    response = select_method(self.api_url + endpoint_path, params=query_parameters, json=request_body)
+                    response = select_method(self.api_url + endpoint_path, params=query_parameters, json=json.dumps(request_body))
                 else:
                     response = select_method(self.api_url + endpoint_path, params=query_parameters, data=request_body)
             else:
