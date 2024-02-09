@@ -13,11 +13,12 @@ class RandomizedSelector:
         self.max_arr_length = 2**32
         self.randomization_max_val = 100
         self.generators = {"int": self.randomize_integer,
-                      "float" : self.randomize_float,
-                      "bool": self.randomize_boolean,
-                      "string" : self.randomize_string,
-                      "array" : self.randomize_array,
-                      "null": self.randomize_null}
+                           "float" : self.randomize_float,
+                           "bool": self.randomize_boolean,
+                           "string" : self.randomize_string,
+                           "array" : self.randomize_array,
+                           "object" : self.randomize_object,
+                           "null": self.randomize_null}
         self.parameters: Dict[str, ParameterProperties] = parameters
         self.request_body: Dict[str, ItemProperties] = request_body
         
@@ -34,9 +35,11 @@ class RandomizedSelector:
             return random.choice(list(self.generators.values()))()
 
     def generate_randomized_object(self, item_properties: ItemProperties) -> Dict:
+        if item_properties.properties is None:
+            self.use_primitive_generator(item_properties)
         randomized_object = {}
-        for item_name, item_properties in item_properties.properties.items():
-            randomized_object[item_name] = self.randomize_item(item_properties)
+        for item_name, item_values in item_properties.properties.items():
+            randomized_object[item_name] = self.randomize_item(item_values)
         return randomized_object
 
     def generate_randomized_array(self, item_properties: ItemProperties) -> List:
@@ -50,11 +53,11 @@ class RandomizedSelector:
         if item_properties.type == "object" and (self.generate_accurate or not self.randomize_type()):
             return self.generate_randomized_object(item_properties)
         elif item_properties.type == "array" and (self.generate_accurate or not self.randomize_type()):
-            self.generate_randomized_array(item_properties)
+            return self.generate_randomized_array(item_properties)
         else:
-            self.use_primitive_generator(item_properties)
+            return self.use_primitive_generator(item_properties)
 
-    def randomize_parameters(self):
+    def randomize_parameters(self) -> Dict[str, any]:
         query_parameters = {}
         for parameter_name, parameter_properties in self.parameters.items():
             if self.is_dropped():
