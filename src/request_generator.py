@@ -14,9 +14,10 @@ from src.randomizer import RandomizedSelector
 class RequestData:
     endpoint_path: str
     http_method: str
-    parameters: Dict
+    parameters: Dict[str: any]
     request_body: Dict
     content_type: str
+    operation_id: str
 
 @dataclass
 class StatusCode:
@@ -30,8 +31,54 @@ class RequestsGenerator:
         self.api_url = api_url
         self.successful_query_data: List[RequestData] = [] # list that will store successfuly query_parameters
         self.status_codes: Dict[int: StatusCode] = {} # dictionary to track status code occurrences
+        self.specification_parser: SpecificationParser = SpecificationParser(self.file_path)
+        self.operations: Dict[str, OperationProperties] = self.specification_parser.parse_specification()
+
+    def get_simple_type(self, variable):
+        """
+        Returns a simplified type name as a string for common Python data types.
+        """
+        type_mapping = {
+            int: "integer",
+            float: "float",
+            str: "string",
+            list: "array",
+            dict: "object",
+            tuple: "tuple",
+            set: "set",
+            bool: "boolean",
+            None: "null"
+        }
+        var_type = type(variable)
+        return type_mapping.get(var_type, str(var_type))
+
+    def create_operation_for_mutation(self, query: RequestData, operation_properties: OperationProperties) -> OperationProperties:
+        """
+        Create a new operation for mutation
+        """
+        if query.request_body:
+            for content_type, request_body_properties in operation_properties.request_body_properties.items():
+                request_body_properties = ItemProperties(
+                    type=self.get_simple_type(query.request_body)
+                )
+
+        return operation_properties
+
+    def mutate_requests(self):
+        """
+        Mutate valid queries for further testing
+        """
+        for query in self.successful_query_data:
+            curr_id = query.operation_id
+            for operation_id, operation_details in self.operations:
+                if operation_id == curr_id:
+                    new_operation: OperationProperties = operation_details
+                    self.create_operation_for_mutation(query, new_operation)
 
     def process_response(self, response, request_data):
+        """
+        Process the response from the API.
+        """
         if response is None:
             return
 
@@ -98,41 +145,7 @@ class RequestsGenerator:
             return None
         return response
 
-    def randomize_integer(self):
-        return random.randint(-2**32, 2**32)
-
-    def randomize_float(self):
-        return random.uniform(-2**32, 2**32)
-
-    def randomize_boolean(self):
-        return random.choice([True, False])
-
-    def randomize_string(self):
-        return ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 9999)))
-
-    def randomize_array(self):
-        return [random.randint(-9999, 9999) for _ in range(random.randint(1, 9999))]
-
-    def randomize_object(self):
-        return {random.choice(string.ascii_letters): random.randint(-9999, 9999) for _ in range(random.randint(1, 9999))}
-
-    def randomize_null(self):
-        return None
-
-    def randomize_parameter_value(self):
-        """
-        Randomly generate values of any type
-        """
-        generators = [self.randomize_integer,
-                      self.randomize_float,
-                      self.randomize_boolean,
-                      self.randomize_string,
-                      self.randomize_array,
-                      self.randomize_object,
-                      self.randomize_null]
-        return random.choice(generators)()
-
-    def randomize_values(self, parameters: Dict[str, ParameterProperties], request_body) -> (Dict[str: any], Dict):
+    def randomize_values(self, parameters: Dict[str, ParameterProperties], request_body) -> (Dict[str: any], any):
         # create randomize object here and return after Object.randomize_parameters() and Object.randomize_request_body() is called
         # do randomize parameter selection, then randomize the values for both parameters and request_body
         randomizer = RandomizedSelector(parameters, request_body)
@@ -166,16 +179,19 @@ class RequestsGenerator:
 
         query_parameters, request_body = self.randomize_values(operation_properties.parameters, request_body)
 
-        for parameter_name, parameter_properties in query_parameters.items():
+        for parameter_name, parameter_properties in operation_properties.parameters.items():
             if parameter_properties.in_value == "path":
-                endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(self.randomize_parameter_value()))
+                manual_randomizer = RandomizedSelector(operation_properties.parameters, request_body)
+                manual_randomizer.use_primitive_generator(parameter_properties.schema)
+                endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(manual_randomizer.randomize_item(parameter_properties.schema)))
 
         request_data = RequestData(
             endpoint_path=endpoint_path,
             http_method=http_method,
             parameters=query_parameters,
             request_body=request_body,
-            content_type=content_type
+            content_type=content_type,
+            operation_id=operation_properties.operation_id
         )
         response = self.send_request(request_data)
         self.process_response(response, request_data)
@@ -188,11 +204,11 @@ class RequestsGenerator:
         """
         print("Generating Request...")
         print()
-        specification_parser = SpecificationParser(self.file_path)
-        operations = specification_parser.parse_specification()
-        for operation_id, operation_properties in operations.items():
+        for operation_id, operation_properties in self.operations.items():
             self.process_operation(operation_properties)
 
+
+        print()
         print("Generated Request!")
 
 #testing code
