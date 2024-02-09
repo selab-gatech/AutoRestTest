@@ -21,14 +21,10 @@ class RandomizedSelector:
                            "null": self.randomize_null}
         self.parameters: Dict[str, ParameterProperties] = parameters
         self.request_body: Dict[str, ItemProperties] = request_body
-        
-    def generate_parameter_value(self, parameter_type):
-        if self.generate_accurate or self.randomize_type():
-            return self.generators[parameter_type]()
-        else:
-            return random.choice(list(self.generators.values()))()
 
     def use_primitive_generator(self, item_properties: ItemProperties):
+        if item_properties is None:
+            return None
         if self.generate_accurate or not self.randomize_type():
             return self.generators[item_properties.type]()
         else:
@@ -36,7 +32,7 @@ class RandomizedSelector:
 
     def generate_randomized_object(self, item_properties: ItemProperties) -> Dict:
         if item_properties.properties is None:
-            self.use_primitive_generator(item_properties)
+            return self.use_primitive_generator(item_properties)
         randomized_object = {}
         for item_name, item_values in item_properties.properties.items():
             if self.is_dropped():
@@ -54,7 +50,7 @@ class RandomizedSelector:
 
     def randomize_item(self, item_properties: ItemProperties):
         if item_properties is None:
-            return self.use_primitive_generator(item_properties)
+            return None
         if item_properties.type == "object" and (self.generate_accurate or not self.randomize_type()):
             return self.generate_randomized_object(item_properties)
         elif item_properties.type == "array" and (self.generate_accurate or not self.randomize_type()):

@@ -15,7 +15,7 @@ class RequestData:
     endpoint_path: str
     http_method: str
     parameters: Dict[str, any]
-    request_body: Dict
+    request_body: any
     content_type: str
     operation_id: str
 
@@ -47,7 +47,7 @@ class RequestsGenerator:
             tuple: "tuple",
             set: "set",
             bool: "boolean",
-            None: "null"
+            type(None): "null"
         }
         var_type = type(variable)
         return type_mapping.get(var_type, str(var_type))
@@ -90,11 +90,11 @@ class RequestsGenerator:
         """
         for query in self.successful_query_data:
             curr_id = query.operation_id
-            for operation_id, operation_details in self.operations.items():
-                if operation_id == curr_id:
-                    new_operation: OperationProperties = operation_details
-                    new_operation = self.create_operation_for_mutation(query, new_operation)
-                    self.process_operation(new_operation)
+            operation_details = self.operations.get(curr_id)
+            if operation_details is not None:
+                new_operation: OperationProperties = operation_details
+                new_operation = self.create_operation_for_mutation(query, new_operation)
+                self.process_operation(new_operation)
 
     def process_response(self, response, request_data):
         """
@@ -136,7 +136,7 @@ class RequestsGenerator:
                     http_method=request_data.http_method,
                     parameters=old_request.request_body, # use old request body as new query parameters to check for producer-consumer dependency
                     request_body=old_request.request_body,
-                    content_type=old_request.content_type, 
+                    content_type=old_request.content_type,
                     operation_id=request_data.operation_id
                 )
                 response = self.send_request(new_request)
@@ -172,18 +172,6 @@ class RequestsGenerator:
         # do randomize parameter selection, then randomize the values for both parameters and request_body
         randomizer = RandomizedSelector(parameters, request_body)
         return randomizer.randomize_parameters() if parameters else None, randomizer.randomize_request_body() if request_body else None
-
-    def randomize_parameters(self, parameter_dict) -> Dict[str, ParameterProperties]:
-        """
-        Randomly select parameters from the dictionary.
-        """
-        random_selection = {}
-        for parameter_name, parameter_properties in parameter_dict.items():
-            if parameter_properties.in_value == "path":
-                random_selection[parameter_name] = parameter_properties
-            elif random.choice([True, False]):
-                random_selection[parameter_name] = parameter_properties
-        return random_selection
 
     def process_operation(self, operation_properties: OperationProperties):
         """
