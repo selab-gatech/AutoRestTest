@@ -72,3 +72,4 @@ mvn clean install -DskipTests && mvn dependency:build-classpath -Dmdep.outputFil
 cd $DEFAULT_DIR/services/emb
 jenv local 1.8.0.402
 mvn clean install -DskipTests && mvn dependency:build-classpath -Dmdep.outputFile=cp.txt
+
