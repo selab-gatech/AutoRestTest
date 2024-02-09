@@ -7,7 +7,7 @@ import requests
 import urllib
 import json
 from specification_parser import SpecificationParser, ItemProperties, ParameterProperties, OperationProperties
-from src.randomizer import RandomizedSelector
+from randomizer import RandomizedSelector
 
 
 @dataclass
@@ -126,7 +126,7 @@ class RequestsGenerator:
         indices = list(range(len(self.successful_query_data)))
         random.shuffle(indices)
         for i in indices:
-            if response.status_code // 100 == 2 or retries > 5:
+            if (200 <= response.status_code < 300) or retries > 5:
                 break
             old_request = self.successful_query_data[i]
             if old_request.http_method in {"put", "post"}:
@@ -215,7 +215,6 @@ class RequestsGenerator:
         response = self.send_request(request_data)
         self.process_response(response, request_data)
         self.attempt_retry(response, request_data)
-
 
     def requests_generate(self):
         """
