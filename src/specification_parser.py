@@ -134,7 +134,6 @@ class SpecificationParser:
         """
         Process the schema of a parameter to return a ValueProperties object
         """
-
         if not schema:
             return None
 

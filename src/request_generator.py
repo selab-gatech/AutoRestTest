@@ -8,7 +8,6 @@ import urllib
 import json
 from specification_parser import SpecificationParser, ItemProperties, ParameterProperties
 
-
 @dataclass
 class RequestData:
     endpoint_path: str
