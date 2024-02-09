@@ -52,7 +52,7 @@ if __name__ == "__main__":
         subprocess.run("docker stop gn-mongo", shell=True)
         subprocess.run("docker rm gn-mongo", shell=True)
         subprocess.run("docker run --name=gn-mongo --restart=always -p 27018:27017 -d genomenexus/gn-mongo:latest",shell=True)
-        time.sleep(180)  # wait for the mongoDB to start, may not be done by end of 180 seconds, might need to add some sort of liveness probe
+        time.sleep(500)  # wait for the mongoDB to start, may not be done by end of 180 seconds, might need to add some sort of liveness probe
         # ADJUSTED TO USE JENV TO SET JAVA VERSION
         subprocess.run(
             """tmux new -d -s genome-nexus-server 'eval "$(jenv init -)" && export JAVA_HOME=$(jenv prefix 1.8.0.402) && java """ + cov + """9002.exec -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'""",
