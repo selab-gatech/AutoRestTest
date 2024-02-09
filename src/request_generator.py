@@ -61,6 +61,25 @@ class RequestsGenerator:
                 request_body_properties = ItemProperties(
                     type=self.get_simple_type(query.request_body)
                 )
+                operation_properties.request_body_properties[content_type] = request_body_properties
+
+        endpoint_path = operation_properties.endpoint_path
+        for parameter_name, parameter_properties in operation_properties.parameters.items():
+            if parameter_properties.in_value == "path":
+                manual_randomizer = RandomizedSelector(operation_properties.parameters, query.request_body)
+                operation_properties.endpoint_path = endpoint_path.replace(
+                    "{" + parameter_name + "}", str(manual_randomizer.randomize_item(parameter_properties.schema)))
+
+        operation_properties.parameters = {}
+        for parameter_name, parameter_value in query.parameters.items():
+            parameter_properties = ParameterProperties(
+                name=parameter_name,
+                in_value="query",
+                schema=ItemProperties(
+                    type=self.get_simple_type(parameter_value)
+                )
+            )
+            operation_properties.parameters[parameter_name] = parameter_properties
 
         return operation_properties
 
@@ -73,7 +92,8 @@ class RequestsGenerator:
             for operation_id, operation_details in self.operations:
                 if operation_id == curr_id:
                     new_operation: OperationProperties = operation_details
-                    self.create_operation_for_mutation(query, new_operation)
+                    new_operation = self.create_operation_for_mutation(query, new_operation)
+                    self.process_operation(new_operation)
 
     def process_response(self, response, request_data):
         """
@@ -182,7 +202,6 @@ class RequestsGenerator:
         for parameter_name, parameter_properties in operation_properties.parameters.items():
             if parameter_properties.in_value == "path":
                 manual_randomizer = RandomizedSelector(operation_properties.parameters, request_body)
-                manual_randomizer.use_primitive_generator(parameter_properties.schema)
                 endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(manual_randomizer.randomize_item(parameter_properties.schema)))
 
         request_data = RequestData(
@@ -207,7 +226,7 @@ class RequestsGenerator:
         for operation_id, operation_properties in self.operations.items():
             self.process_operation(operation_properties)
 
-
+        self.mutate_requests()
         print()
         print("Generated Request!")
 
