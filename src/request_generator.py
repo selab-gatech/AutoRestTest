@@ -7,7 +7,7 @@ import requests
 import urllib
 import json
 from specification_parser import SpecificationParser, ItemProperties, ParameterProperties, OperationProperties
-from src.randomizer import RandomizedSelector
+from randomizer import RandomizedSelector
 
 
 @dataclass
