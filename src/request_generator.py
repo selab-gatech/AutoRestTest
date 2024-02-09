@@ -14,7 +14,7 @@ from randomizer import RandomizedSelector
 class RequestData:
     endpoint_path: str
     http_method: str
-    parameters: Dict[str: any]
+    parameters: Dict[str, any]
     request_body: Dict
     content_type: str
     operation_id: str
@@ -120,14 +120,14 @@ class RequestsGenerator:
         """
         Attempt retrying request with old query parameters
         """
-        if response.status_code // 100 == 2:
+        if response is None or response.status_code // 100 == 2:
             return
 
         retries = 1
         indices = list(range(len(self.successful_query_data)))
         random.shuffle(indices)
         for i in indices:
-            if (200 <= response.status_code < 300) or retries > 5:
+            if response is None or (200 <= response.status_code < 300) or retries > 5:
                 break
             old_request = self.successful_query_data[i]
             if old_request.http_method in {"put", "post"}:
@@ -136,7 +136,8 @@ class RequestsGenerator:
                     http_method=request_data.http_method,
                     parameters=old_request.request_body, # use old request body as new query parameters to check for producer-consumer dependency
                     request_body=old_request.request_body,
-                    content_type=old_request.content_type
+                    content_type=old_request.content_type, 
+                    operation_id=request_data.operation_id
                 )
                 response = self.send_request(new_request)
                 self.process_response(response, new_request)
@@ -156,7 +157,7 @@ class RequestsGenerator:
             select_method = getattr(requests, http_method)
             if http_method in {"put", "post"}:
                 if content_type == "json":
-                    response = select_method(self.api_url + endpoint_path, params=query_parameters, json=request_body)
+                    response = select_method(self.api_url + endpoint_path, params=query_parameters, json=json.dumps(request_body))
                 else:
                     response = select_method(self.api_url + endpoint_path, params=query_parameters, data=request_body)
             else:
@@ -166,11 +167,11 @@ class RequestsGenerator:
             return None
         return response
 
-    def randomize_values(self, parameters: Dict[str, ParameterProperties], request_body) -> (Dict[str: any], any):
+    def randomize_values(self, parameters: Dict[str, ParameterProperties], request_body) -> (Dict[str, any], any):
         # create randomize object here and return after Object.randomize_parameters() and Object.randomize_request_body() is called
         # do randomize parameter selection, then randomize the values for both parameters and request_body
         randomizer = RandomizedSelector(parameters, request_body)
-        return randomizer.randomize_parameters(), randomizer.randomize_request_body()
+        return randomizer.randomize_parameters() if parameters else None, randomizer.randomize_request_body() if request_body else None
 
     def randomize_parameters(self, parameter_dict) -> Dict[str, ParameterProperties]:
         """
@@ -214,8 +215,9 @@ class RequestsGenerator:
             operation_id=operation_properties.operation_id
         )
         response = self.send_request(request_data)
-        self.process_response(response, request_data)
-        self.attempt_retry(response, request_data)
+        if response:
+            self.process_response(response, request_data)
+            self.attempt_retry(response, request_data)
 
     def requests_generate(self):
         """
