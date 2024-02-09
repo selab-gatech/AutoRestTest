@@ -3,32 +3,39 @@ import sys
 import time
 import subprocess
 
+# Assign jenv version
+def set_java_version(java_version, service_path):
+    subprocess.run(f"jenv local {java_version}", shell=True, cwd=service_path)
 
 # This function is used to run a service given the service path, class name, and coverage collecting port number
 def run_service(service_path, class_name, port_number):
     # Read classpath from cp.txt file in the service path
     with open(service_path + "/cp.txt", 'r') as f:
         cp = f.read()
+    if "languagetool" in service_path or "ocvn" in service_path:
+        set_java_version("1.8.0.402", service_path)
+    else:
+        set_java_version("11.0.22", service_path)
     if "languagetool" in service_path:
         with open(service_path + "/run.sh", 'w') as f:
             f.write(
                 "java " + cov + port_number + ".exec" + " -cp target/classes:target/test-classes:" + cp + ' ' + class_name)
         subprocess.run(
-            ". ./java8_mac.env && cd " + service_path + " && tmux new-session -d -s language-tool-server 'sh run.sh'",
+            ". ../java8_arm.env && cd " + service_path + " && tmux new-session -d -s language-tool-server 'sh run.sh'",
             shell=True)
     elif "ocvn" in service_path:
         with open(service_path + "/run.sh", 'w') as f:
             f.write(
                 "java " + cov + port_number + ".exec" + " -cp target/classes:target/test-classes:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/rt.jar:" + base + "/emb/cs/rest-gui/ocvn/web/target/classes:" + cp + ' ' + class_name)
         subprocess.run(
-            ". ./java8_mac.env && cd " + service_path + " && tmux new-session -d -s ocvn-server 'sh run.sh'",
+            ". ../java8_arm.env && cd " + service_path + " && tmux new-session -d -s ocvn-server 'sh run.sh'",
             shell=True)
     else:
         with open(service_path + "/run.sh", 'w') as f:
             f.write(
                 "java " + cov + port_number + ".exec" + " -cp target/classes:target/test-classes:" + cp + ' ' + class_name)
         subprocess.run(
-            ". ./java11_mac.env && cd " + service_path + " && tmux new-session -d -s youtube-server 'sh run.sh'",
+            ". ../java11_arm.env && cd " + service_path + " && tmux new-session -d -s youtube-server 'sh run.sh'",
             shell=True)
 
 
@@ -44,11 +51,13 @@ if __name__ == "__main__":
     elif name == "genome-nexus":
         subprocess.run("docker stop gn-mongo", shell=True)
         subprocess.run("docker rm gn-mongo", shell=True)
-        subprocess.run("docker run --name=gn-mongo --restart=always -p 27018:27017 -d genomenexus/gn-mongo:latest", shell=True)
-        time.sleep(180) # wait for the mongoDB to start, may not be done by end of 180 seconds, might need to add some sort of liveness probe
+        subprocess.run("docker run --name=gn-mongo --restart=always -p 27018:27017 -d genomenexus/gn-mongo:latest",shell=True)
+        time.sleep(500)  # wait for the mongoDB to start, may not be done by end of 180 seconds, might need to add some sort of liveness probe
+        # ADJUSTED TO USE JENV TO SET JAVA VERSION
         subprocess.run(
-            "tmux new -d -s genome-nexus-server '. ./java8_mac.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'",
-            shell=True)
+            """tmux new -d -s genome-nexus-server 'eval "$(jenv init -)" && export JAVA_HOME=$(jenv prefix 1.8.0.402) && java """ + cov + """9002.exec -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'""",
+            shell=True
+        )
         subprocess.run(
             "tmux new -d -s genome-nexus-proxy 'LOG_FILE=log-genome-nexus.txt mitmproxy --mode reverse:http://0.0.0.0:50110 -p 9002 -s proxy.py'",
             shell=True)
@@ -95,7 +104,7 @@ if __name__ == "__main__":
                        shell=True)
         time.sleep(30)
         subprocess.run(
-            "tmux new -d -s genome-nexus-server '. ./java8_mac.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'",
+            "tmux new -d -s genome-nexus-server '. ../java8_arm.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'",
             shell=True)
         subprocess.run(
             "tmux new -d -s genome-nexus-proxy 'LOG_FILE=log-genome-nexus.txt mitmproxy --mode reverse:http://0.0.0.0:50110 -p 9002 -s proxy.py'",
