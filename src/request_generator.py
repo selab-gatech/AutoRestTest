@@ -89,7 +89,7 @@ class RequestsGenerator:
         """
         for query in self.successful_query_data:
             curr_id = query.operation_id
-            for operation_id, operation_details in self.operations:
+            for operation_id, operation_details in self.operations.items():
                 if operation_id == curr_id:
                     new_operation: OperationProperties = operation_details
                     new_operation = self.create_operation_for_mutation(query, new_operation)
