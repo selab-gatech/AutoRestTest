@@ -56,7 +56,7 @@ class RequestsGenerator:
         """
         Create a new operation for mutation
         """
-        if query.request_body:
+        if query.request_body and operation_properties.request_body_properties:
             for content_type, request_body_properties in operation_properties.request_body_properties.items():
                 request_body_properties = ItemProperties(
                     type=self.get_simple_type(query.request_body)
@@ -71,15 +71,16 @@ class RequestsGenerator:
                     "{" + parameter_name + "}", str(manual_randomizer.randomize_item(parameter_properties.schema)))
 
         operation_properties.parameters = {}
-        for parameter_name, parameter_value in query.parameters.items():
-            parameter_properties = ParameterProperties(
-                name=parameter_name,
-                in_value="query",
-                schema=ItemProperties(
-                    type=self.get_simple_type(parameter_value)
+        if query.parameters:
+            for parameter_name, parameter_value in query.parameters.items():
+                parameter_properties = ParameterProperties(
+                    name=parameter_name,
+                    in_value="query",
+                    schema=ItemProperties(
+                        type=self.get_simple_type(parameter_value)
+                    )
                 )
-            )
-            operation_properties.parameters[parameter_name] = parameter_properties
+                operation_properties.parameters[parameter_name] = parameter_properties
 
         return operation_properties
 
