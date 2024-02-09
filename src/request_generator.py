@@ -120,14 +120,14 @@ class RequestsGenerator:
         """
         Attempt retrying request with old query parameters
         """
-        if response.status_code // 100 == 2:
+        if response is None or response.status_code // 100 == 2:
             return
 
         retries = 1
         indices = list(range(len(self.successful_query_data)))
         random.shuffle(indices)
         for i in indices:
-            if (200 <= response.status_code < 300) or retries > 5:
+            if response is None or (200 <= response.status_code < 300) or retries > 5:
                 break
             old_request = self.successful_query_data[i]
             if old_request.http_method in {"put", "post"}:
@@ -215,8 +215,9 @@ class RequestsGenerator:
             operation_id=operation_properties.operation_id
         )
         response = self.send_request(request_data)
-        self.process_response(response, request_data)
-        self.attempt_retry(response, request_data)
+        if response:
+            self.process_response(response, request_data)
+            self.attempt_retry(response, request_data)
 
     def requests_generate(self):
         """
