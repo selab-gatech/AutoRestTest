@@ -19,6 +19,7 @@ class RandomizedSelector:
                       "array" : self.randomize_array,
                       "null": self.randomize_null}
         self.parameters: Dict[str, ParameterProperties] = parameters
+        self.request_body: Dict[str, ItemProperties] = request_body
         
     def generate_parameter_value(self, parameter_type):
         if self.generate_accurate or self.randomize_type():
@@ -35,17 +36,17 @@ class RandomizedSelector:
     def generate_randomized_object(self, item_properties: ItemProperties) -> Dict:
         randomized_object = {}
         for item_name, item_properties in item_properties.properties.items():
-            randomized_object[item_name] = self.generate_parameter_val(item_properties)
+            randomized_object[item_name] = self.randomize_item(item_properties)
         return randomized_object
 
     def generate_randomized_array(self, item_properties: ItemProperties) -> List:
         array_length = self.randomized_array_length()
         randomized_array = []
         for _ in range(array_length):
-            randomized_array.append(self.generate_parameter_val(item_properties.items)) # shouldn't be None if type is array
+            randomized_array.append(self.randomize_item(item_properties.items)) # shouldn't be None if type is array
         return randomized_array
 
-    def generate_parameter_val(self, item_properties: ItemProperties):
+    def randomize_item(self, item_properties: ItemProperties):
         if item_properties.type == "object" and (self.generate_accurate or not self.randomize_type()):
             return self.generate_randomized_object(item_properties)
         elif item_properties.type == "array" and (self.generate_accurate or not self.randomize_type()):
@@ -53,14 +54,17 @@ class RandomizedSelector:
         else:
             self.use_primitive_generator(item_properties)
 
-    def generate_randomized_parameters(self):
+    def randomize_parameters(self):
         query_parameters = {}
         for parameter_name, parameter_properties in self.parameters.items():
             if self.is_dropped():
                 continue
-            randomized_value = self.generate_parameter_val(parameter_properties.schema)
+            randomized_value = self.randomize_item(parameter_properties.schema)
             query_parameters[parameter_name] = randomized_value
         return query_parameters
+
+    def randomize_request_body(self):
+        pass
 
     def randomize_type(self):
         return random.randint(1, self.randomization_max_val) < self.randomized_weight * self.randomization_max_val # return accurate
