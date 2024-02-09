@@ -83,6 +83,7 @@ class RandomizedSelector:
                 else:
                     return self.randomize_item(self.request_body)
             else:
+                print(type(self.request_body))
                 raise ValueError("Error parsing request body")
             
             
