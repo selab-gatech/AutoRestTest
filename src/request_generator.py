@@ -131,7 +131,11 @@ class RequestsGenerator:
                       self.randomize_null]
         return random.choice(generators)()
 
+<<<<<<< HEAD
     def randomize_values(self, parameters, request_body):
+=======
+    def randomize_values(self, parameters: Dict[str, ParameterProperties], request_body) -> (Dict[str: any], Dict):
+>>>>>>> 5e27fd00ac279aad54205ed615fce3280baa589a
         # create randomize object here and return after Object.randomize_parameters() and Object.randomize_request_body() is called
         # do randomize parameter selection, then randomize the values for both parameters and request_body
         randomized_selector = RandomizedSelector()
