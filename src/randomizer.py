@@ -26,36 +26,33 @@ class RandomizedSelector:
     def use_primitive_generator(self, item_properties: ItemProperties):
         if item_properties is None:
             return None
-        if self.generate_accurate or not self.randomize_type():
-            return self.generators[item_properties.type]()
+        generator = self.generators.get(item_properties.type)
+        if self.should_generate_accurately():
+            return generator() if generator else None
         else:
             return random.choice(list(self.generators.values()))()
 
     def generate_randomized_object(self, item_properties: ItemProperties) -> Dict:
-        if item_properties.properties is None:
-            return self.use_primitive_generator(item_properties)
+        if not item_properties.properties:
+            return self.generators["object"]()
         randomized_object = {}
         for item_name, item_values in item_properties.properties.items():
-            if self.is_dropped():
-                continue
-            else:
+            if not self.is_dropped():
                 randomized_object[item_name] = self.randomize_item(item_values)
         return randomized_object
 
     def generate_randomized_array(self, item_properties: ItemProperties) -> List:
+        if not item_properties.items:
+            return self.generators["array"]()
         array_length = self.randomized_array_length()
-        randomized_array = []
-        for _ in range(array_length):
-            randomized_array.append(self.randomize_item(item_properties.items)) # shouldn't be None if type is array
-        return randomized_array
+        return [self.randomize_item(item_properties.items) for _ in range(array_length)]
 
     def randomize_item(self, item_properties: ItemProperties):
         if item_properties is None:
             return None
-        if item_properties.type == "object" and (self.generate_accurate or not self.randomize_type()):
-            return self.generate_randomized_object(item_properties)
-        elif item_properties.type == "array" and (self.generate_accurate or not self.randomize_type()):
-            return self.generate_randomized_array(item_properties)
+        if item_properties.type in ["object", "array"] and self.should_generate_accurately():
+            composite_method = self.generate_randomized_object if item_properties.type == "object" else self.generate_randomized_array
+            return composite_method(item_properties)
         else:
             return self.use_primitive_generator(item_properties)
 
@@ -69,23 +66,20 @@ class RandomizedSelector:
         return query_parameters
 
     def randomize_request_body(self):
-            if isinstance(self.request_body,list):
-                if self.is_dropped():
-                    return []
-                request_arr = []
-                for item in self.request_body:
-                    request_arr.append(self.randomize_item(item))
-                return request_arr
-            elif isinstance(self.request_body, ItemProperties):
-                if self.is_dropped():
-                    return []
-                else:
-                    return self.randomize_item(self.request_body)
-            else:
-                print(type(self.request_body))
-                raise ValueError("Error parsing request body")
-            
-            
+        if self.is_dropped():
+            return []
+        if isinstance(self.request_body, list):
+            return [self.randomize_item(item) for item in self.request_body]
+        elif isinstance(self.request_body, ItemProperties):
+            return self.randomize_item(self.request_body)
+        else:
+            error_msg = "Error parsing request body"
+            print(error_msg)
+            raise ValueError(error_msg)
+
+    def should_generate_accurately(self):
+        return self.generate_accurate or not self.randomize_type()
+
     def randomize_type(self):
         return random.randint(1, self.randomization_max_val) < self.randomized_weight * self.randomization_max_val # return accurate
 
