@@ -8,7 +8,6 @@ from src.specification_parser import ParameterProperties, ItemProperties
 class RandomizedSelector:
     def __init__(self, parameters: dict, request_body: dict):
         self.generate_accurate = random.randint(1, 10) <= 3
-        self.type_accurate =
         self.dropout_ratio = 0.05
         self.randomized_weight = 0.8
         self.max_arr_length = 2**32
@@ -62,7 +61,7 @@ class RandomizedSelector:
             randomized_value = self.generate_parameter_val(parameter_properties.schema)
             query_parameters[parameter_name] = randomized_value
         return query_parameters
-        
+
     def randomize_type(self):
         return random.randint(1, self.randomization_max_val) < self.randomized_weight * self.randomization_max_val # return accurate
 
