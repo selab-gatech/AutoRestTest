@@ -1,9 +1,14 @@
 import random
 import string
+from typing import Dict, List
+
+from src.specification_parser import ParameterProperties, ItemProperties
+
 
 class RandomizedSelector:
-    def __init__(self):
-        self.generate_accurate = random.randint(0, 10) < 2
+    def __init__(self, parameters: dict, request_body: dict):
+        self.generate_accurate = random.randint(1, 10) <= 3
+        self.type_accurate =
         self.dropout_ratio = 0.05
         self.randomized_weight = 0.8
         self.max_arr_length = 2**32
@@ -14,16 +19,53 @@ class RandomizedSelector:
                       "string" : self.randomize_string,
                       "array" : self.randomize_array,
                       "null": self.randomize_null}
+        self.parameters: Dict[str, ParameterProperties] = parameters
         
-    def generate_parameter_value(self, parameter_type):  
-        if self.generate_accurate:
-            return self.generators[parameter_type]()               
-        parameter_randomization = random.randint(0, self.randomization_max_val) < self.randomized_weight * self.randomization_max_val
-        if parameter_randomization:
-            return random.choice(list(self.generators.values()))()
-        else:
+    def generate_parameter_value(self, parameter_type):
+        if self.generate_accurate or self.randomize_type():
             return self.generators[parameter_type]()
-    
+        else:
+            return random.choice(list(self.generators.values()))()
+
+    def use_primitive_generator(self, item_properties: ItemProperties):
+        if self.generate_accurate or not self.randomize_type():
+            return self.generators[item_properties.type]()
+        else:
+            return random.choice(list(self.generators.values()))()
+
+    def generate_randomized_object(self, item_properties: ItemProperties) -> Dict:
+        randomized_object = {}
+        for item_name, item_properties in item_properties.properties.items():
+            randomized_object[item_name] = self.generate_parameter_val(item_properties)
+        return randomized_object
+
+    def generate_randomized_array(self, item_properties: ItemProperties) -> List:
+        array_length = self.randomized_array_length()
+        randomized_array = []
+        for _ in range(array_length):
+            randomized_array.append(self.generate_parameter_val(item_properties.items)) # shouldn't be None if type is array
+        return randomized_array
+
+    def generate_parameter_val(self, item_properties: ItemProperties):
+        if item_properties.type == "object" and (self.generate_accurate or not self.randomize_type()):
+            return self.generate_randomized_object(item_properties)
+        elif item_properties.type == "array" and (self.generate_accurate or not self.randomize_type()):
+            self.generate_randomized_array(item_properties)
+        else:
+            self.use_primitive_generator(item_properties)
+
+    def generate_randomized_parameters(self):
+        query_parameters = {}
+        for parameter_name, parameter_properties in self.parameters.items():
+            if self.is_dropped():
+                continue
+            randomized_value = self.generate_parameter_val(parameter_properties.schema)
+            query_parameters[parameter_name] = randomized_value
+        return query_parameters
+        
+    def randomize_type(self):
+        return random.randint(1, self.randomization_max_val) < self.randomized_weight * self.randomization_max_val # return accurate
+
     def is_dropped(self):
         return random.randint(0, self.randomization_max_val) < self.dropout_ratio * self.randomization_max_val if not self.generate_accurate else False
         
