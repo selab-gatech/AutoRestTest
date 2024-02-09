@@ -1,7 +1,7 @@
 import random
 import string
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict
 
 import requests
 import urllib
@@ -13,36 +13,32 @@ from specification_parser import SpecificationParser, ItemProperties, ParameterP
 class RequestData:
     endpoint_path: str
     http_method: str
-    parameters: dict
-    request_body: dict
+    parameters: Dict
+    request_body: Dict
+    content_type: str
 
 @dataclass
 class StatusCode:
     status_code: int
     count: int
-    requests: list[RequestData]
+    requests: List[RequestData]
 
 class RequestsGenerator:
     def __init__(self, file_path: str, api_url: str):
         self.file_path = file_path
         self.api_url = api_url
-        self.successful_query_data = [] # list that will store successfuly query_parameters
-        self.status_codes = {} # dictionary to track status code occurrences
+        self.successful_query_data: List[RequestData] = [] # list that will store successfuly query_parameters
+        self.status_codes: Dict[int: StatusCode] = {} # dictionary to track status code occurrences
 
-    def process_response(self, response, endpoint_path, http_method, query_parameters, request_body=None):
-        # Increment the count for the received status code
-        request_data = RequestData(
-            endpoint_path=endpoint_path,
-            http_method=http_method,
-            parameters=query_parameters,
-            request_body=request_body
-        )
+    def process_response(self, response, request_data):
+        if response is None:
+            return
 
         if response.status_code not in self.status_codes:
             self.status_codes[response.status_code] = StatusCode(
                 status_code=response.status_code,
-                count=0,
-                requests=[]
+                count=1,
+                requests=[request_data]
             )
         else:
             self.status_codes[response.status_code].count += 1
@@ -51,16 +47,51 @@ class RequestsGenerator:
         if response.status_code // 100 == 2:
             self.successful_query_data.append(request_data)
 
-    def send_request(self, endpoint_path, http_method, query_parameters, request_body=None):
+    def attempt_retry(self, response: requests.Response, request_data: RequestData):
+        """
+        Attempt retrying request with old query parameters
+        """
+        if response.status_code // 100 == 2:
+            return
+
+        retries = 1
+        indices = list(range(len(self.successful_query_data)))
+        random.shuffle(indices)
+        for i in indices:
+            if response.status_code // 100 == 2 or retries > 5:
+                break
+            old_request = self.successful_query_data[i]
+            if old_request.http_method in {"put", "post"}:
+                new_request = RequestData(
+                    endpoint_path=request_data.endpoint_path,
+                    http_method=request_data.http_method,
+                    parameters=old_request.request_body, # use old request body as new query parameters to check for producer-consumer dependency
+                    request_body=old_request.request_body,
+                    content_type=old_request.content_type
+                )
+                response = self.send_request(new_request)
+                self.process_response(response, new_request)
+                retries += 1
+        return
+
+    def send_request(self, request_data: RequestData) -> requests.Response:
         """
         Send the request to the API.
         """
+        endpoint_path = request_data.endpoint_path
+        http_method = request_data.http_method
+        query_parameters = request_data.parameters
+        request_body = request_data.request_body
+        content_type = request_data.content_type
         try:
-            method = getattr(requests, http_method)
+            select_method = getattr(requests, http_method)
             if http_method in {"put", "post"}:
-                response = method(self.api_url + endpoint_path, params=query_parameters, json=request_body)
+                if content_type == "json":
+                    response = select_method(self.api_url + endpoint_path, params=query_parameters, json=request_body)
+                else:
+                    response = select_method(self.api_url + endpoint_path, params=query_parameters, data=request_body)
             else:
-                response = method(self.api_url + endpoint_path, params=query_parameters)
+                response = select_method(self.api_url + endpoint_path, params=query_parameters)
         except requests.exceptions.RequestException:
             print("Request failed")
             return None
@@ -100,12 +131,12 @@ class RequestsGenerator:
                       self.randomize_null]
         return random.choice(generators)()
 
-    def randomize_values(self, parameters, request_body) -> (dict[str: any], dict):
+    def randomize_values(self, parameters, request_body) -> (Dict[str: any], Dict):
         # create randomize object here and return after Object.randomize_parameters() and Object.randomize_request_body() is called
         # do randomize parameter selection, then randomize the values for both parameters and request_body
         pass
 
-    def randomize_parameters(self, parameter_dict) -> dict[str, ParameterProperties]:
+    def randomize_parameters(self, parameter_dict) -> Dict[str, ParameterProperties]:
         """
         Randomly select parameters from the dictionary.
         """
@@ -128,7 +159,7 @@ class RequestsGenerator:
         content_type = None
         if operation_properties.request_body:
             for content_type_value, request_body_properties in operation_properties.request_body_properties.items():
-                content_type = content_type_value
+                content_type = content_type_value.replace("application/", "")
                 request_body = request_body_properties
 
         query_parameters, request_body = self.randomize_values(operation_properties.parameters, request_body)
@@ -137,11 +168,16 @@ class RequestsGenerator:
             if parameter_properties.in_value == "path":
                 endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(self.randomize_parameter_value()))
 
-        response = self.send_request(endpoint_path, http_method, query_parameters, request_body)
-
-        if response is not None:
-            #processing the response if request was successful
-            self.process_response(response, endpoint_path, http_method, query_parameters, request_body)
+        request_data = RequestData(
+            endpoint_path=endpoint_path,
+            http_method=http_method,
+            parameters=query_parameters,
+            request_body=request_body,
+            content_type=content_type
+        )
+        response = self.send_request(request_data)
+        self.process_response(response, request_data)
+        self.attempt_retry(response, request_data)
 
     def convert_properties(self, object: ItemProperties):
         if object.type == "array":
