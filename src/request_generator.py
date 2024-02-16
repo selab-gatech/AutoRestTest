@@ -103,7 +103,8 @@ class RequestsGenerator:
         """
         Mutate valid queries for further testing
         """
-        for query in self.successful_query_data:
+        curr_success_queries = self.successful_query_data.copy()
+        for query in curr_success_queries:
             curr_id = query.operation_id
             operation_details = self.operations.get(curr_id)
             if operation_details is not None:
