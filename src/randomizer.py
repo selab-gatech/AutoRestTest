@@ -6,11 +6,12 @@ from specification_parser import ParameterProperties, ItemProperties
 
 
 class RandomizedSelector:
+    MAX_DEPTH = 10
     def __init__(self, parameters: dict, request_body: dict):
         self.generate_accurate = random.randint(1, 10) <= 3
         self.dropout_ratio = 0.05
         self.randomized_weight = 0.8
-        self.max_arr_length = 2**32
+        self.max_arr_length = 2**16
         self.randomization_max_val = 100
         self.generators = {"integer": self.randomize_integer,
                            "float": self.randomize_float,
@@ -32,27 +33,29 @@ class RandomizedSelector:
         else:
             return random.choice(list(self.generators.values()))()
 
-    def generate_randomized_object(self, item_properties: ItemProperties) -> Dict:
-        if not item_properties.properties:
+    def generate_randomized_object(self, item_properties: ItemProperties, depth = 0) -> Dict:
+        if not item_properties.properties or depth > self.MAX_DEPTH:
             return self.generators["object"]()
         randomized_object = {}
         for item_name, item_values in item_properties.properties.items():
             if not self.is_dropped():
-                randomized_object[item_name] = self.randomize_item(item_values)
+                randomized_object[item_name] = self.randomize_item(item_values, depth + 1)
         return randomized_object
 
-    def generate_randomized_array(self, item_properties: ItemProperties) -> List:
-        if not item_properties.items:
+    def generate_randomized_array(self, item_properties: ItemProperties, depth = 0) -> List:
+        if not item_properties.items or depth > self.MAX_DEPTH:
             return self.generators["array"]()
         array_length = self.randomized_array_length()
-        return [self.randomize_item(item_properties.items) for _ in range(array_length)]
+        return [self.randomize_item(item_properties.items, depth + 1) for _ in range(array_length)]
 
-    def randomize_item(self, item_properties: ItemProperties):
+    def randomize_item(self, item_properties: ItemProperties, depth = 0):
+        if depth > self.MAX_DEPTH:
+            return None
         if item_properties is None:
             return None
         if item_properties.type in ["object", "array"] and self.should_generate_accurately():
             composite_method = self.generate_randomized_object if item_properties.type == "object" else self.generate_randomized_array
-            return composite_method(item_properties)
+            return composite_method(item_properties, depth + 1)
         else:
             return self.use_primitive_generator(item_properties)
 
