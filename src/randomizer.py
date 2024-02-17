@@ -37,7 +37,7 @@ class RandomizedSelector:
             return self.generators["object"]()
         randomized_object = {}
         for item_name, item_values in item_properties.properties.items():
-            if not self.is_dropped():
+            if self.generate_accurate or not self.is_dropped():
                 randomized_object[item_name] = self.randomize_item(item_values)
         return randomized_object
 

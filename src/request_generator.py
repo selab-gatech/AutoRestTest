@@ -105,6 +105,7 @@ class RequestsGenerator:
         """
         Mutate valid queries for further testing
         """
+        print("Mutating Requests...")
         curr_success_queries = self.successful_query_data.copy()
         for query in curr_success_queries:
             curr_id = query.operation_id
@@ -222,7 +223,6 @@ class RequestsGenerator:
         )
         print("Request Sent")
         response = self.send_request(request_data)
-        print("Response Recieved")
         if response is not None:
             self.process_response(response, request_data)
             self.attempt_retry(response, request_data)
@@ -250,8 +250,7 @@ class RequestsGenerator:
                 self.process_operation(operation_properties)
 
         self.mutate_requests()
-        print()
-        print("Generated Request!")
+        print("Generated Requests!")
 
 #testing code
 if __name__ == "__main__":
