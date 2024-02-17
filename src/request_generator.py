@@ -103,6 +103,7 @@ class RequestsGenerator:
         """
         Mutate valid queries for further testing
         """
+        print("Mutating Requests...")
         curr_success_queries = self.successful_query_data.copy()
         for query in curr_success_queries:
             curr_id = query.operation_id
@@ -219,7 +220,7 @@ class RequestsGenerator:
             operation_id=operation_properties.operation_id
         )
         response = self.send_request(request_data)
-        if response:
+        if response is not None:
             self.process_response(response, request_data)
             self.attempt_retry(response, request_data)
 
@@ -227,20 +228,19 @@ class RequestsGenerator:
         """
         Generate the randomized requests based on the specification file.
         """
-        print("Generating Request...")
-        print()
+        print("Generating Requests...")
         for operation_id, operation_properties in self.operations.items():
-            self.process_operation(operation_properties)
+            for i in range(200):
+                self.process_operation(operation_properties)
 
         self.mutate_requests()
-        print()
-        print("Generated Request!")
+        print("Generated Requests!")
 
 #testing code
 if __name__ == "__main__":
-    request_generator = RequestsGenerator(file_path="../specs/original/oas/genome-nexus.yaml", api_url="http://localhost:50110")
+    request_generator = RequestsGenerator(file_path="../specs/original/oas/omdb.yaml", api_url="https://omdbapi.com/")
     request_generator.requests_generate()
     #generate histogram using self.status_code_counts
-    print(request_generator.status_code_counts)
+    print([(x.status_code, x.count) for x in request_generator.status_codes.values()])
     #for i in range(10):
     #    print(request_generator.randomize_parameter_value())
