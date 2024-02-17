@@ -45,7 +45,7 @@ if __name__ == "__main__":
         subprocess.run("docker stop gn-mongo", shell=True)
         subprocess.run("docker rm gn-mongo", shell=True)
         subprocess.run("docker run --name=gn-mongo --restart=always -p 27018:27017 -d genomenexus/gn-mongo:latest", shell=True)
-        time.sleep(240) # wait for the mongoDB to start, may not be done by end of 180 seconds, might need to add some sort of liveness probe
+        time.sleep(300) # wait for the mongoDB to start, may not be done by end of 180 seconds, might need to add some sort of liveness probe
         subprocess.run(
             "tmux new -d -s genome-nexus-server '. ../java8_arm.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'",
             shell=True)
