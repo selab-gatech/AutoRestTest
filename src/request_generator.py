@@ -3,6 +3,7 @@ import string
 from dataclasses import dataclass
 from typing import List, Dict
 
+import threading
 import requests
 import urllib
 import json
@@ -26,13 +27,14 @@ class StatusCode:
     requests: List[RequestData]
 
 class RequestsGenerator:
-    def __init__(self, file_path: str, api_url: str):
+    def __init__(self, file_path: str, api_url: str, is_local: bool = False):
         self.file_path = file_path
         self.api_url = api_url
         self.successful_query_data: List[RequestData] = [] # list that will store successfuly query_parameters
         self.status_codes: Dict[int: StatusCode] = {} # dictionary to track status code occurrences
         self.specification_parser: SpecificationParser = SpecificationParser(self.file_path)
         self.operations: Dict[str, OperationProperties] = self.specification_parser.parse_specification()
+        self.is_local = is_local
 
     def get_simple_type(self, variable):
         """
@@ -219,6 +221,7 @@ class RequestsGenerator:
             content_type=content_type,
             operation_id=operation_properties.operation_id
         )
+        print("Request Sent")
         response = self.send_request(request_data)
         if response is not None:
             self.process_response(response, request_data)
@@ -228,9 +231,22 @@ class RequestsGenerator:
         """
         Generate the randomized requests based on the specification file.
         """
-        print("Generating Requests...")
-        for operation_id, operation_properties in self.operations.items():
-            for i in range(200):
+        print("Generating Request...")
+        print()
+        if not self.is_local:
+            num_workers = 5
+            worker_queues = [[] for i in range(num_workers)] 
+            for i, (operation_id, operation_properties) in enumerate(self.operations.items()):
+                worker_queues[i % num_workers].append((operation_id, operation_properties))
+            workers = []
+            for i in range(num_workers):
+                worker = threading.Thread(target=self.process_operation, args=(worker_queues[i],))
+                workers.append(worker)
+                worker.start()
+            for worker in workers:
+                worker.join()
+        else:
+            for operation_id, operation_properties in self.operations.items():
                 self.process_operation(operation_properties)
 
         self.mutate_requests()
@@ -240,6 +256,7 @@ class RequestsGenerator:
 if __name__ == "__main__":
     request_generator = RequestsGenerator(file_path="../specs/original/oas/ocvn.yaml", api_url="http://0.0.0.0:50112")
     request_generator.requests_generate()
+
     #generate histogram using self.status_code_counts
     print([(x.status_code, x.count) for x in request_generator.status_codes.values()])
     #for i in range(10):

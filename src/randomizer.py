@@ -6,7 +6,6 @@ from specification_parser import ParameterProperties, ItemProperties
 
 
 class RandomizedSelector:
-    MAX_DEPTH = 10
     def __init__(self, parameters: dict, request_body: dict):
         self.generate_accurate = random.randint(1, 10) <= 3
         self.dropout_ratio = 0.05
@@ -109,8 +108,8 @@ class RandomizedSelector:
         return None
     
     def randomized_array_length(self):
-        array_size = random.randint(0, 100)
+        array_size = random.randint(0, 5)
         if array_size <= 95:
-            return random.randint(0, 1000)
+            return random.randint(0, 5)
         else:
-            return random.randint(0, 2**16)
+            return random.randint(0, 1000)
