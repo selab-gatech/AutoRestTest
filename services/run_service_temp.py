@@ -2,8 +2,8 @@ import os
 import sys
 import time
 import subprocess
-import py
-
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
 
 # This function is used to run a service given the service path, class name, and coverage collecting port number
 def run_service(service_path, class_name, port_number):
@@ -20,7 +20,7 @@ def run_service(service_path, class_name, port_number):
     elif "ocvn" in service_path:
         with open(service_path + "/run.sh", 'w') as f:
             f.write(
-                "java " + cov + port_number + ".exec" + " -cp target/classes:target/test-classes:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/rt.jar:" + base + "/emb/cs/rest-gui/ocvn/web/target/classes:" + cp + ' ' + class_name)
+                "java " + cov + port_number + ".exec" + " -cp target/classes:target/test-classes:/usr/lib/jvm/java-8-openjdk-arm64/jre/lib/rt.jar:" + base + "/emb/cs/rest-gui/ocvn/web/target/classes:" + cp + ' ' + class_name)
         subprocess.run(
             ". ../java8_arm.env && cd " + service_path + " && tmux new-session -d -s ocvn-server 'sh run.sh'",
             shell=True)
@@ -44,16 +44,38 @@ if __name__ == "__main__":
         subprocess.run("tmux new -d -s fdic-proxy 'LOG_FILE=log-fdic.txt mitmproxy --mode reverse:https://banks.data.fdic.gov -p 9001 -s proxy.py'", shell=True)
     elif name == "genome-nexus":
         working_dir = os.getcwd()
+        host = "localhost"
+        port = 27018
+        container_name = "gn-mongo"
+        log_file_path = f"{working_dir}/mongo_logs.txt"
+
         subprocess.run("docker stop gn-mongo", shell=True)
         subprocess.run("docker rm gn-mongo", shell=True)
         subprocess.run(f"docker run --name=gn-mongo --restart=always -p 27018:27017 -d -v '{working_dir}/genome-nexus/data/db:/data/db' genomenexus/gn-mongo:latest", shell=True)
-        time.sleep(60) # wait for the mongoDB to start, may not be done by end of 180 seconds, might need to add some sort of liveness probe
+
+        time.sleep(80) # wait for the mongoDB to start, may not be done by end of 180 seconds, might need to add some sort of liveness probe
+
+        def log_docker_output(container_name, log_file_path):
+            command = f"docker logs {container_name}"
+            with open(log_file_path, "w") as log_file:
+                subprocess.run(command, shell=True, stdout=log_file, stderr=subprocess.STDOUT)
+            print(f"Logs have been written to {log_file_path}")
+
+        log_docker_output("gn-mongo", log_file_path)
+        client = MongoClient(host, port, serverSelectionTimeoutMS=5000)
+        try:
+            client.admin.command('ismaster')
+            print("MongoDB is connected and available on port", port)
+        except ConnectionFailure:
+            print(f"Failed to connect to MongoDB on {host}:{port}")
+
         subprocess.run(
             "tmux new -d -s genome-nexus-server '. ../java8_arm.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war >server_log.txt 2>&1'",
             shell=True)
         subprocess.run(
             "tmux new -d -s genome-nexus-proxy 'LOG_FILE=log-genome-nexus.txt mitmproxy --mode reverse:http://0.0.0.0:50110 -p 9002 -s proxy.py'",
             shell=True)
+
     elif name == "language-tool":
         run_service("emb/em/embedded/rest/languagetool", "em.embedded.org.languagetool.RunServer",
                     "9003")
@@ -91,17 +113,17 @@ if __name__ == "__main__":
         subprocess.run(
             "tmux new -d -s fdic-proxy 'LOG_FILE=log-fdic.txt mitmproxy --mode reverse:https://banks.data.fdic.gov -p 9001 -s proxy.py'",
             shell=True)
-        subprocess.run("docker stop gn-mongo", shell=True)
-        subprocess.run("docker rm gn-mongo", shell=True)
-        subprocess.run("docker run --name=gn-mongo --restart=always -p 27018:27017 -d genomenexus/gn-mongo:latest",
-                       shell=True)
-        time.sleep(30)
-        subprocess.run(
-            "tmux new -d -s genome-nexus-server '. ../java8_arm.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'",
-            shell=True)
-        subprocess.run(
-            "tmux new -d -s genome-nexus-proxy 'LOG_FILE=log-genome-nexus.txt mitmproxy --mode reverse:http://0.0.0.0:50110 -p 9002 -s proxy.py'",
-            shell=True)
+        #subprocess.run("docker stop gn-mongo", shell=True)
+        #subprocess.run("docker rm gn-mongo", shell=True)
+        #subprocess.run("docker run --name=gn-mongo --restart=always -p 27018:27017 -d genomenexus/gn-mongo:latest",
+        #               shell=True)
+        #time.sleep(30)
+        #subprocess.run(
+        #    "tmux new -d -s genome-nexus-server '. ../java8_arm.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'",
+        #    shell=True)
+        #subprocess.run(
+        #    "tmux new -d -s genome-nexus-proxy 'LOG_FILE=log-genome-nexus.txt mitmproxy --mode reverse:http://0.0.0.0:50110 -p 9002 -s proxy.py'",
+        #    shell=True)
         run_service("emb/em/embedded/rest/languagetool",
                     "em.embedded.org.languagetool.RunServer",
                     "9003")
