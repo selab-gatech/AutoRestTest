@@ -179,8 +179,8 @@ class RequestsGenerator:
                     response = select_method(self.api_url + endpoint_path, params=query_parameters, data=request_body)
             else:
                 response = select_method(self.api_url + endpoint_path, params=query_parameters)
-        except requests.exceptions.RequestException:
-            print("Request failed")
+        except requests.exceptions.RequestException as err:
+            print("Request failed due to error: ", err)
             return None
         return response
 
@@ -238,7 +238,7 @@ class RequestsGenerator:
 
 #testing code
 if __name__ == "__main__":
-    request_generator = RequestsGenerator(file_path="../specs/original/oas/omdb.yaml", api_url="https://omdbapi.com/")
+    request_generator = RequestsGenerator(file_path="../specs/original/oas/ocvn.yaml", api_url="http://0.0.0.0:50112")
     request_generator.requests_generate()
     #generate histogram using self.status_code_counts
     print([(x.status_code, x.count) for x in request_generator.status_codes.values()])
