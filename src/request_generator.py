@@ -2,7 +2,7 @@ import random
 import string
 from dataclasses import dataclass
 from typing import List, Dict
-
+import argparse
 import threading
 import requests
 import urllib
@@ -252,9 +252,31 @@ class RequestsGenerator:
         self.mutate_requests()
         print("Generated Requests!")
 
+service_urls = {
+    'fdic': "http://0.0.0.0:9001",
+    'genome-nexus': "http://0.0.0.0:9002",
+    'language-tool': "http://0.0.0.0:9003",
+    'ocvn': "http://0.0.0.0:9004",
+    'ohsome': "http://0.0.0.0:9005",
+    'omdb': "http://0.0.0.0:9006",
+    'rest-countries': "http://0.0.0.0:9007",
+    'spotify': "http://0.0.0.0:9008",
+    'youtube': "http://0.0.0.0:9009"
+}
 #testing code
 if __name__ == "__main__":
-    request_generator = RequestsGenerator(file_path="../specs/original/oas/genome-nexus.yaml", api_url="http://localhost:50110", is_local=True)
+    # Set up argparse to handle command line arguments
+    parser = argparse.ArgumentParser(description='Generate requests based on API specification.')
+    parser.add_argument('service', help='The service specification to use.')
+    # Parse the command line arguments
+    args = parser.parse_args()
+    # Get the api_url from the dictionary using the service name provided
+    api_url = service_urls.get(args.service)
+    if api_url is None:
+        print(f"Service '{args.service}' not recognized. Available services are: {list(service_urls.keys())}")
+        exit(1)
+    file_path = f"../specs/original/oas/{args.service}.yaml"
+    request_generator = RequestsGenerator(file_path=file_path, api_url=api_url, is_local=True)
     for i in range(5):
         request_generator.requests_generate()
         print(i)
