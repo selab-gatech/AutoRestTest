@@ -10,7 +10,7 @@ class RandomizedSelector:
         self.generate_accurate = random.randint(1, 10) <= 3
         self.dropout_ratio = 0.05
         self.randomized_weight = 0.8
-        self.max_arr_length = 2**32
+        self.max_arr_length = 2**16
         self.randomization_max_val = 100
         self.generators = {"integer": self.randomize_integer,
                            "float": self.randomize_float,
@@ -37,7 +37,7 @@ class RandomizedSelector:
             return self.generators["object"]()
         randomized_object = {}
         for item_name, item_values in item_properties.properties.items():
-            if not self.is_dropped():
+            if self.generate_accurate or not self.is_dropped():
                 randomized_object[item_name] = self.randomize_item(item_values)
         return randomized_object
 
@@ -108,8 +108,8 @@ class RandomizedSelector:
         return None
     
     def randomized_array_length(self):
-        array_size = random.randint(0, 100)
+        array_size = random.randint(0, 5)
         if array_size <= 95:
-            return random.randint(0, 1000)
+            return random.randint(0, 5)
         else:
-            return random.randint(0, 2**32)
+            return random.randint(0, 1000)
