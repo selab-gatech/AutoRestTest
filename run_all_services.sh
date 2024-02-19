@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#./run_all_services.sh to run all services
 # Define list of services
 declare -a services=(
   "fdic"
@@ -51,3 +51,4 @@ do
 done
 
 echo "All services have been processed."
+
