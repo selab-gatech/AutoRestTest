@@ -27,7 +27,7 @@ class StatusCode:
     requests: List[RequestData]
 
 class RequestsGenerator:
-    def __init__(self, file_path: str, api_url: str, is_local: bool = False):
+    def __init__(self, file_path: str, api_url: str, is_local: bool = True):
         self.file_path = file_path
         self.api_url = api_url
         self.successful_query_data: List[RequestData] = [] # list that will store successfuly query_parameters
@@ -254,7 +254,7 @@ class RequestsGenerator:
 
 #testing code
 if __name__ == "__main__":
-    request_generator = RequestsGenerator(file_path="../specs/original/oas/ocvn.yaml", api_url="http://0.0.0.0:50112")
+    request_generator = RequestsGenerator(file_path="../specs/original/oas/genome-nexus.yaml", api_url="https://3.135.223.203:9002")
     request_generator.requests_generate()
 
     #generate histogram using self.status_code_counts
