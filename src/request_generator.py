@@ -252,39 +252,37 @@ class RequestsGenerator:
         self.mutate_requests()
         print("Generated Requests!")
 
-service_urls = {
-    'fdic': "http://0.0.0.0:9001",
-    'genome-nexus': "http://0.0.0.0:9002",
-    'language-tool': "http://0.0.0.0:9003",
-    'ocvn': "http://0.0.0.0:9004",
-    'ohsome': "http://0.0.0.0:9005",
-    'omdb': "http://0.0.0.0:9006",
-    'rest-countries': "http://0.0.0.0:9007",
-    'spotify': "http://0.0.0.0:9008",
-    'youtube': "http://0.0.0.0:9009"
-}
 
-#testing code
-if __name__ == "__main__":
 
-    # Set up argparse to handle command line arguments
+def argument_parse() -> (str, str):
+    service_urls = {
+        'fdic': "http://0.0.0.0:9001",
+        'genome-nexus': "http://0.0.0.0:9002",
+        'language-tool': "http://0.0.0.0:9003",
+        'ocvn': "http://0.0.0.0:9004",
+        'ohsome': "http://0.0.0.0:9005",
+        'omdb': "http://0.0.0.0:9006",
+        'rest-countries': "http://0.0.0.0:9007",
+        'spotify': "http://0.0.0.0:9008",
+        'youtube': "http://0.0.0.0:9009"
+    }
     parser = argparse.ArgumentParser(description='Generate requests based on API specification.')
     parser.add_argument('service', help='The service specification to use.')
-    # Parse the command line arguments
     args = parser.parse_args()
-    # Get the api_url from the dictionary using the service name provided
     api_url = service_urls.get(args.service)
     if api_url is None:
         print(f"Service '{args.service}' not recognized. Available services are: {list(service_urls.keys())}")
         exit(1)
-    api_url = api_url.replace("0.0.0.0", DEV_SERVER_ADDRESS)
-    file_path = f"../specs/original/oas/{args.service}.yaml"
+    api_url = api_url.replace("0.0.0.0", DEV_SERVER_ADDRESS)  # use config
+    return args.service, api_url
+
+#testing code
+if __name__ == "__main__":
+    service_name, api_url = argument_parse()
+    file_path = f"../specs/original/oas/{service_name}.yaml"
     request_generator = RequestsGenerator(file_path=file_path, api_url=api_url, is_local=True)
     for i in range(1):
         request_generator.requests_generate()
         print(i)
 
-    #generate histogram using self.status_code_counts
     print([(x.status_code, x.count) for x in request_generator.status_codes.values()])
-    #for i in range(10):
-    #    print(request_generator.randomize_parameter_value())
