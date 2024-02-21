@@ -1,12 +1,12 @@
+import os
 import random
-import string
 from dataclasses import dataclass
 from typing import List, Dict
-
+import argparse
 import threading
 import requests
-import urllib
 import json
+from config import *
 from specification_parser import SpecificationParser, ItemProperties, ParameterProperties, OperationProperties
 from randomizer import RandomizedSelector
 
@@ -21,13 +21,19 @@ class RequestData:
     operation_id: str
 
 @dataclass
+class RequestResponse:
+    request: RequestData
+    response: requests.Response
+    response_text: str
+
+@dataclass
 class StatusCode:
     status_code: int
     count: int
-    requests: List[RequestData]
+    requests_and_responses: List[RequestResponse]
 
 class RequestsGenerator:
-    def __init__(self, file_path: str, api_url: str, is_local: bool = False):
+    def __init__(self, file_path: str, api_url: str, is_local: bool = True):
         self.file_path = file_path
         self.api_url = api_url
         self.successful_query_data: List[RequestData] = [] # list that will store successfuly query_parameters
@@ -115,22 +121,29 @@ class RequestsGenerator:
                 new_operation = self.create_operation_for_mutation(query, new_operation)
                 self.process_operation(new_operation)
 
-    def process_response(self, response, request_data):
+    def process_response(self, response: requests.Response, request_data: RequestData):
         """
         Process the response from the API.
         """
         if response is None:
             return
 
+        # print(response.text)
+        request_and_response = RequestResponse(
+            request=request_data,
+            response=response,
+            response_text=response.text
+        )
+
         if response.status_code not in self.status_codes:
             self.status_codes[response.status_code] = StatusCode(
                 status_code=response.status_code,
                 count=1,
-                requests=[request_data]
+                requests_and_responses=[request_and_response],
             )
         else:
             self.status_codes[response.status_code].count += 1
-            self.status_codes[response.status_code].requests.append(request_data)
+            self.status_codes[response.status_code].requests_and_responses.append(request_and_response)
 
         if response.status_code // 100 == 2:
             self.successful_query_data.append(request_data)
@@ -181,8 +194,9 @@ class RequestsGenerator:
                     response = select_method(self.api_url + endpoint_path, params=query_parameters, data=request_body)
             else:
                 response = select_method(self.api_url + endpoint_path, params=query_parameters)
-        except requests.exceptions.RequestException as e:
-            print("Request failed")
+        except requests.exceptions.RequestException as err:
+            #print("Request failed due to error: ", err)
+            print("Request failed due to error: ", str(err)[:400])
             return None
         return response
 
@@ -247,18 +261,69 @@ class RequestsGenerator:
                 worker.join()
         else:
             for operation_id, operation_properties in self.operations.items():
-                self.process_operation(operation_properties)
+                for _ in range(10):
+                    self.process_operation(operation_properties)
 
         self.mutate_requests()
         print("Generated Requests!")
 
+
+
+def argument_parse() -> (str, str):
+    service_urls = {
+        'fdic': "http://0.0.0.0:8001",
+        'genome-nexus': "http://0.0.0.0:8002",
+        'language-tool': "http://0.0.0.0:8003",
+        'ocvn': "http://0.0.0.0:8004",
+        'ohsome': "http://0.0.0.0:8005",
+        'omdb': "http://0.0.0.0:8006",
+        'rest-countries': "http://0.0.0.0:8007",
+        'spotify': "http://0.0.0.0:8008",
+        'youtube': "http://0.0.0.0:8009"
+    }
+    parser = argparse.ArgumentParser(description='Generate requests based on API specification.')
+    parser.add_argument('service', help='The service specification to use.')
+    parser.add_argument('is_local', help='Whether the services are loaded locally or not.')
+    args = parser.parse_args()
+    api_url = service_urls.get(args.service)
+    is_local = args.is_local
+    if api_url is None:
+        print(f"Service '{args.service}' not recognized. Available services are: {list(service_urls.keys())}")
+        exit(1)
+    if is_local not in {"true", "false"}:
+        print(f"Invalid value for 'is_local'. Must be either 'true' or 'false'.")
+        exit(1)
+    if is_local == "false":
+        api_url = api_url.replace("0.0.0.0", DEV_SERVER_ADDRESS)  # use config
+    return args.service, api_url
+
+def output_responses(request_generator: RequestsGenerator, service_name: str):
+    """
+    Output the responses to a file.
+    """
+    directory = "./testing_output/logs/"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    with open(f"./testing_output/logs/{service_name}.txt", "w") as file:
+        file.write(f"SERVER OUTPUT FOR {service_name}\n")
+        for status_code, status_code_data in request_generator.status_codes.items():
+            file.write("========================================\n")
+            file.write(f"Status Code: {status_code}\n")
+            file.write(f"Count: {status_code_data.count}\n")
+            for request_response in status_code_data.requests_and_responses:
+                file.write(f"Request Parameters: {request_response.request.parameters}\n")
+                file.write(f"Request Body: {request_response.request.request_body}\n")
+                file.write(f"Response Text: {request_response.response_text}\n")
+                file.write("\n")
+
+
 #testing code
 if __name__ == "__main__":
-    request_generator = RequestsGenerator(file_path="../specs/original/oas/genome-nexus.yaml", api_url="http://localhost:50110", is_local=True)
-    for i in range(5):
+    service_name, api_url = argument_parse()
+    file_path = f"../specs/original/oas/{service_name}.yaml"
+    print("Checking requests at: ", api_url)
+    request_generator = RequestsGenerator(file_path=file_path, api_url=api_url, is_local=True)
+    for i in range(1):
         request_generator.requests_generate()
-        print(i)
-    #generate histogram using self.status_code_counts
     print([(x.status_code, x.count) for x in request_generator.status_codes.values()])
-    #for i in range(10):
-    #    print(request_generator.randomize_parameter_value())
+    output_responses(request_generator, service_name)

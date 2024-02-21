@@ -45,7 +45,7 @@ if __name__ == "__main__":
         subprocess.run("sudo docker stop gn-mongo", shell=True)
         subprocess.run("sudo docker rm gn-mongo", shell=True)
         subprocess.run("sudo docker run --name=gn-mongo --restart=always -p 27018:27017 -d genomenexus/gn-mongo:latest", shell=True)
-        time.sleep(180)
+        time.sleep(30)
         subprocess.run(
             "tmux new -d -s genome-nexus-server '. ./java8.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'",
             shell=True)
