@@ -9,7 +9,7 @@ class Counter:
 
     def request(self, flow):
         # https://developer.spotify.com/console/get-playlists/
-        flow.request.headers["Authorization"] = "Bearer TOKEN_HERE"
+        flow.request.headers["Authorization"] = "Bearer no_token"
         with open("log-spotify.txt", "a") as f:
             f.write("========REQUEST========\n")
             f.write(flow.request.method + "\n")
