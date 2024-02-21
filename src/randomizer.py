@@ -74,7 +74,7 @@ class RandomizedSelector:
             return self.randomize_item(self.request_body)
         else:
             error_msg = "Error parsing request body"
-            print(error_msg)
+            #print(error_msg)
             raise ValueError(error_msg)
 
     def should_generate_accurately(self):
