@@ -271,15 +271,15 @@ class RequestsGenerator:
 
 def argument_parse() -> (str, str):
     service_urls = {
-        'fdic': "http://0.0.0.0:8001",
-        'genome-nexus': "http://0.0.0.0:8002",
-        'language-tool': "http://0.0.0.0:8003",
-        'ocvn': "http://0.0.0.0:8004",
-        'ohsome': "http://0.0.0.0:8005",
-        'omdb': "http://0.0.0.0:8006",
-        'rest-countries': "http://0.0.0.0:8007",
-        'spotify': "http://0.0.0.0:8008",
-        'youtube': "http://0.0.0.0:8009"
+        'fdic': "http://0.0.0.0:9001",
+        'genome-nexus': "http://0.0.0.0:9002",
+        'language-tool': "http://0.0.0.0:9003",
+        'ocvn': "http://0.0.0.0:9004",
+        'ohsome': "http://0.0.0.0:9005",
+        'omdb': "http://0.0.0.0:9006",
+        'rest-countries': "http://0.0.0.0:9007",
+        'spotify': "http://0.0.0.0:9008",
+        'youtube': "http://0.0.0.0:9009"
     }
     parser = argparse.ArgumentParser(description='Generate requests based on API specification.')
     parser.add_argument('service', help='The service specification to use.')
@@ -294,7 +294,8 @@ def argument_parse() -> (str, str):
         print(f"Invalid value for 'is_local'. Must be either 'true' or 'false'.")
         exit(1)
     if is_local == "false":
-        api_url = api_url.replace("0.0.0.0", DEV_SERVER_ADDRESS)  # use config
+        api_url = api_url.replace("0.0.0.0", DEV_SERVER_ADDRESS)  # use config.py for DEV_SERVER_ADDRESS var
+        api_url = api_url.replace(":9", ":8") # use public server proxy ports
     return args.service, api_url
 
 def output_responses(request_generator: RequestsGenerator, service_name: str):
