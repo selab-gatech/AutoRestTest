@@ -1,6 +1,6 @@
 from model.method import Method
 from pydblite import Base
-from fuzzer.util import resolve_json_value
+from util import resolve_json_value
 
 
 class APIDB:

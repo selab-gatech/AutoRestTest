@@ -4,9 +4,9 @@ import string
 
 import numpy as np
 import rstr
-from fuzzer.schema_validator import validate
-from fuzzer.runtime_dictionary import RuntimeDictionary
-from fuzzer.constant import ValueSource
+from schema_validator import validate
+from runtime_dictionary import RuntimeDictionary
+from constant import ValueSource
 from model.parameter import TargetType, TargetStatus
 from model.method import Method
 import uuid
