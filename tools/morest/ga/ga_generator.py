@@ -1,5 +1,5 @@
 import time
-from fuzzer.runtime_dictionary import RuntimeDictionary
+from fuzzer_dir.runtime_dictionary import RuntimeDictionary
 from model.operation_dependency_graph import OperationDependencyGraph
 import uuid
 from ._gene_bank import GeneBank
