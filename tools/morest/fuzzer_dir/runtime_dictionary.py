@@ -5,9 +5,9 @@ import re
 
 import numpy as np
 from model.method import Method
-from schema_validator import validate
+from fuzzer_dir.schema_validator import validate
 from .util import resolve_json_value
-from relation_reasoner import RelationReasoner
+from fuzzer_dir.relation_reasoner import RelationReasoner
 
 
 class ParameterType:
