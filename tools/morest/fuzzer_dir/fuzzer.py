@@ -127,7 +127,7 @@ class APIFuzzer:
     def mutation_fuzz_run(self):
         print("Continue to mutation fuzzing \n-------------------- \n")
         time.sleep(3)
-        # re_initialize the fuzzer
+        # re_initialize the fuzzer_dir
         self.runtime_dict = RuntimeDictionary()
         self.mutation_runtime_dict = RuntimeDictionary()
         # re-initialize error sequence
