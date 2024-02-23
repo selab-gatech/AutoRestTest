@@ -6,7 +6,7 @@ import argparse
 import threading
 import requests
 import json
-from config import *
+from src.config import *
 from specification_parser import SpecificationParser, ItemProperties, ParameterProperties, OperationProperties
 from randomizer import RandomizedSelector
 
