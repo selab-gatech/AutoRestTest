@@ -20,7 +20,7 @@ restler/
 rest-gitlab/
 **/testing_output/
 
-src/config.py
+config.py
 test.json
 cp.txt
 *.log

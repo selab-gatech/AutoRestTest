@@ -3,7 +3,7 @@ import os
 from prance import ResolvingParser
 
 from build_graph import parse
-from fuzzer.fuzzer import APIFuzzer
+from fuzzer_dir.fuzzer import APIFuzzer
 import requests
 import json
 
