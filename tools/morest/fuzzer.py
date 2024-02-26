@@ -8,7 +8,6 @@ from fuzzer.fuzzer import APIFuzzer
 from utils.auth_util import get_token, SUT
 from config import DEV_SERVER_ADDRESS
 
-
 def default_reclimit_handler(limit, parsed_url, recursions=()):
     """Raise prance.util.url.ResolutionError."""
     return {
@@ -16,7 +15,6 @@ def default_reclimit_handler(limit, parsed_url, recursions=()):
         "name": "Recursive Dependency",
         "properties": {}
     }
-
 
 def main():
     # testing arguments format: swagger address, server address, system under test's name, *args to obtain token
