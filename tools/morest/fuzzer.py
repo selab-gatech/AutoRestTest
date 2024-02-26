@@ -3,7 +3,7 @@ import os
 from prance import ResolvingParser
 
 from build_graph import parse
-from fuzzer_dir.fuzzer import APIFuzzer
+from fuzzer.fuzzer import APIFuzzer
 from utils.auth_util import get_token, SUT
 
 
@@ -28,7 +28,7 @@ def main():
     # api_fuzzer = APIFuzzer(apis, parser.specification, odg, 'https://demo.traccar.org/api/')
     # api_fuzzer = APIFuzzer(apis, parser.specification, odg, 'http://192.168.74.135:3000', pre_defined_headers=headers)
     # token = get_token(*test_args[2:])
-    api_fuzzer = APIFuzzer(apis, parser.specification, odg, test_args[1], time_budget=3600)
+    api_fuzzer = APIFuzzer(apis, parser.specification, odg, test_args[1], time_budget=60)
     api_fuzzer.run()
 
 class MorestFuzzer:
