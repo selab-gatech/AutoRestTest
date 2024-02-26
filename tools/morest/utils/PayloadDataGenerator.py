@@ -6,7 +6,7 @@ from utils.basic_payloads import general_payload_list
 import numpy as np
 import rstr
 
-from fuzzer_dir.runtime_dictionary import RuntimeDictionary
+from fuzzer.runtime_dictionary import RuntimeDictionary
 
 
 class PayloadDataGenerator:
