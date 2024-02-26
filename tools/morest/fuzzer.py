@@ -31,14 +31,14 @@ def main():
     api_fuzzer = APIFuzzer(apis, parser.specification, odg, test_args[1], time_budget=60)
     api_fuzzer.run()
 
-def run_fuzzer(spec_path, server_url):
+def run_fuzzer(spec_path, server_url, time_budget=300):
     test_args = [spec_path, server_url, SUT.BITBUCKET]
     parser = ResolvingParser(test_args[0],
                              recursion_limit_handler=default_reclimit_handler, backend='openapi-spec-validator',
                              strict=False)
     apis, odg = parse(parser.specification)
     odg.draw()
-    api_fuzzer = APIFuzzer(apis, parser.specification, odg, test_args[1], time_budget=60) # changed time budget from 3600 to 60
+    api_fuzzer = APIFuzzer(apis, parser.specification, odg, test_args[1], time_budget=time_budget) # changed time budget from 3600 to 60
     api_fuzzer.run()
 
 def argument_parse() -> (str, str):
@@ -76,7 +76,7 @@ class MorestFuzzer:
         self.server_url = server_url
 
     def run(self):
-        run_fuzzer(self.spec_path, self.server_url)
+        run_fuzzer(self.spec_path, self.server_url, time_budget=600)
 
 if __name__ == '__main__':
     service_name, api_url = argument_parse()
