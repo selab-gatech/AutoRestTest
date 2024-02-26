@@ -1,6 +1,6 @@
 import argparse
 from config import DEV_SERVER_ADDRESS
-from fuzzer import MorestFuzzer
+from .fuzzer import MorestFuzzer
 
 def argument_parse() -> (str, str):
     service_urls = {
