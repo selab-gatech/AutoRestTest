@@ -257,14 +257,26 @@ class APIFuzzer:
         f.close()
 
     def write_result(self):
+        import json
         with open('errors.json', 'w') as data:
-            json.dump({"result": self.error_sequence}, data)
+            json.dump({
+                "number of errors": len(self.error_sequence),
+                "result": self.error_sequence
+            }, data)
+
         with open('success_resource_merging.json', 'w') as data:
-            json.dump({"result": self.success_sequence_output}, data)
+            json.dump({
+                "number of success sequence output": len(self.success_sequence_output),
+                "result": self.success_sequence_output
+            }, data)
         with open('client_errors.json', 'w') as data:
-            json.dump({"result": list(self.client_apis)}, data)
+            json.dump({
+                "number of client APIs": len(self.client_apis),
+                "result": list(self.client_apis)
+            }, data)
         with open('runtime.json', 'w') as data:
             json.dump({
+                "number of keys": len(self.runtime_dict.signature_to_value.keys()),
                 'keys': list(self.runtime_dict.signature_to_value.keys())
             }, data)
 
