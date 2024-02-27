@@ -76,7 +76,7 @@ class MorestFuzzer:
         self.server_url = server_url
 
     def run(self):
-        run_fuzzer(self.spec_path, self.server_url, time_budget=600)
+        run_fuzzer(self.spec_path, self.server_url, time_budget=60)
 
 if __name__ == '__main__':
     service_name, api_url = argument_parse()

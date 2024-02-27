@@ -159,7 +159,6 @@ class SequenceConverter:
         for i, method in enumerate(sequence.requests):
             url, params, data, headers, files, form_data = self.generate_random_parameter(i, method,
                                                                                           sequence, last_call_response)
-
             resp = self.execute_request(fuzzer, session, method, url, params, data, headers, files, form_data,
                                         fuzzer.pre_defined_headers)
             result.append(resp)
