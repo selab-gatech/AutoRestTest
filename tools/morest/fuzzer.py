@@ -56,9 +56,11 @@ def argument_parse() -> (str, str):
     parser = argparse.ArgumentParser(description='Generate requests based on API specification.')
     parser.add_argument('service', help='The service specification to use.')
     parser.add_argument('is_local', help='Whether the services are loaded locally or not.')
+    parser.add_argument('time_budget', help='The time budget for the fuzzer.')
     args = parser.parse_args()
     api_url = service_urls.get(args.service)
     is_local = args.is_local
+    time_budget = args.time_budget
     if api_url is None:
         print(f"Service '{args.service}' not recognized. Available services are: {list(service_urls.keys())}")
         exit(1)
@@ -68,19 +70,20 @@ def argument_parse() -> (str, str):
     if is_local == "false":
         api_url = api_url.replace("0.0.0.0", DEV_SERVER_ADDRESS)  # use config.py for DEV_SERVER_ADDRESS var
         api_url = api_url.replace(":9", ":8") # use public server proxy ports
-    return args.service, api_url
+    return args.service, api_url, time_budget
 
 class MorestFuzzer:
-    def __init__(self, spec_path, server_url):
+    def __init__(self, spec_path, server_url, time_budget=600):
         self.spec_path = spec_path
         self.server_url = server_url
+        self.time_budget = time_budget
 
     def run(self):
-        run_fuzzer(self.spec_path, self.server_url, time_budget=60)
+        run_fuzzer(self.spec_path, self.server_url, self.time_budget)
 
 if __name__ == '__main__':
-    service_name, api_url = argument_parse()
+    service_name, api_url, time_budget = argument_parse()
     file_path = f"../../specs/original/oas/{service_name}.yaml"
-    fuzzer = MorestFuzzer(file_path, api_url)
+    fuzzer = MorestFuzzer(file_path, api_url, time_budget)
     fuzzer.run()
     #main()

@@ -588,14 +588,14 @@ class APIFuzzer:
             f' ({len(self.success_apis)}/{len(self.total_apis)}),'
             f'Error API: {float(len(self.error_apis)) / len(self.total_apis)}'
             f' ({len(self.error_apis)}/{len(self.total_apis)}),'
-            f'Client Error API: {float(len(self.client_apis)) / len(self.total_apis)}'
-            f' ({len(self.client_apis)}/{len(self.total_apis)}),'
+            #f'Client Error API: {float(len(self.client_apis)) / len(self.total_apis)}'
+            #f' ({len(self.client_apis)}/{len(self.total_apis)}),'
             f'Success Endpoint: {float(len(self.success_endpoint)) / len(self.apis)}'
             f' ({len(self.success_endpoint)}/{len(self.apis)}),'
             f'Error Endpoint: {float(len(self.error_endpoint)) / len(self.apis)}'
             f' ({len(self.error_endpoint)}/{len(self.apis)}),'
-            f'Client Error Endpoint: {float(len(self.client_endpoint)) / len(self.apis)}'
-            f' ({len(self.client_endpoint)}/{len(self.apis)}),'
+            #f'Client Error Endpoint: {float(len(self.client_endpoint)) / len(self.apis)}'
+            #f' ({len(self.client_endpoint)}/{len(self.apis)}),'
             f' Tested Error and Success Unique API: {float(len(set.union(self.success_apis, self.error_apis))) / len(self.total_apis)}'
             f' ({len(set.union(self.success_apis, self.error_apis))}/{len(self.total_apis)}),'
             f' Request Count: {self.request_count}, '
@@ -614,10 +614,10 @@ class APIFuzzer:
         print({
             "success_api": self.api_curve,
             "error_api": self.error_api_curve,
-            "client_api": self.client_api_curve,
+            #"client_api": self.client_api_curve,
             "success_endpoint": self.success_endpoint_api_curve,
             "error_endpoint": self.error_endpoint_api_curve,
-            "client_endpoint": self.client_endpoint_api_curve
+            #"client_endpoint": self.client_endpoint_api_curve
         })
         print(self.runtime_dict.signature_to_value.keys())
         print(status_stat)
