@@ -386,7 +386,7 @@ class APIFuzzer:
             status_code = response["statusCode"]
             if status_code > 299:
                 is_all_success = False
-            if status_code > 199 and status_code < 300:
+            if 199 < status_code < 300:
                 if not self.success_apis.__contains__(response['apiName']):
                     self.api_curve.append({
                         "time": time.time() - self.begin,
@@ -401,7 +401,7 @@ class APIFuzzer:
                 print(method_path, 'method path')
                 self.success_endpoint.add(method_path)
                 self.success_apis.add(response["apiName"])
-            if status_code > 499 and status_code < 600:
+            if 499 < status_code < 600:
                 if not self.error_apis.__contains__(response['apiName']):
                     self.error_api_curve.append({
                         "time": time.time() - self.begin,

@@ -1,0 +1,4 @@
+digraph {
+	"POST /check"
+	"GET /languages"
+}
