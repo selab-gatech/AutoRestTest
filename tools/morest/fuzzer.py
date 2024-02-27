@@ -70,6 +70,11 @@ def argument_parse() -> (str, str):
     if is_local == "false":
         api_url = api_url.replace("0.0.0.0", DEV_SERVER_ADDRESS)  # use config.py for DEV_SERVER_ADDRESS var
         api_url = api_url.replace(":9", ":8") # use public server proxy ports
+    try:
+        time_budget = int(time_budget)
+    except ValueError:
+        print(f"Invalid value for 'time_budget' of {time_budget}. Must be an integer.")
+        exit(1)
     return args.service, api_url, time_budget
 
 class MorestFuzzer:
