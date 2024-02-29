@@ -1,12 +1,13 @@
 import os
 import random
+import time
 from dataclasses import dataclass
 from typing import List, Dict
 import argparse
 import threading
 import requests
 import json
-from config import *
+from config import DEV_SERVER_ADDRESS
 from specification_parser import SpecificationParser, ItemProperties, ParameterProperties, OperationProperties
 from randomizer import RandomizedSelector
 
@@ -33,7 +34,7 @@ class StatusCode:
     requests_and_responses: List[RequestResponse]
 
 class RequestsGenerator:
-    def __init__(self, file_path: str, api_url: str, is_local: bool = True):
+    def __init__(self, file_path: str, api_url: str, is_local: bool = True, time_duration=600):
         self.file_path = file_path
         self.api_url = api_url
         self.successful_query_data: List[RequestData] = [] # list that will store successfuly query_parameters
@@ -41,6 +42,7 @@ class RequestsGenerator:
         self.specification_parser: SpecificationParser = SpecificationParser(self.file_path)
         self.operations: Dict[str, OperationProperties] = self.specification_parser.parse_specification()
         self.is_local = is_local
+        self.time_duration = time_duration
 
     def get_simple_type(self, variable):
         """
@@ -260,42 +262,16 @@ class RequestsGenerator:
             for worker in workers:
                 worker.join()
         else:
-            for operation_id, operation_properties in self.operations.items():
-                for _ in range(10):
-                    self.process_operation(operation_properties)
+            start_time = time.time()
+            while (time.time() - start_time) < self.time_duration:
+                for operation_id, operation_properties in self.operations.items():
+                    for _ in range(5):
+                        self.process_operation(operation_properties)
+                    if (time.time() - start_time) > self.time_duration:
+                        break
 
         self.mutate_requests()
         print("Generated Requests!")
-
-
-
-def argument_parse() -> (str, str):
-    service_urls = {
-        'fdic': "http://0.0.0.0:8001",
-        'genome-nexus': "http://0.0.0.0:8002",
-        'language-tool': "http://0.0.0.0:8003",
-        'ocvn': "http://0.0.0.0:8004",
-        'ohsome': "http://0.0.0.0:8005",
-        'omdb': "http://0.0.0.0:8006",
-        'rest-countries': "http://0.0.0.0:8007",
-        'spotify': "http://0.0.0.0:8008",
-        'youtube': "http://0.0.0.0:8009"
-    }
-    parser = argparse.ArgumentParser(description='Generate requests based on API specification.')
-    parser.add_argument('service', help='The service specification to use.')
-    parser.add_argument('is_local', help='Whether the services are loaded locally or not.')
-    args = parser.parse_args()
-    api_url = service_urls.get(args.service)
-    is_local = args.is_local
-    if api_url is None:
-        print(f"Service '{args.service}' not recognized. Available services are: {list(service_urls.keys())}")
-        exit(1)
-    if is_local not in {"true", "false"}:
-        print(f"Invalid value for 'is_local'. Must be either 'true' or 'false'.")
-        exit(1)
-    if is_local == "false":
-        api_url = api_url.replace("0.0.0.0", DEV_SERVER_ADDRESS)  # use config
-    return args.service, api_url
 
 def output_responses(request_generator: RequestsGenerator, service_name: str):
     """
@@ -310,19 +286,50 @@ def output_responses(request_generator: RequestsGenerator, service_name: str):
             file.write("========================================\n")
             file.write(f"Status Code: {status_code}\n")
             file.write(f"Count: {status_code_data.count}\n")
+            file.write("----------------------------------------\n")
             for request_response in status_code_data.requests_and_responses:
                 file.write(f"Request Parameters: {request_response.request.parameters}\n")
                 file.write(f"Request Body: {request_response.request.request_body}\n")
                 file.write(f"Response Text: {request_response.response_text}\n")
                 file.write("\n")
 
+def argument_parse() -> (str, str):
+    service_urls = {
+        'fdic': "http://0.0.0.0:9001",
+        'genome-nexus': "http://0.0.0.0:9002",
+        'language-tool': "http://0.0.0.0:9003",
+        'ocvn': "http://0.0.0.0:9004",
+        'ohsome': "http://0.0.0.0:9005",
+        'omdb': "http://0.0.0.0:9006",
+        'rest-countries': "http://0.0.0.0:9007",
+        'spotify': "http://0.0.0.0:9008",
+        'youtube': "http://0.0.0.0:9009"
+    }
+    parser = argparse.ArgumentParser(description='Generate requests based on API specification.')
+    parser.add_argument('service', help='The service specification to use.')
+    parser.add_argument('is_local', help='Whether the services are loaded locally or not.')
+    parser.add_argument('time_duration', help='The time duration to run the tests for.')
+    args = parser.parse_args()
+    api_url = service_urls.get(args.service)
+    is_local = args.is_local
+    time_duration = args.time_duration
+    if api_url is None:
+        print(f"Service '{args.service}' not recognized. Available services are: {list(service_urls.keys())}")
+        exit(1)
+    if is_local not in {"true", "false"}:
+        print(f"Invalid value for 'is_local'. Must be either 'true' or 'false'.")
+        exit(1)
+    if is_local == "false":
+        api_url = api_url.replace("0.0.0.0", DEV_SERVER_ADDRESS)  # use config.py for DEV_SERVER_ADDRESS var
+        api_url = api_url.replace(":9", ":8") # use public server proxy ports
+    return args.service, api_url, time_duration
 
 #testing code
 if __name__ == "__main__":
-    service_name, api_url = argument_parse()
+    service_name, api_url, time_duration = argument_parse()
     file_path = f"../specs/original/oas/{service_name}.yaml"
     print("Checking requests at: ", api_url)
-    request_generator = RequestsGenerator(file_path=file_path, api_url=api_url, is_local=True)
+    request_generator = RequestsGenerator(file_path=file_path, api_url=api_url, is_local=True, time_duration=time_duration)
     for i in range(1):
         request_generator.requests_generate()
     print([(x.status_code, x.count) for x in request_generator.status_codes.values()])
