@@ -9,4 +9,5 @@ dependencies:
   - wheel
   - requests
   - pip:
+      - openapi-spec-validator
       - prance
