@@ -136,7 +136,10 @@ class SequenceConverter:
             response["content"] = "Timeout Error"
             response["resolved_value"] = "None"
         except Exception as e:  # probably an encoding error
-            return None
+            print("Encoding error: ", e)
+            response["statusCode"] = -100
+            response["content"] = "Error with encoding/parsing"
+            response["resolved_value"] = "None"
         else:
             response["statusCode"] = raw_response.status_code
             response["content"] = raw_response.text
