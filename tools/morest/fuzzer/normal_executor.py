@@ -128,13 +128,18 @@ class SequenceConverter:
         try:
             raw_response = executed_method(url, params=params, data=form_data, json=data, headers=headers, files=files,
                                            allow_redirects=False, timeout=3)
+            print("Raw Response Status Code: ", raw_response.status_code)
+            print()
         except requests.exceptions.ReadTimeout as err:
             print(err)
             response["statusCode"] = 524
             response["content"] = "Timeout Error"
             response["resolved_value"] = "None"
         except Exception as e:  # probably an encoding error
-            return None
+            print("Encoding error: ", e)
+            response["statusCode"] = -100
+            response["content"] = "Error with encoding/parsing"
+            response["resolved_value"] = "None"
         else:
             response["statusCode"] = raw_response.status_code
             response["content"] = raw_response.text
@@ -143,6 +148,7 @@ class SequenceConverter:
             except:  # returned value format not correct
                 resolved_value = {}
             response["resolved_value"] = resolved_value
+
         return response
 
     def execute_request(self, fuzzer, session, method, url, params, data, headers, files, form_data,
@@ -159,9 +165,9 @@ class SequenceConverter:
         for i, method in enumerate(sequence.requests):
             url, params, data, headers, files, form_data = self.generate_random_parameter(i, method,
                                                                                           sequence, last_call_response)
-
             resp = self.execute_request(fuzzer, session, method, url, params, data, headers, files, form_data,
                                         fuzzer.pre_defined_headers)
+
             result.append(resp)
             last_call_response = resp["resolved_value"]
         return result

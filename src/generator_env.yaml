@@ -1,0 +1,13 @@
+name: request_generator
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - setuptools
+  - wheel
+  - requests
+  - pip:
+      - openapi-spec-validator
+      - prance
