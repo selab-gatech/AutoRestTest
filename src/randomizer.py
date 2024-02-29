@@ -7,7 +7,7 @@ from specification_parser import ParameterProperties, ItemProperties
 
 class RandomizedSelector:
     def __init__(self, parameters: dict, request_body: dict):
-        self.generate_accurate = random.randint(1, 10) <= 3
+        self.generate_accurate = random.randint(1, 10) <= 5
         self.dropout_ratio = 0.05
         self.randomized_weight = 0.8
         self.max_arr_length = 2**16
@@ -85,31 +85,48 @@ class RandomizedSelector:
 
     def is_dropped(self):
         return random.randint(0, self.randomization_max_val) < self.dropout_ratio * self.randomization_max_val if not self.generate_accurate else False
-        
-    def randomize_integer(self):
-        return random.randint(-2**32, 2**32)
-
-    def randomize_float(self):
-        return random.uniform(-2**32, 2**32)
 
     def randomize_boolean(self):
         return random.choice([True, False])
 
-    def randomize_string(self):
-        return ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(1, 9999)))
-
-    def randomize_array(self):
-        return [random.randint(-9999, 9999) for _ in range(random.randint(1, 9999))]
-
-    def randomize_object(self):
-        return {random.choice(string.ascii_letters): random.randint(-9999, 9999) for _ in range(random.randint(1, 9999))}
-
     def randomize_null(self):
         return None
+
+    def randomize_integer(self):
+        if random.randint(1, 100) <= 50:
+            return random.randint(0, 1000)
+        else:
+            return random.randint(-2 ** 32, 2 ** 32)
+
+    def randomize_float(self):
+        if random.randint(1, 100) <= 50:
+            return random.uniform(0, 1000)
+        else:
+            return random.uniform(-2 ** 32, 2 ** 32)
+
+    def randomize_string(self):
+        if random.randint(1, 100) <= 65:
+            length = random.randint(4, 10)
+        else:
+            length = random.randint(1, 9999)
+        return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+
+    def randomize_array(self):
+        if random.randint(1, 100) <= 65:
+            length = random.randint(4, 10)
+        else:
+            length = random.randint(0, 9999)
+        return [random.randint(-9999, 9999) for _ in range(length)]
+
+    def randomize_object(self):
+        if random.randint(1, 100) <= 65:
+            length = random.randint(6, 8)
+        else:
+            length = random.randint(0, 9999)
+        return {random.choice(string.ascii_letters): random.randint(-9999, 9999) for _ in range(length)}
     
     def randomized_array_length(self):
-        array_size = random.randint(0, 5)
-        if array_size <= 95:
-            return random.randint(0, 5)
+        if random.randint(0,100) <= 65:
+            return random.randint(0, 10)
         else:
-            return random.randint(0, 1000)
+            return random.randint(0, 9999)

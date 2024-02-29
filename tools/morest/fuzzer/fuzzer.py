@@ -51,15 +51,19 @@ class APIFuzzer:
         self.success_sequence_count = 0
         self.success_apis = set()
         self.error_apis = set()
+        self.client_apis = set()
         self.total_apis = set()
         self.success_sequence = set()
         self.begin = time.time()
         self.success_sequence_output = []
         self.success_endpoint = set()
         self.error_endpoint = set()
+        self.client_endpoint = set()
         self.error_api_curve = []
+        self.client_api_curve = []
         self.success_endpoint_api_curve = []
         self.error_endpoint_api_curve = []
+        self.client_endpoint_api_curve = []
         self.pre_defined_headers = pre_defined_headers
         self.total_apis_map = {}
         self.api_curve = [{
@@ -253,12 +257,26 @@ class APIFuzzer:
         f.close()
 
     def write_result(self):
+        import json
         with open('errors.json', 'w') as data:
-            json.dump({"result": self.error_sequence}, data)
+            json.dump({
+                "number of errors": len(self.error_sequence),
+                "result": self.error_sequence
+            }, data)
+
         with open('success_resource_merging.json', 'w') as data:
-            json.dump({"result": self.success_sequence_output}, data)
+            json.dump({
+                "number of success sequence output": len(self.success_sequence_output),
+                "result": self.success_sequence_output
+            }, data)
+        with open('client_errors.json', 'w') as data:
+            json.dump({
+                "number of client APIs": len(self.client_apis),
+                "result": list(self.client_apis)
+            }, data)
         with open('runtime.json', 'w') as data:
             json.dump({
+                "number of keys": len(self.runtime_dict.signature_to_value.keys()),
                 'keys': list(self.runtime_dict.signature_to_value.keys())
             }, data)
 
@@ -386,7 +404,7 @@ class APIFuzzer:
             status_code = response["statusCode"]
             if status_code > 299:
                 is_all_success = False
-            if status_code > 199 and status_code < 300:
+            if 199 < status_code < 300:
                 if not self.success_apis.__contains__(response['apiName']):
                     self.api_curve.append({
                         "time": time.time() - self.begin,
@@ -401,7 +419,21 @@ class APIFuzzer:
                 print(method_path, 'method path')
                 self.success_endpoint.add(method_path)
                 self.success_apis.add(response["apiName"])
-            if status_code > 499 and status_code < 600:
+            if 399 < status_code < 500:
+                if not self.client_apis.__contains__(response['apiName']):
+                    self.client_api_curve.append({
+                        "time": time.time() - self.begin,
+                        'count': len(self.client_apis) + 1
+                    })
+                method_path = sequence[response_ind].method_path
+                if not self.client_endpoint.__contains__(method_path):
+                    self.client_endpoint_api_curve.append({
+                        "time": time.time() - self.begin,
+                        'count': len(self.client_endpoint) + 1
+                    })
+                self.client_endpoint.add(method_path)
+                self.client_apis.add(response["apiName"])
+            if 499 < status_code < 600:
                 if not self.error_apis.__contains__(response['apiName']):
                     self.error_api_curve.append({
                         "time": time.time() - self.begin,
@@ -568,10 +600,14 @@ class APIFuzzer:
             f' ({len(self.success_apis)}/{len(self.total_apis)}),'
             f'Error API: {float(len(self.error_apis)) / len(self.total_apis)}'
             f' ({len(self.error_apis)}/{len(self.total_apis)}),'
+            #f'Client Error API: {float(len(self.client_apis)) / len(self.total_apis)}'
+            #f' ({len(self.client_apis)}/{len(self.total_apis)}),'
             f'Success Endpoint: {float(len(self.success_endpoint)) / len(self.apis)}'
             f' ({len(self.success_endpoint)}/{len(self.apis)}),'
             f'Error Endpoint: {float(len(self.error_endpoint)) / len(self.apis)}'
             f' ({len(self.error_endpoint)}/{len(self.apis)}),'
+            #f'Client Error Endpoint: {float(len(self.client_endpoint)) / len(self.apis)}'
+            #f' ({len(self.client_endpoint)}/{len(self.apis)}),'
             f' Tested Error and Success Unique API: {float(len(set.union(self.success_apis, self.error_apis))) / len(self.total_apis)}'
             f' ({len(set.union(self.success_apis, self.error_apis))}/{len(self.total_apis)}),'
             f' Request Count: {self.request_count}, '
@@ -584,12 +620,16 @@ class APIFuzzer:
         print(self.success_apis)
         print('errors')
         print(self.error_apis)
+        print('client errors')
+        print(self.client_apis)
         print('==API Curve')
         print({
             "success_api": self.api_curve,
             "error_api": self.error_api_curve,
+            #"client_api": self.client_api_curve,
             "success_endpoint": self.success_endpoint_api_curve,
             "error_endpoint": self.error_endpoint_api_curve,
+            #"client_endpoint": self.client_endpoint_api_curve
         })
         print(self.runtime_dict.signature_to_value.keys())
         print(status_stat)
