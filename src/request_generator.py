@@ -175,10 +175,14 @@ class RequestsGenerator:
                 break
             old_request = self.successful_query_data[i]
             if old_request.http_method in {"put", "post"}:
+                new_params = old_request.request_body
+                if new_params is not type(dict):
+                    new_params = {"request_body": old_request.request_body}
                 new_request = RequestData(
                     endpoint_path=request_data.endpoint_path,
                     http_method=request_data.http_method,
-                    parameters=old_request.request_body, # use old request body as new query parameters to check for producer-consumer dependency
+                    parameters=new_params, # use old request body as new query parameters to check for producer-consumer dependency
+                    # NEED TO CHECK THAT REQUEST_BODY ISN'T JUST STRING
                     request_body=old_request.request_body,
                     content_type=old_request.content_type,
                     operation_id=request_data.operation_id
@@ -201,16 +205,23 @@ class RequestsGenerator:
             select_method = getattr(requests, http_method)
             if http_method in {"put", "post"}:
                 #if content_type == "json":
-                response = select_method(self.api_url + endpoint_path, params=query_parameters, json=json.dumps(request_body))
+                response = select_method(f"{self.api_url}{endpoint_path}", params=query_parameters, json=json.dumps(request_body))
                 #else:
                 #    print("Request Body: ", request_body)
                 #    response = select_method(self.api_url + endpoint_path, params=query_parameters, data=request_body)
                 # FORM DATA ERRORING ATM
             else:
-                response = select_method(self.api_url + endpoint_path, params=query_parameters)
+                response = select_method(f"{self.api_url}{endpoint_path}", params=query_parameters)
         except requests.exceptions.RequestException as err:
             #print("Request failed due to error: ", err)
             print("Request failed due to error: ", str(err)[:400])
+            print("Endpoint Path: ", endpoint_path)
+            print("Params: ", query_parameters)
+            return None
+        except Exception as err:
+            print("Request failed due to error: ", str(err)[:400])
+            print("Endpoint Path: ", endpoint_path)
+            print("Params: ", query_parameters)
             return None
         return response
 
