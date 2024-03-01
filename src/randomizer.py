@@ -93,40 +93,40 @@ class RandomizedSelector:
         return None
 
     def randomize_integer(self):
-        if random.randint(1, 100) <= 50:
+        if random.randint(1, 100) <= 70:
             return random.randint(0, 1000)
         else:
-            return random.randint(-2 ** 32, 2 ** 32)
+            return random.randint(-(2 ** 10), (2 ** 10))
 
     def randomize_float(self):
-        if random.randint(1, 100) <= 50:
+        if random.randint(1, 100) <= 70:
             return random.uniform(0, 1000)
         else:
-            return random.uniform(-2 ** 32, 2 ** 32)
+            return random.uniform(-(2 ** 10), (2 ** 10))
 
     def randomize_string(self):
-        if random.randint(1, 100) <= 65:
-            length = random.randint(4, 10)
+        if random.randint(1, 100) <= 90:
+            length = random.randint(4, 16)
         else:
-            length = random.randint(1, 9999)
+            length = random.randint(1, 100)
         return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
     def randomize_array(self):
-        if random.randint(1, 100) <= 65:
+        if random.randint(1, 100) <= 90:
             length = random.randint(4, 10)
         else:
-            length = random.randint(0, 9999)
+            length = random.randint(0, 50)
         return [random.randint(-9999, 9999) for _ in range(length)]
 
     def randomize_object(self):
-        if random.randint(1, 100) <= 65:
-            length = random.randint(6, 8)
+        if random.randint(1, 100) <= 90:
+            length = random.randint(4, 10)
         else:
-            length = random.randint(0, 9999)
+            length = random.randint(0, 50)
         return {random.choice(string.ascii_letters): random.randint(-9999, 9999) for _ in range(length)}
     
     def randomized_array_length(self):
-        if random.randint(0,100) <= 65:
-            return random.randint(0, 10)
+        if random.randint(0,100) <= 90:
+            return random.randint(4, 10)
         else:
-            return random.randint(0, 9999)
+            return random.randint(0, 50)
