@@ -305,6 +305,7 @@ def output_responses(request_generator: RequestsGenerator, service_name: str):
             file.write(f"Count: {status_code_data.count}\n")
             file.write("----------------------------------------\n")
             for request_response in status_code_data.requests_and_responses:
+                file.write(f"Endpoint Path: {request_response.request.endpoint_path}\n")
                 file.write(f"Request Parameters: {request_response.request.parameters}\n")
                 file.write(f"Request Body: {request_response.request.request_body}\n")
                 file.write(f"Status Code: {request_response.response.status_code}\n")
