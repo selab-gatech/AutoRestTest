@@ -44,6 +44,7 @@ class RequestsGenerator:
         self.is_local = is_local
         self.time_duration = time_duration
         self.requests_generated = 0
+        self.start_time = None
 
     def get_simple_type(self, variable):
         """
@@ -117,12 +118,18 @@ class RequestsGenerator:
         print("Mutating Requests...")
         curr_success_queries = self.successful_query_data.copy()
         for query in curr_success_queries:
+            print("Time Elapsed: ", time.time() - self.start_time)
+            print("Time Remaining: ", self.time_duration - (time.time() - self.start_time))
+            print("Requests Sent: ", self.requests_generated)
+            print("========================================")
             curr_id = query.operation_id
             operation_details = self.operations.get(curr_id)
             if operation_details is not None:
                 new_operation: OperationProperties = operation_details
                 new_operation = self.create_operation_for_mutation(query, new_operation)
                 self.process_operation(new_operation)
+            if (time.time() - self.start_time) > self.time_duration:
+                break
 
     def process_response(self, response: requests.Response, request_data: RequestData):
         """
@@ -193,10 +200,12 @@ class RequestsGenerator:
         try:
             select_method = getattr(requests, http_method)
             if http_method in {"put", "post"}:
-                if content_type == "json":
-                    response = select_method(self.api_url + endpoint_path, params=query_parameters, json=json.dumps(request_body))
-                else:
-                    response = select_method(self.api_url + endpoint_path, params=query_parameters, data=request_body)
+                #if content_type == "json":
+                response = select_method(self.api_url + endpoint_path, params=query_parameters, json=json.dumps(request_body))
+                #else:
+                #    print("Request Body: ", request_body)
+                #    response = select_method(self.api_url + endpoint_path, params=query_parameters, data=request_body)
+                # FORM DATA ERRORING ATM
             else:
                 response = select_method(self.api_url + endpoint_path, params=query_parameters)
         except requests.exceptions.RequestException as err:
@@ -265,19 +274,20 @@ class RequestsGenerator:
             for worker in workers:
                 worker.join()
         else:
-            start_time = time.time()
-            while (time.time() - start_time) < self.time_duration:
+            self.start_time = time.time()
+            while (time.time() - self.start_time) < self.time_duration:
                 for operation_id, operation_properties in self.operations.items():
-                    print("Time Elapsed: ", time.time() - start_time)
-                    print("Time Remaining: ", self.time_duration - (time.time() - start_time))
+                    print("Time Elapsed: ", time.time() - self.start_time)
+                    print("Time Remaining: ", self.time_duration - (time.time() - self.start_time))
                     print("Requests Sent: ", self.requests_generated)
                     print("========================================")
                     for _ in range(1):
                         self.process_operation(operation_properties)
-                    if (time.time() - start_time) > self.time_duration:
+                    if (time.time() - self.start_time) > self.time_duration:
                         break
+                self.mutate_requests()
 
-        self.mutate_requests()
+
         print("Generated Requests!")
 
 def output_responses(request_generator: RequestsGenerator, service_name: str):
