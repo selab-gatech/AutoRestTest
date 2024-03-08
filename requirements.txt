@@ -1,3 +1,7 @@
-prance~=23.6.21.0
+scikit-learn
+pathlib
 numpy~=1.25.0
-requests~=2.31.0
+scipy
+gensim
+prance
+openapi-spec-validator
