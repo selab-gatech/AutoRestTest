@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -19,18 +19,25 @@ class OperationDependencyComparator:
     def __init__(self):
         self.vectorizer = TfidfVectorizer()
 
-    def cosine_similarity(self, operation1_parameters, operation2_responses):
+    def cosine_similarity(self, operation1_parameters: List[str], operation2_responses: List[str]):
 
-        parameter_text = " ".join(operation1_parameters)
-        response_text = " ".join(operation2_responses)
+        #operation1_parameters = ["Test1", "Test2", "Tset3"]
+        #operation2_responses = ["Test3", "Tes1", "Test2"]
 
-        tfidf_matrix = self.vectorizer.fit_transform([parameter_text, response_text])
+        tfidf_matrix = self.vectorizer.fit_transform(operation1_parameters + operation2_responses)
 
-        similarity_matrix = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])
+        similarity_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
 
-        return similarity_matrix[0]
+        parameter_similarity = {}
+        for i in range(len(similarity_matrix)):
+            for j in range(len(similarity_matrix[i])):
+                #if i < len(operation1_parameters) <= j < len(operation2_responses) + len(operation1_parameters):
+                #    print(similarity_matrix[i][j])
+                if i < len(operation1_parameters) <= j < len(operation2_responses) + len(operation1_parameters) and similarity_matrix[i][j] > 0.7:
+                    parameter_similarity[operation1_parameters[i]] = operation2_responses[j - len(operation1_parameters)]
+        return parameter_similarity
 
-    def compare(self, operation1: OperationProperties, operation2: OperationProperties):
+    def compare(self, operation1: OperationProperties, operation2: OperationProperties) -> (Dict, Dict):
         operation1_parameters = get_parameter_list(operation1)
         operation2_responses = get_response_list(operation2)
 
