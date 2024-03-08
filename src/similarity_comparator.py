@@ -17,7 +17,8 @@ def get_response_list(operation: OperationProperties) -> List[str]:
 
 class OperationDependencyComparator:
     def __init__(self):
-        self.vectorizer = TfidfVectorizer()
+        self.vectorizer = TfidfVectorizer(analyzer="char", ngram_range=(2,5))
+        self.threshold = 0.7
 
     def cosine_similarity(self, operation1_parameters: List[str], operation2_responses: List[str]):
 
@@ -33,7 +34,7 @@ class OperationDependencyComparator:
             for j in range(len(similarity_matrix[i])):
                 #if i < len(operation1_parameters) <= j < len(operation2_responses) + len(operation1_parameters):
                 #    print(similarity_matrix[i][j])
-                if i < len(operation1_parameters) <= j < len(operation2_responses) + len(operation1_parameters) and similarity_matrix[i][j] > 0.7:
+                if i < len(operation1_parameters) <= j < len(operation2_responses) + len(operation1_parameters) and similarity_matrix[i][j] > self.threshold:
                     parameter_similarity[operation1_parameters[i]] = operation2_responses[j - len(operation1_parameters)]
         return parameter_similarity
 
