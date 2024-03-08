@@ -29,10 +29,9 @@ def get_response_list(operation: OperationProperties) -> List[str]:
 class OperationDependencyComparator:
     def __init__(self):
         current_file_path = os.path.dirname(os.path.abspath(__file__))
-        #glove_file = os.path.join(current_file_path, "models/glove.6B.50d.txt")
-        word_file = os.path.join(current_file_path, "models/glove.6B.50d.w2v.txt")
-        #glove2word2vec(glove_file, tmp_file)
-        self.model = KeyedVectors.load_word2vec_format(word_file, binary=False)
+        #word_file = os.path.join(current_file_path, "models/glove.6B.50d.w2v.txt")
+        #self.model = KeyedVectors.load_word2vec_format(word_file, binary=False)
+        self.model = load("glove-wiki-gigaword-50")
         self.threshold = 0.65
 
     def cosine_similarity(self, operation1_parameters: List[str], operation2_responses: List[str]):
