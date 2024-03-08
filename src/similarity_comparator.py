@@ -1,12 +1,11 @@
+import os
 from typing import List, Dict
 
 from gensim.models import KeyedVectors
 from gensim.downloader import load
+from gensim.scripts.glove2word2vec import glove2word2vec
 
 from scipy.spatial.distance import cosine
-
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 from .specification_parser import OperationProperties
 
@@ -29,27 +28,14 @@ def get_response_list(operation: OperationProperties) -> List[str]:
 
 class OperationDependencyComparator:
     def __init__(self):
-        self.vectorizer = TfidfVectorizer(analyzer="char", ngram_range=(2,5))
-        self.model = load("glove-wiki-gigaword-50")
+        current_file_path = os.path.dirname(os.path.abspath(__file__))
+        #glove_file = os.path.join(current_file_path, "models/glove.6B.50d.txt")
+        word_file = os.path.join(current_file_path, "models/glove.6B.50d.w2v.txt")
+        #glove2word2vec(glove_file, tmp_file)
+        self.model = KeyedVectors.load_word2vec_format(word_file, binary=False)
         self.threshold = 0.65
 
     def cosine_similarity(self, operation1_parameters: List[str], operation2_responses: List[str]):
-
-        #operation1_parameters = ["apples", "numbers", "testing"]
-        #operation2_responses = ["testing2", "apple", "in_numbers"]
-
-        #tfidf_matrix = self.vectorizer.fit_transform(operation1_parameters + operation2_responses)
-
-        #similarity_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
-
-        #parameter_similarity = {}
-        #for i in range(len(similarity_matrix)):
-        #    for j in range(len(similarity_matrix[i])):
-        #        if i < len(operation1_parameters) <= j < len(operation2_responses) + len(operation1_parameters):
-        #            print(similarity_matrix[i][j])
-        #        if i < len(operation1_parameters) <= j < len(operation2_responses) + len(operation1_parameters) and similarity_matrix[i][j] > self.threshold:
-        #            parameter_similarity[operation1_parameters[i]] = operation2_responses[j - len(operation1_parameters)]
-
         parameter_similarity = {}
         for parameter in operation1_parameters:
             for response in operation2_responses:
@@ -61,16 +47,16 @@ class OperationDependencyComparator:
 
         return parameter_similarity
 
-    def compare(self, operation1: OperationProperties, operation2: OperationProperties) -> (Dict, Dict):
+    def compare(self, operation1: OperationProperties, operation2: OperationProperties) -> Dict[str, str]:
         operation1_parameters = get_parameter_list(operation1)
         operation2_responses = get_response_list(operation2)
 
-        similarty_1to2 = self.cosine_similarity(operation1_parameters, operation2_responses)
+        similar_parameters = self.cosine_similarity(operation1_parameters, operation2_responses)
 
-        operation2_parameters = get_parameter_list(operation2)
-        operation1_responses = get_response_list(operation1)
+        #operation2_parameters = get_parameter_list(operation2)
+        #operation1_responses = get_response_list(operation1)
 
-        similarity_2to1 = self.cosine_similarity(operation2_parameters, operation1_responses)
+        #similarity_2to1 = self.cosine_similarity(operation2_parameters, operation1_responses)
 
-        return similarty_1to2, similarity_2to1
+        return similar_parameters
 

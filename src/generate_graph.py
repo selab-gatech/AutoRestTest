@@ -24,7 +24,7 @@ class OperationGraph:
     def add_operation_node(self, operation_properties: OperationProperties):
         self.operation_nodes[operation_properties.operation_id] = OperationNode(operation_properties)
 
-    def add_operation_edge(self, operation_id: str, dependent_operation_id: str, parameters: Dict[str, float]):
+    def add_operation_edge(self, operation_id: str, dependent_operation_id: str, parameters: Dict[str, str]):
         if operation_id not in self.operation_nodes:
             raise ValueError(f"Operation {operation_id} not found in the graph")
         source_node = self.operation_nodes[operation_id]
@@ -37,15 +37,14 @@ class OperationGraph:
         operation_dependency_comparator = OperationDependencyComparator()
         visited = set()
         for operation_id, operation_properties in operations.items():
-            visited.add(operation_id)
             for dependent_operation_id, dependent_operation_properties in operations.items():
-                if dependent_operation_id in visited:
+                if not operation_properties.parameters or not dependent_operation_properties.responses:
                     continue
-                similarity_1to2, similarity_2to1 = operation_dependency_comparator.compare(operation_properties, dependent_operation_properties)
+                similarity_1to2 = operation_dependency_comparator.compare(operation_properties, dependent_operation_properties)
                 if len(similarity_1to2) > 0:
                     self.add_operation_edge(operation_id, dependent_operation_id, similarity_1to2)
-                if len(similarity_2to1) > 0:
-                    self.add_operation_edge(dependent_operation_id, operation_id, similarity_2to1)
+                #if len(similarity_2to1) > 0:
+                #    self.add_operation_edge(dependent_operation_id, operation_id, similarity_2to1)
 
     def create_graph(self):
         spec_parser = SpecificationParser(self.spec_path, self.spec_name)
