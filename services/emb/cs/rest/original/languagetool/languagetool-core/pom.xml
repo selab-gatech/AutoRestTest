@@ -82,7 +82,7 @@
                     <protocArtifact>com.google.protobuf:protoc:3.11.0:exe:${os.detected.classifier}</protocArtifact>
                     <pluginId>grpc-java</pluginId>
                     <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.27.1:exe:${os.detected.classifier}</pluginArtifact>
-                    <!-- output into src/main/java, but don't ever clear it (would delete all regular source files) -->
+                    <!-- output into baseline/main/java, but don't ever clear it (would delete all regular source files) -->
                     <outputDirectory>${project.build.sourceDirectory}/</outputDirectory>
                     <clearOutputDirectory>false</clearOutputDirectory>
                 </configuration>

@@ -14,21 +14,21 @@ def run_service(service_path, class_name, port_number):
             f.write(
                 "java " + cov + port_number + ".exec" + " -cp target/classes:target/test-classes:" + cp + ' ' + class_name)
         subprocess.run(
-            ". ../java8_arm.env && cd " + service_path + " && tmux new-session -d -s language-tool-server 'sh run.sh'",
+            ". ../env/java8_arm.env && cd " + service_path + " && tmux new-session -d -s language-tool-server 'sh run.sh'",
             shell=True)
     elif "ocvn" in service_path:
         with open(service_path + "/run.sh", 'w') as f:
             f.write(
                 "java " + cov + port_number + ".exec" + " -cp target/classes:target/test-classes:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/rt.jar:" + base + "/emb/cs/rest-gui/ocvn/web/target/classes:" + cp + ' ' + class_name)
         subprocess.run(
-            ". ../java8_arm.env && cd " + service_path + " && tmux new-session -d -s ocvn-server 'sh run.sh'",
+            ". ../env/java8_arm.env && cd " + service_path + " && tmux new-session -d -s ocvn-server 'sh run.sh'",
             shell=True)
     else:
         with open(service_path + "/run.sh", 'w') as f:
             f.write(
                 "java " + cov + port_number + ".exec" + " -cp target/classes:target/test-classes:" + cp + ' ' + class_name)
         subprocess.run(
-            ". ../java11_arm.env && cd " + service_path + " && tmux new-session -d -s youtube-server 'sh run.sh'",
+            ". ../env/java11_arm.env && cd " + service_path + " && tmux new-session -d -s youtube-server 'sh run.sh'",
             shell=True)
 
 
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         subprocess.run("docker run --name=gn-mongo --restart=always -p 27018:27017 -d genomenexus/gn-mongo:latest", shell=True)
         time.sleep(300) # wait for the mongoDB to start, may not be done by end of 180 seconds, might need to add some sort of liveness probe
         subprocess.run(
-            "tmux new -d -s genome-nexus-server '. ../java8_arm.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'",
+            "tmux new -d -s genome-nexus-server '. ../env/java8_arm.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'",
             shell=True)
         subprocess.run(
             "tmux new -d -s genome-nexus-proxy 'LOG_FILE=log-genome-nexus.txt mitmproxy --mode reverse:http://0.0.0.0:50110 -p 9002 -s proxy.py'",
@@ -95,7 +95,7 @@ if __name__ == "__main__":
                        shell=True)
         time.sleep(30)
         subprocess.run(
-            "tmux new -d -s genome-nexus-server '. ../java8_arm.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'",
+            "tmux new -d -s genome-nexus-server '. ../env/java8_arm.env && java " + cov + "9002.exec" + " -jar ./genome-nexus/web/target/web-0-unknown-version-SNAPSHOT.war'",
             shell=True)
         subprocess.run(
             "tmux new -d -s genome-nexus-proxy 'LOG_FILE=log-genome-nexus.txt mitmproxy --mode reverse:http://0.0.0.0:50110 -p 9002 -s proxy.py'",

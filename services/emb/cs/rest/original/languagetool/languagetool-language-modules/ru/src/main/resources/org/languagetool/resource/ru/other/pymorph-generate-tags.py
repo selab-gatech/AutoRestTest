@@ -8,7 +8,7 @@
 #  3) sudo pip3 install pymorphy2[fast]
 #  4) copy script to the folder, that contains LT git repo with a build. So that path to "languagetool/languagetool-standalone/target/LanguageTool-3.5-SNAPSHOT/LanguageTool-3.5-SNAPSHOT/languagetool-commandline.jar" should be valid to run LT.
 #  5) copy Russian tagset to "all_tags.txt"
-#       cp languagetool/languagetool-language-modules/ru/src/main/resources/org/languagetool/resource/ru/tags_russian.txt all_tags.txt
+#       cp languagetool/languagetool-language-modules/ru/baseline/main/resources/org/languagetool/resource/ru/tags_russian.txt all_tags.txt
 #  6) put any text, which includes tagged and untagged words to "need-tag.txt" file. This can be, e.g. an outpuh of testing "Unkonwn_words" rule against wikipedia.
 #  7) run the script, the output, ready to be included to LT should be written to final-tags-pymorph.txt
 #

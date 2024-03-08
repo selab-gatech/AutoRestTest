@@ -111,8 +111,8 @@ if __name__ == "__main__":
     HTTP_METHODS = HTTP_METHODS_RESTFUL + HTTP_METHODS_NON_RESTFUL + HTTP_METHODS_POLLUTED
 
     extractedFlatLists = list(dict_generator(jsonData))
-    tamperedValueList = ['qwerty','<script> alert(\'xss\')</script>','<img src=1 onerror=alert("XSS")>'] #Read from textfile
-    tamperedKeyList = ['qwerty','<script> alert(\'xss\')</script>','<img src=1 onerror=alert("XSS")>'] #Read from textfile
+    tamperedValueList = ['qwerty','<script> alert(\'xss\')</script>','<img baseline=1 onerror=alert("XSS")>'] #Read from textfile
+    tamperedKeyList = ['qwerty','<script> alert(\'xss\')</script>','<img baseline=1 onerror=alert("XSS")>'] #Read from textfile
 
     tamperedValueJsonList,tKeyList,valueList = tamper_all_parameter_values(extractedFlatLists,tamperedValueList)
     #print("TamperedValueJSONList: ",tamperedValueJsonList)

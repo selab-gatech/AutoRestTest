@@ -3,7 +3,10 @@ import os
 
 class Counter:
     def __init__(self):
-        self.filename = os.environ.get('LOG_FILE', 'default.log')
+        self.directory = "./service_logs/"
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+        self.filename = self.directory + os.environ.get('LOG_FILE', 'default.log')
 
     def request(self, flow):
         with open(self.filename, "a") as f:
@@ -18,6 +21,5 @@ class Counter:
             f.write(str(time.time()) + "\n")
             f.write(str(flow.response.status_code) + "\n")
             f.write(flow.response.text + "\n")
-
 
 addons = [Counter()]

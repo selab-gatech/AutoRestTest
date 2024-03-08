@@ -20,39 +20,16 @@ def to_dict_helper(item):
     else:
         return item
 
-def json_spec_output(output_directory: Path, file_name: str, spec: Dict):
-    """
-    Create a testing JSON file from the specification parsing output.
-    """
-    output_file = output_directory / file_name
-    with output_file.open('w', encoding='utf-8') as file:
-        json.dump(spec, file, ensure_ascii=False, indent=4)
-
 @dataclass
-class ResponseProperties:
-    """
-    Class to store the properties of a response
-    """
-    status_code: int = -1
-    description: Optional[str] = None
-    content: Dict[str, 'SchemaProperties'] = field(default_factory=dict) # MIME type as first key, then schema content as result
-
-    def to_dict(self):
-        result = {k: to_dict_helper(v) for k, v in self.__dict__.items() if v is not None}
-        if 'content' in result and self.content:
-            result['content'] = {k: v.to_dict() for k, v in self.content.items()}
-        return result
-
-@dataclass
-class SchemaProperties:
+class ItemProperties:
     """
     Class to store the properties of either the schema values, in the case of parameters, or the request body object values
     """
     type: Optional[str] = None
     format: Optional[str] = None
     description: Optional[str] = None
-    items: 'SchemaProperties' = None
-    properties: Dict[str, 'SchemaProperties'] = None # property name then schema content as value
+    items: 'ItemProperties' = None
+    properties: Dict[str, 'ItemProperties'] = None
     required: List[str] = field(default_factory=list)
     default: Optional[Union[str, int, float, bool, List, Dict]] = None
     enum: Optional[List[str]] = field(default_factory=list)
@@ -64,7 +41,7 @@ class SchemaProperties:
     max_items: Optional[int] = None
     min_items: Optional[int] = None
     unique_items: Optional[bool] = None
-    additional_properties: Union[bool, 'SchemaProperties', None] = True
+    additional_properties: Union[bool, 'ItemProperties', None] = True
     nullable: Optional[bool] = None
     read_only: Optional[bool] = None
     write_only: Optional[bool] = None
@@ -77,7 +54,7 @@ class SchemaProperties:
             result['items'] = self.items.to_dict()
         if 'properties' in result and self.properties:
             result['properties'] = {k: v.to_dict() for k, v in self.properties.items()}
-        if 'additional_properties' in result and isinstance(self.additional_properties, SchemaProperties):
+        if 'additional_properties' in result and isinstance(self.additional_properties, ItemProperties):
             result['additional_properties'] = self.additional_properties.to_dict()
         return result
 
@@ -95,10 +72,10 @@ class ParameterProperties:
     style: Optional[str] = None
     explode: Optional[bool] = None
     allow_reserved: Optional[bool] = None
-    schema: SchemaProperties = None
+    schema: ItemProperties = None
     example: Optional[Union[str, int, float, bool, List, Dict]] = None
     examples: List[Optional[Union[str, int, float, bool, List, Dict]]] = field(default_factory=list)
-    content: Dict[str, SchemaProperties] = field(default_factory=dict)
+    content: Dict[str, ItemProperties] = field(default_factory=dict)
 
     def to_dict(self):
         result = {k: to_dict_helper(v) for k, v in self.__dict__.items() if v is not None}
@@ -117,32 +94,30 @@ class OperationProperties:
     endpoint_path: str = ''
     http_method: str = ''
     parameters: Dict[str, ParameterProperties] = field(default_factory=dict)
-    request_body: Dict[str, SchemaProperties] = None # MIME type as first key, then each parameter with its properties as second dict
-    responses: Dict[str, ResponseProperties] = None # status code as first key, then each response with its properties as second dict
+    request_body: bool = False
+    request_body_properties: Dict[str, ItemProperties] = None # MIME type as first key, then each parameter with its properties as second dict
 
     def to_dict(self):
         result = {k: to_dict_helper(v) for k, v in self.__dict__.items() if v is not None}
         if 'parameters' in result and self.parameters:
             result['parameters'] = {k: v.to_dict() for k, v in self.parameters.items()}
-        if 'request_body' in result and self.request_body:
-            result['request_body'] = {k: v.to_dict() for k, v in self.request_body.items()}
+        if 'request_body_properties' in result and self.request_body_properties:
+            result['request_body_properties'] = {k: v.to_dict() for k, v in self.request_body_properties.items()}
         return result
-
 
 class SpecificationParser:
     """
     Class to parse a specification file and return a dictionary of all the operations and their properties.
     """
-    def __init__(self, file_path=None, spec_name=None):
+    def __init__(self, file_path=None):
         self.file_path = file_path
-        self.spec_name = spec_name
         if file_path is not None:
             self.resolving_parser = ResolvingParser(file_path, strict=False)
             self.base_parser = BaseParser(file_path, strict=False)
         self.directory_path = '../specs/original/oas/'
         self.all_specs = {}
 
-    def process_parameter_object_properties(self, properties: Dict) -> Dict[str, SchemaProperties]:
+    def process_parameter_object_properties(self, properties: Dict) -> Dict[str, ItemProperties]:
         """
         Process the properties of a parameter of type object to return a dictionary of all the properties and their
         corresponding parameter values.
@@ -155,14 +130,14 @@ class SpecificationParser:
             object_properties.setdefault(name, self.process_parameter_schema(values)) # check if this is correct, or if it should be process_parameter
         return object_properties
 
-    def process_parameter_schema(self, schema: Dict) -> SchemaProperties:
+    def process_parameter_schema(self, schema: Dict) -> ItemProperties:
         """
         Process the schema of a parameter to return a ValueProperties object
         """
         if not schema:
             return None
 
-        value_properties = SchemaProperties(
+        value_properties = ItemProperties(
             type=schema.get('type'),
             format=schema.get('format'),
             description=schema.get('description'),
@@ -218,7 +193,7 @@ class SpecificationParser:
                 parameters.setdefault(parameter_properties.name, parameter_properties)
         return parameters
 
-    def process_request_body(self, request_body) -> Dict[str, SchemaProperties]:
+    def process_request_body(self, request_body) -> Dict[str, ItemProperties]:
         """
         Process the request body to return a Dictionary with mime type and its properties and values.
         """
@@ -234,25 +209,6 @@ class SpecificationParser:
 
         return request_body_properties
 
-    def process_responses(self, responses) -> Dict[str, ResponseProperties]:
-        """
-        Process the responses to return a Dictionary with status code and its properties and values.
-        """
-        response_properties = {}
-        for status_code, response_details in responses.items():
-            response_properties.setdefault(status_code, ResponseProperties(
-                status_code=status_code,
-                description=response_details.get('description')
-            ))
-            content = response_details.get('content')
-            if content:
-                for mime_type, mime_details in content.items():
-                    # if we need to check required list, do it here
-                    schema = mime_details.get('schema')
-                    if schema:
-                        response_properties[status_code].content[mime_type] = self.process_parameter_schema(schema)
-        return response_properties
-
     def process_operation_details(self, http_method: str, endpoint_path: str, operation_details: Dict) -> OperationProperties:
         """
         Process the parameters and request body details within a given operation to return as OperationProperties object.
@@ -266,10 +222,9 @@ class SpecificationParser:
             operation_properties.parameters = self.process_parameters(parameter_list=operation_details.get('parameters'))
 
         if operation_details.get('requestBody'):
-            operation_properties.request_body = self.process_request_body(request_body=operation_details.get('requestBody'))
-
-        if operation_details.get('responses'):
-            operation_properties.responses =self.process_responses(responses=operation_details.get('responses'))
+            operation_properties.request_body = True
+            operation_properties.request_body_properties = self.process_request_body(request_body=operation_details.get('requestBody'))
+            # add response details if need-be here
 
         # maybe add security details?
 
@@ -302,6 +257,14 @@ class SpecificationParser:
 
         return self.all_specs
 
+    def json_spec_output(self, output_directory: Path, file_name: str, spec: Dict):
+        """
+        Create a testing JSON file from the specification parsing output.
+        """
+        output_file = output_directory / file_name
+        with output_file.open('w', encoding='utf-8') as file:
+            json.dump(spec, file, ensure_ascii=False, indent=4)
+
     def all_json_spec_output(self):
         """
         Create a testing JSON file from the specification parsing output.
@@ -312,24 +275,15 @@ class SpecificationParser:
         output_directory.mkdir(parents=True, exist_ok=True)
 
         for file_name, spec in all_specs.items():
-            json_spec_output(output_directory, file_name, spec)
-
-    def single_json_spec_output(self):
-        output_directory = Path("./testing_output")
-        output_directory.mkdir(parents=True, exist_ok=True)
-        output = self.parse_specification()
-        json_spec_output(output_directory, self.spec_name, to_dict_helper(output))
-
+            self.json_spec_output(output_directory, file_name, spec)
 
 if __name__ == "__main__":
     # testing
     spec_parser = SpecificationParser()
-    #spec_parser.parse_all_specifications()
-    #spec_parser.all_json_spec_output()
+    spec_parser.parse_all_specifications()
+    spec_parser.all_json_spec_output()
 
-    spec_parser = SpecificationParser(file_path="../specs/original/oas/genome-nexus.yaml", spec_name="genome-nexus")
-    spec_parser.single_json_spec_output()
-
+    #spec_parser = SpecificationParser("../specs/original/oas/genome-nexus.yaml")
     # output = spec_parser.parse_specification()
     #print(output["fetchPostTranslationalModificationsByPtmFilterPOST"])
     #print(output["endpoint-add-tracks-to-playlist"])

@@ -27,7 +27,7 @@ rm evomaster.jar.zip
 
 #Install RestTestGen
 cd $DEFAULT_DIR
-source ./java11_mac.env && cd tools/resttestgen && ./gradlew install
+source ./env/java11_mac.env && cd tools/resttestgen && ./gradlew install
 
 #docker installa
 brew install --cask docker
@@ -39,12 +39,12 @@ wget https://repo1.maven.org/maven2/org/jacoco/org.jacoco.cli/0.8.7/org.jacoco.c
 
 #Install Evo Bench
 cd $DEFAULT_DIR
-source ./java8_mac.env && cd services/emb && mvn clean install -DskipTests && mvn dependency:build-classpath -Dmdep.outputFile=cp.txt
+source ./env/java8_mac.env && cd services/emb && mvn clean install -DskipTests && mvn dependency:build-classpath -Dmdep.outputFile=cp.txt
 
 #Install Genome-Nexus
 cd $DEFAULT_DIR
-source ./java8_mac.env && cd services/genome-nexus && mvn clean install -DskipTests
+source ./env/java8_mac.env && cd services/genome-nexus && mvn clean install -DskipTests
 
 #Install YouTube Mock service
 cd $DEFAULT_DIR
-source ./java11_mac.env && cd services/youtube && mvn clean install -DskipTests && mvn dependency:build-classpath -Dmdep.outputFile=cp.txt
+source ./env/java11_mac.env && cd services/youtube && mvn clean install -DskipTests && mvn dependency:build-classpath -Dmdep.outputFile=cp.txt

