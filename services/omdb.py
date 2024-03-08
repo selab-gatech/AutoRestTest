@@ -4,7 +4,10 @@ import time
 
 class Counter:
     def __init__(self):
-        self.filename = os.environ.get('LOG_FILE', 'log-omdb.txt')
+        self.directory = "./service_logs/"
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+        self.filename = self.directory + os.environ.get('LOG_FILE', 'log-omdb.txt')
 
     def request(self, flow):
         flow.request.query["apikey"] = "9cbead2"

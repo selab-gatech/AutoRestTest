@@ -340,7 +340,7 @@
             if (msie || opts.forceIframe)
                 lyr1 = $('<iframe class="blockUI" style="z-index:'
                         + (z++)
-                        + ';display:none;border:none;margin:0;padding:0;position:absolute;width:100%;height:100%;top:0;left:0" src="'
+                        + ';display:none;border:none;margin:0;padding:0;position:absolute;width:100%;height:100%;top:0;left:0" baseline="'
                         + opts.iframeSrc + '"></iframe>');
             else
                 lyr1 = $('<div class="blockUI" style="display:none"></div>');
