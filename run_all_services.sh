@@ -34,7 +34,7 @@ do
 
   echo "Running request generator for: $service"
   
-  # Navigate to the src directory and run the request generator
+  # Navigate to the baseline directory and run the request generator
   cd src
   if python3 request_generator.py "$service"; then
     echo "Request generator for $service completed successfully."
