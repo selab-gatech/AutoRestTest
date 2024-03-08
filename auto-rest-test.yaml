@@ -1,4 +1,4 @@
-name: request_generator
+name: auto-rest-test
 channels:
   - conda-forge
   - defaults
@@ -7,6 +7,9 @@ dependencies:
   - pip
   - setuptools
   - wheel
+  - scikit-learn
+  - pathlib
+  - numpy~=1.25.0
   - pip:
-      - openapi-spec-validator
       - prance
+      - openapi-spec-validator

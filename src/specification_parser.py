@@ -116,7 +116,7 @@ class OperationProperties:
     operation_id: str = ''
     endpoint_path: str = ''
     http_method: str = ''
-    parameters: Dict[str, ParameterProperties] = field(default_factory=dict)
+    parameters: Dict[str, ParameterProperties] = field(default_factory=dict) # parameter name as first key, then parameter properties as second dict
     request_body: Dict[str, SchemaProperties] = None # MIME type as first key, then each parameter with its properties as second dict
     responses: Dict[str, ResponseProperties] = None # status code as first key, then each response with its properties as second dict
 
@@ -133,12 +133,12 @@ class SpecificationParser:
     """
     Class to parse a specification file and return a dictionary of all the operations and their properties.
     """
-    def __init__(self, file_path=None, spec_name=None):
-        self.file_path = file_path
+    def __init__(self, spec_path=None, spec_name=None):
+        self.spec_path = spec_path
         self.spec_name = spec_name
-        if file_path is not None:
-            self.resolving_parser = ResolvingParser(file_path, strict=False)
-            self.base_parser = BaseParser(file_path, strict=False)
+        if spec_path is not None:
+            self.resolving_parser = ResolvingParser(spec_path, strict=False)
+            self.base_parser = BaseParser(spec_path, strict=False)
         self.directory_path = '../specs/original/oas/'
         self.all_specs = {}
 
@@ -295,8 +295,8 @@ class SpecificationParser:
         """
         for file_name in os.listdir(self.directory_path):
             print("Specification parsing for file: ", file_name)
-            self.file_path = os.path.join(self.directory_path, file_name)
-            self.resolving_parser = ResolvingParser(self.file_path, strict=False)
+            self.spec_path = os.path.join(self.directory_path, file_name)
+            self.resolving_parser = ResolvingParser(self.spec_path, strict=False)
             self.all_specs[file_name]  = self.parse_specification()
             #print("Output: " + str(output))
 
@@ -324,11 +324,11 @@ class SpecificationParser:
 if __name__ == "__main__":
     # testing
     spec_parser = SpecificationParser()
-    #spec_parser.parse_all_specifications()
-    #spec_parser.all_json_spec_output()
+    spec_parser.parse_all_specifications()
+    spec_parser.all_json_spec_output()
 
-    spec_parser = SpecificationParser(file_path="../specs/original/oas/genome-nexus.yaml", spec_name="genome-nexus")
-    spec_parser.single_json_spec_output()
+    #spec_parser = SpecificationParser(spec_path="../specs/original/oas/genome-nexus.yaml", spec_name="genome-nexus")
+    #spec_parser.single_json_spec_output()
 
     # output = spec_parser.parse_specification()
     #print(output["fetchPostTranslationalModificationsByPtmFilterPOST"])
