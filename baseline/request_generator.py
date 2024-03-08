@@ -43,6 +43,8 @@ class RequestsGenerator:
         self.operations: Dict[str, OperationProperties] = self.specification_parser.parse_specification()
         self.is_local = is_local
         self.time_duration = time_duration
+        self.requests_generated = 0
+        self.start_time = None
 
     def get_simple_type(self, variable):
         """
@@ -116,12 +118,18 @@ class RequestsGenerator:
         print("Mutating Requests...")
         curr_success_queries = self.successful_query_data.copy()
         for query in curr_success_queries:
+            print("Time Elapsed: ", time.time() - self.start_time)
+            print("Time Remaining: ", self.time_duration - (time.time() - self.start_time))
+            print("Requests Sent: ", self.requests_generated)
+            print("========================================")
             curr_id = query.operation_id
             operation_details = self.operations.get(curr_id)
             if operation_details is not None:
                 new_operation: OperationProperties = operation_details
                 new_operation = self.create_operation_for_mutation(query, new_operation)
                 self.process_operation(new_operation)
+            if (time.time() - self.start_time) > self.time_duration:
+                break
 
     def process_response(self, response: requests.Response, request_data: RequestData):
         """
@@ -129,6 +137,8 @@ class RequestsGenerator:
         """
         if response is None:
             return
+
+        self.requests_generated += 1
 
         # print(response.text)
         request_and_response = RequestResponse(
@@ -165,10 +175,14 @@ class RequestsGenerator:
                 break
             old_request = self.successful_query_data[i]
             if old_request.http_method in {"put", "post"}:
+                new_params = old_request.request_body
+                if new_params is not type(dict):
+                    new_params = {"request_body": old_request.request_body}
                 new_request = RequestData(
                     endpoint_path=request_data.endpoint_path,
                     http_method=request_data.http_method,
-                    parameters=old_request.request_body, # use old request body as new query parameters to check for producer-consumer dependency
+                    parameters=new_params, # use old request body as new query parameters to check for producer-consumer dependency
+                    # NEED TO CHECK THAT REQUEST_BODY ISN'T JUST STRING
                     request_body=old_request.request_body,
                     content_type=old_request.content_type,
                     operation_id=request_data.operation_id
@@ -190,15 +204,24 @@ class RequestsGenerator:
         try:
             select_method = getattr(requests, http_method)
             if http_method in {"put", "post"}:
-                if content_type == "json":
-                    response = select_method(self.api_url + endpoint_path, params=query_parameters, json=json.dumps(request_body))
-                else:
-                    response = select_method(self.api_url + endpoint_path, params=query_parameters, data=request_body)
+                #if content_type == "json":
+                response = select_method(f"{self.api_url}{endpoint_path}", params=query_parameters, json=json.dumps(request_body))
+                #else:
+                #    print("Request Body: ", request_body)
+                #    response = select_method(self.api_url + endpoint_path, params=query_parameters, data=request_body)
+                # FORM DATA ERRORING ATM
             else:
-                response = select_method(self.api_url + endpoint_path, params=query_parameters)
+                response = select_method(f"{self.api_url}{endpoint_path}", params=query_parameters)
         except requests.exceptions.RequestException as err:
             #print("Request failed due to error: ", err)
             print("Request failed due to error: ", str(err)[:400])
+            print("Endpoint Path: ", endpoint_path)
+            print("Params: ", query_parameters)
+            return None
+        except Exception as err:
+            print("Request failed due to error: ", str(err)[:400])
+            print("Endpoint Path: ", endpoint_path)
+            print("Params: ", query_parameters)
             return None
         return response
 
@@ -237,7 +260,7 @@ class RequestsGenerator:
             content_type=content_type,
             operation_id=operation_properties.operation_id
         )
-        print("Request Sent")
+        #print("Request Sent")
         response = self.send_request(request_data)
         if response is not None:
             self.process_response(response, request_data)
@@ -262,34 +285,41 @@ class RequestsGenerator:
             for worker in workers:
                 worker.join()
         else:
-            start_time = time.time()
-            while (time.time() - start_time) < self.time_duration:
+            self.start_time = time.time()
+            while (time.time() - self.start_time) < self.time_duration:
                 for operation_id, operation_properties in self.operations.items():
-                    for _ in range(5):
+                    print("Time Elapsed: ", time.time() - self.start_time)
+                    print("Time Remaining: ", self.time_duration - (time.time() - self.start_time))
+                    print("Requests Sent: ", self.requests_generated)
+                    print("========================================")
+                    for _ in range(1):
                         self.process_operation(operation_properties)
-                    if (time.time() - start_time) > self.time_duration:
+                    if (time.time() - self.start_time) > self.time_duration:
                         break
+                self.mutate_requests()
 
-        self.mutate_requests()
+
         print("Generated Requests!")
 
 def output_responses(request_generator: RequestsGenerator, service_name: str):
     """
     Output the responses to a file.
     """
-    directory = "./testing_output/logs/"
+    directory = "./testing_output/baseline-logs/"
     if not os.path.exists(directory):
         os.makedirs(directory)
-    with open(f"./testing_output/logs/{service_name}.txt", "w") as file:
-        file.write(f"SERVER OUTPUT FOR {service_name}\n")
+    with open(f"./testing_output/baseline-logs/{service_name}.txt", "w") as file:
+        file.write(f"BASELINE OUTPUT FOR {service_name}\n")
         for status_code, status_code_data in request_generator.status_codes.items():
             file.write("========================================\n")
-            file.write(f"Status Code: {status_code}\n")
+            file.write(f"Status Code Category: {status_code}\n")
             file.write(f"Count: {status_code_data.count}\n")
             file.write("----------------------------------------\n")
             for request_response in status_code_data.requests_and_responses:
+                file.write(f"Endpoint Path: {request_response.request.endpoint_path}\n")
                 file.write(f"Request Parameters: {request_response.request.parameters}\n")
                 file.write(f"Request Body: {request_response.request.request_body}\n")
+                file.write(f"Status Code: {request_response.response.status_code}\n")
                 file.write(f"Response Text: {request_response.response_text}\n")
                 file.write("\n")
 
@@ -312,7 +342,7 @@ def argument_parse() -> (str, str):
     args = parser.parse_args()
     api_url = service_urls.get(args.service)
     is_local = args.is_local
-    time_duration = args.time_duration
+    time_duration = float(args.time_duration)
     if api_url is None:
         print(f"Service '{args.service}' not recognized. Available services are: {list(service_urls.keys())}")
         exit(1)
