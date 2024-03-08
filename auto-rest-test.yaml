@@ -10,6 +10,7 @@ dependencies:
   - scikit-learn
   - pathlib
   - numpy~=1.25.0
+  - scipy
   - gensim
   - pip:
       - prance
