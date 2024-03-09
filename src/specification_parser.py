@@ -139,7 +139,7 @@ class SpecificationParser:
         if spec_path is not None:
             self.resolving_parser = ResolvingParser(spec_path, strict=False)
             self.base_parser = BaseParser(spec_path, strict=False)
-        self.directory_path = '../specs/original/oas/'
+        self.directory_path = 'specs/original/oas/'
         self.all_specs = {}
 
     def process_parameter_object_properties(self, properties: Dict) -> Dict[str, SchemaProperties]:
