@@ -8,12 +8,15 @@ class OperationNode:
     def __init__(self, operation_properties: OperationProperties):
         self.operation_id = operation_properties.operation_id
         self.operation_properties: OperationProperties = operation_properties
+        self.outgoing_edges: List[OperationEdge] = []
 
 class OperationEdge:
-    def __init__(self, source: OperationNode, destination: OperationNode):
+    def __init__(self, source: OperationNode, destination: OperationNode, parameters: Dict[str, SimilarityValue]=None):
+        if parameters is None:
+            parameters = {}
         self.source: OperationNode = source
         self.destination: OperationNode = destination
-        self.parameters: Dict[str, SimilarityValue] = {} # have parameters as the weights
+        self.parameters: Dict[str, SimilarityValue] = parameters # have parameters as the key (similarity value has response and in_value)
 
 class OperationGraph:
     def __init__(self, spec_path, spec_name=None):
@@ -30,9 +33,9 @@ class OperationGraph:
             raise ValueError(f"Operation {operation_id} not found in the graph")
         source_node = self.operation_nodes[operation_id]
         destination_node = self.operation_nodes[dependent_operation_id]
-        edge = OperationEdge(source=source_node, destination=destination_node)
-        edge.parameters = parameters
+        edge = OperationEdge(source=source_node, destination=destination_node, parameters=parameters)
         self.operation_edges.append(edge)
+        source_node.outgoing_edges.append(edge)
 
     def determine_dependencies(self, operations):
         operation_dependency_comparator = OperationDependencyComparator()
@@ -41,9 +44,9 @@ class OperationGraph:
                 # Note: We consider responses from get requests as dependencies for request bodies
                 # Note: We consider responses from post/put requests as dependencies for get requests
                 if (operation_properties.parameters or operation_properties.request_body) and dependent_operation_properties.responses:
-                    similarity_1to2 = operation_dependency_comparator.compare(operation_properties, dependent_operation_properties)
-                    if len(similarity_1to2) > 0:
-                        self.add_operation_edge(operation_id, dependent_operation_id, similarity_1to2)
+                    parameter_similarities = operation_dependency_comparator.compare(operation_properties, dependent_operation_properties)
+                    if len(parameter_similarities) > 0:
+                        self.add_operation_edge(operation_id, dependent_operation_id, parameter_similarities)
                     #if len(similarity_2to1) > 0:
                     #    self.add_operation_edge(dependent_operation_id, operation_id, similarity_2to1)
 
