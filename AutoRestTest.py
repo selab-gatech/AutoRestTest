@@ -7,4 +7,4 @@ if __name__ == "__main__":
         print(f"Operation: {operation_id}")
     for operation_edge in operation_graph.operation_edges:
         print(
-            f"Edge: {operation_edge.source.operation_id} -> {operation_edge.destination.operation_id} with parameters: {operation_edge.parameters}")
+            f"Edge: {operation_edge.source.operation_id} -> {operation_edge.destination.operation_id} with parameters: {operation_edge.similar_parameters}")

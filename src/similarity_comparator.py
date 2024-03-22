@@ -1,3 +1,4 @@
+import heapq
 import os
 from typing import List, Dict
 
@@ -68,6 +69,7 @@ class OperationDependencyComparator:
         #self.model = KeyedVectors.load_word2vec_format(word_file, binary=False)
         self.model = load("glove-wiki-gigaword-50")
         self.threshold = 0.65
+        self.next_most_similar_count = 3
 
     def cosine_similarity(self, operation1_parameters: List[str], operation2_responses: List[str], in_value: str = None) -> Dict[str, SimilarityValue]:
         """
@@ -79,28 +81,34 @@ class OperationDependencyComparator:
                 if parameter in self.model and response in self.model:
                     similarity = 1 - cosine(self.model[parameter], self.model[response])
                     print(similarity, parameter, response)
-                    if similarity > self.threshold:
-                        parameter_similarity[parameter] = SimilarityValue(
-                            response=response,
-                            in_value=in_value,
-                            similarity=similarity
-                        )
+                    parameter_similarity[parameter] = SimilarityValue(
+                        response=response,
+                        in_value=in_value,
+                        similarity=similarity
+                    )
 
         return parameter_similarity
 
-    def compare(self, operation1: OperationProperties, operation2: OperationProperties) -> Dict[str, SimilarityValue]:
-        similar_parameters = {}
-
+    def compare(self, operation1: OperationProperties, operation2: OperationProperties) -> (Dict[str, SimilarityValue], List[(str, SimilarityValue)]):
+        parameter_matchings: Dict[str, SimilarityValue] = {}
+        similar_parameters: Dict[str, SimilarityValue] = {}
+        next_most_similar_parameters: List[(str, SimilarityValue)] = []
         operation2_responses = get_response_list(operation2)
 
         if operation1.parameters:
             operation1_parameters = get_parameter_list(operation1)
-            similar_parameters = self.cosine_similarity(operation1_parameters, operation2_responses, in_value="query")
-
+            parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_responses, in_value="query")
         if operation1.request_body:
-            operation1_request_body = get_request_body_list(operation1)
-            similar_request_body = self.cosine_similarity(operation1_request_body, operation2_responses, in_value="request body")
-            similar_parameters.update(similar_request_body)
+            operation1_parameters = get_request_body_list(operation1)
+            parameter_matchings.update(self.cosine_similarity(operation1_parameters, operation2_responses, in_value="request body"))
 
-        return similar_parameters
+        for parameter, similarity in parameter_matchings.items():
+            if similarity.similarity > self.threshold:
+                similar_parameters[parameter] = similarity
+            else:
+                next_most_similar_parameters.append((parameter, similarity))
+
+        next_most_similar_parameters = heapq.nlargest(self.next_most_similar_count, next_most_similar_parameters, key=lambda x: x[1].similarity) # small n so efficient
+
+        return similar_parameters, next_most_similar_parameters
 
