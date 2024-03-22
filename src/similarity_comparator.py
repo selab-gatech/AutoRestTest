@@ -1,6 +1,6 @@
 import heapq
 import os
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 from dataclasses import dataclass
 
@@ -89,7 +89,7 @@ class OperationDependencyComparator:
 
         return parameter_similarity
 
-    def compare(self, operation1: OperationProperties, operation2: OperationProperties) -> (Dict[str, SimilarityValue], List[(str, SimilarityValue)]):
+    def compare(self, operation1: OperationProperties, operation2: OperationProperties) -> (Dict[str, SimilarityValue], List[Tuple[str, SimilarityValue]]):
         parameter_matchings: Dict[str, SimilarityValue] = {}
         similar_parameters: Dict[str, SimilarityValue] = {}
         next_most_similar_parameters: List[(str, SimilarityValue)] = []
