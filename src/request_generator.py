@@ -18,14 +18,60 @@ class RequestData:
     operation_id: AnyStr
     operation_properties: OperationProperties
 
+@dataclass
+class RequestResponse:
+    request: RequestData
+    response: requests.Response
+    response_text: str
+
+@dataclass
+class StatusCode:
+    status_code: int
+    count: int
+    requests_and_responses: List[RequestResponse]
+
+
 class NaiveRequestGenerator:
-    def __init__(self, operation_graph: OperationGraph):
+    def __init__(self, operation_graph: OperationGraph, api_url: str):
         self.operation_graph: OperationGraph = operation_graph
-        self.api_url = api_url  # Set the base URL of your API here
+        self.api_url = api_url  
+        self.status_codes: Dict[int: StatusCode] = {} # dictionary to track status code occurrences
+        self.requests_generated = 0  # Initialize the request count
+        self.successful_query_data = [] # List to store successful query data
 
     def generate_parameter_values(self, parameters: Dict[AnyStr, ParameterProperties], request_body: Dict[AnyStr, SchemaProperties]):
         value_generator = NaiveValueGenerator(parameters=parameters, request_body=request_body)
         return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
+
+    def process_response(self, response: requests.Response, request_data: RequestData):
+        """
+        Process the response from the API.
+        """
+        if response is None:
+            return
+
+        self.requests_generated += 1
+
+        # print(response.text)
+        request_and_response = RequestResponse(
+            request=request_data,
+            response=response,
+            response_text=response.text
+        )
+
+        if response.status_code not in self.status_codes:
+            self.status_codes[response.status_code] = StatusCode(
+                status_code=response.status_code,
+                count=1,
+                requests_and_responses=[request_and_response],
+            )
+        else:
+            self.status_codes[response.status_code].count += 1
+            self.status_codes[response.status_code].requests_and_responses.append(request_and_response)
+
+        if response.status_code // 100 == 2:
+            self.successful_query_data.append(request_data)
+
 
     def send_operation_request(self, request_data: RequestData):
         '''
@@ -75,7 +121,7 @@ class NaiveRequestGenerator:
             print(f"Endpoint Path: {endpoint_path}")
             print(f"Params: {parameters}")
             return None
-    
+        
     def process_operation(self, operation_properties: OperationProperties) -> RequestData:
         '''
         Process the operation properties to prepare the request data.
@@ -118,7 +164,10 @@ class NaiveRequestGenerator:
             if edge.destination.operation_id not in visited:
                 self.depth_traversal(edge.destination, visited)
         request_data = self.process_operation(curr_node.operation_properties)
-        self.send_operation_request(request_data)
+        response = self.send_operation_request(request_data)
+        if response is not None:
+            self.process_response(response, request_data)
+            # self.attempt_retry(response, request_data)
 
 
     def generate_requests(self):
@@ -130,3 +179,29 @@ class NaiveRequestGenerator:
             if operation_id not in visited:
                 self.depth_traversal(operation_node, visited)
 
+
+def setup_request_generation():
+    api_url = "http://0.0.0.0:9002"  # API URL for genome-nexus
+    spec_path = "specs/original/oas/genome-nexus.yaml"  # Specification path
+
+    # Create and populate the operation graph
+    operation_graph = OperationGraph(spec_path, spec_name="genome-nexus")
+    operation_graph.create_graph()  # Generate the graph
+
+    for operation_id, operation_node in operation_graph.operation_nodes.items():
+        print("=====================================")
+        print(f"Operation: {operation_id}")
+        for edge in operation_node.outgoing_edges:
+            print(f"Edge: {edge.source.operation_id} -> {edge.destination.operation_id} with parameters: {edge.similar_parameters}")
+        for tentative_edge in operation_node.tentative_edges:
+            print(f"Tentative Edge: {tentative_edge.source.operation_id} -> {tentative_edge.destination.operation_id} with parameters: {tentative_edge.similar_parameters}")
+        print()
+        print()
+
+    # Create the request generator with the populated graph
+    request_generator = NaiveRequestGenerator(operation_graph, api_url)
+    return request_generator
+
+if __name__ == "__main__":
+    generator = setup_request_generation()
+    generator.generate_requests()
