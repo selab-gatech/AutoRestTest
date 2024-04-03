@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, AnyStr, Set, Any
+from typing import Dict, AnyStr, Set, Any, List
 
 from .generate_graph import OperationGraph, OperationNode, OperationEdge
 from .specification_parser import OperationProperties, ParameterProperties, SchemaProperties
@@ -12,7 +12,7 @@ from .value_generator import NaiveValueGenerator, identify_generator
 class RequestData:
     endpoint_path: AnyStr
     http_method: AnyStr
-    parameter_values: Dict[AnyStr, Any] # dict of parameter name to value
+    parameters: Dict[AnyStr, Any] # dict of parameter name to value
     request_body: AnyStr
     content_type: AnyStr
     operation_id: AnyStr
@@ -150,7 +150,8 @@ class NaiveRequestGenerator:
             parameters=parameters,
             request_body=request_body,
             content_type=content_type,
-            operation_id=operation_properties.operation_id
+            operation_id=operation_properties.operation_id, 
+            operation_properties=operation_properties
         )
     
     

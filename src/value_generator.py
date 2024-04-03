@@ -10,7 +10,7 @@ def randomize_boolean():
 def randomize_null():
     return None
 
-def randomize_integer(reasonable_range):
+def randomize_integer():
     if random.randint(1, 100) <= 70:
         return random.randint(0, 1000)
     else:

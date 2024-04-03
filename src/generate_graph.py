@@ -20,11 +20,13 @@ class OperationEdge:
         self.similar_parameters: Dict[str, SimilarityValue] = similar_parameters # have parameters as the key (similarity value has response and in_value)
 
 class OperationGraph:
-    def __init__(self, spec_path, spec_name=None):
+    def __init__(self, spec_path, spec_name=None, initialize_graph=True):
         self.spec_path = spec_path
         self.spec_name = spec_name
         self.operation_nodes: Dict[str, OperationNode] = {}
         self.operation_edges: List[OperationEdge] = []
+        if initialize_graph:
+            self.create_graph()
 
     def add_operation_node(self, operation_properties: OperationProperties):
         self.operation_nodes[operation_properties.operation_id] = OperationNode(operation_properties)
@@ -82,7 +84,7 @@ class OperationGraph:
         self.determine_dependencies(operations)
 
 if __name__ == "__main__":
-    operation_graph = OperationGraph(spec_path="specs/original/oas/genome-nexus.yaml", spec_name="genome-nexus")
+    operation_graph = OperationGraph(spec_path="specs/original/oas/genome-nexus.yaml", spec_name="genome-nexus", initialize_graph=False)
     #operation_graph = OperationGraph(spec_path="specs/original/oas/ocvn.yaml", spec_name="ocvn")
     operation_graph.create_graph()
     for operation_id, operation_node in operation_graph.operation_nodes.items():
