@@ -26,6 +26,7 @@ rest-gitlab/
 test.json
 cp.txt
 *.log
+*.pkl
 log_*
 evomaster-benchmark-cs-rest-artificial-news.iml
 evomaster.jar

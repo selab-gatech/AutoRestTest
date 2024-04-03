@@ -4,6 +4,8 @@ from typing import Dict, AnyStr, Set, Any, List
 from .generate_graph import OperationGraph, OperationNode, OperationEdge
 from .specification_parser import OperationProperties, ParameterProperties, SchemaProperties
 import requests
+import pickle
+import os 
 
 from .value_generator import NaiveValueGenerator, identify_generator
 
@@ -71,6 +73,8 @@ class NaiveRequestGenerator:
 
         if response.status_code // 100 == 2:
             self.successful_query_data.append(request_data)
+        
+        print(f"Request {request_data.operation_id} completed with response text {response.text} and status code {response.status_code}")
 
 
     def send_operation_request(self, request_data: RequestData):
@@ -181,13 +185,22 @@ class NaiveRequestGenerator:
                 self.depth_traversal(operation_node, visited)
 
 
-def setup_request_generation():
-    api_url = "http://0.0.0.0:9002"  # API URL for genome-nexus
-    spec_path = "specs/original/oas/genome-nexus.yaml"  # Specification path
-
-    # Create and populate the operation graph
-    operation_graph = OperationGraph(spec_path, spec_name="genome-nexus")
-    operation_graph.create_graph()  # Generate the graph
+def setup_request_generation(api_url, spec_path, spec_name, cached_graph=False):
+    # Create and populate the operation graph -- useful for development
+    if cached_graph:
+        if os.path.exists("operation_graph_" + spec_name + ".pkl"):
+            with open("operation_graph_" + spec_name + ".pkl", "rb") as f:
+                operation_graph = pickle.load(f)
+        else:
+            operation_graph = OperationGraph(spec_path, spec_name=spec_name, initialize_graph=False)
+            operation_graph.create_graph()  # Generate the graph
+            if cached_graph:
+                with open("operation_graph_" + spec_name + ".pkl", "wb") as f:
+                    pickle.dump(operation_graph, f)
+    else:
+        operation_graph = OperationGraph(spec_path, spec_name=spec_name, initialize_graph=False)
+        operation_graph.create_graph()
+    
 
     for operation_id, operation_node in operation_graph.operation_nodes.items():
         print("=====================================")
@@ -204,5 +217,9 @@ def setup_request_generation():
     return request_generator
 
 if __name__ == "__main__":
-    generator = setup_request_generation()
+    api_url = "http://0.0.0.0:9002"  # API URL for genome-nexus
+    spec_path = "specs/original/oas/genome-nexus.yaml"  # Specification path
+    spec_name = "genome-nexus"  # Specification name
+    cache_graph = True #set to false when you are actively changing the graph, however caching is useful for fast development when testing API side things
+    generator = setup_request_generation(api_url, spec_path, spec_name, cached_graph=cache_graph)
     generator.generate_requests()

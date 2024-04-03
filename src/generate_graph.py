@@ -20,7 +20,7 @@ class OperationEdge:
         self.similar_parameters: Dict[str, SimilarityValue] = similar_parameters # have parameters as the key (similarity value has response and in_value)
 
 class OperationGraph:
-    def __init__(self, spec_path, spec_name=None, initialize_graph=True):
+    def __init__(self, spec_path, spec_name=None, initialize_graph=False):
         self.spec_path = spec_path
         self.spec_name = spec_name
         self.operation_nodes: Dict[str, OperationNode] = {}
