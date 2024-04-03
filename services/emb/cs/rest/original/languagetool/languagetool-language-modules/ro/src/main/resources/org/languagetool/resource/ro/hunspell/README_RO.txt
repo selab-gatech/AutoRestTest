@@ -1,17 +1,3 @@
-Dicționarul de corectare ortografică
-Autori:
-    Lucian Constantin (http://rospell.sourceforge.net)
-    Sorin Sbarnea (http://www.i18n.ro)
-    Alexandru Szasz (Mozilla and OpenOffice.org Romanian Translation Team)
-    Ionuț Păduraru (http://www.archeus.ro)
-    Adrian Stoica (OpenOffice.org Romanian Translation Team) <adrian dot stoica at cuvinte dot ro>
-    Nicu Buculei (OpenOffice.org Romanian Translation Team) <nicu at apsro dot com>
-    Cătălin Frâncu (http://dexonline.ro)
-    Ionel Mugurel Ciobică (previous aspell releases) <tgakic at sg10 chem tue nl>
-    Mihai Budiu (ispell dictionary) <mihaib at cs cmu edu>
-Licență:  GPL 2.0/LGPL 2.1/MPL 1.1, vedeți COPYING.GPL, COPYING.LGPL,
-    și COPYING.MPL pentru mai multe detalii
-
-Suport:
-    Grupul de email rospell la http://groups.google.com/group/rospell
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:fae94c075ff8a3b05b5f6d02608a06d18256f7beaf3912f482216c73e70e0f5c
+size 828

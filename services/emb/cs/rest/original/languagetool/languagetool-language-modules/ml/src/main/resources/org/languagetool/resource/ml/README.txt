@@ -1,3 +1,3 @@
-The data has been collected by Jithesh.V.S. of the Centre For Development of Imaging Technology (C-DIT),
-Thiruvananthapuram, Kerala, India (http://www.cdit.org/index/). It comes from public sources like newspapers,
-magazines, and novels. It is made available here under GPL.
+version https://git-lfs.github.com/spec/v1
+oid sha256:31db8502b415c5dc9ec3a91264422608edf3e7cdc74623499656eb8026fb9249
+size 274

@@ -1,15 +1,3 @@
-# Words that extend the en-ZA spell checker.
-# To add a word to all variants (en-US, en-GB,...) use spelling.txt
-# For multi-word terms, refer to https://github.com/languagetool-org/languagetool/issues/700
-ZATestWordToBeIgnored
-annexure
-non-stop
-non-smoker
-non-smokers
-non-smoking
-sexualised
-time-honoured
-sublicence
-sublicenced
-sublicencing
-sublicences
+version https://git-lfs.github.com/spec/v1
+oid sha256:c7e27960ecfe9c52d09b8c9062a598547fab64e33defaa5b545b1907af0d0032
+size 353

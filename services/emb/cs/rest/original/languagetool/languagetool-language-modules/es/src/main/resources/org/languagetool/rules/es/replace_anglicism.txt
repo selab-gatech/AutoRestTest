@@ -1,18 +1,3 @@
-webinar=seminario web
-webinars=seminarios web
-antibacterial=antibacteriano|antibacteriana
-target=blanco|diana|objectivo|público objectivo|grupo objectivo
-website=sitio web
-webpage=página web
-screenshot=captura de pantalla|pantallazo
-screenshots=capturas de pantalla|pantallazos
-plugin|addon|plug-in|add-on=complemento|conector|extensión
-plugins|addons|plug-ins|add-ons=complementos|conectores|extensiones
-influencer=influyente
-influencers=influyentes
-sport=deporte|deportivo|informal
-sponsor=patrocinador
-sponsors=patrocinadores
-spam=correo basura|correo no deseado
-zapping|zaping|záping=zapeo
-lockdown=confinamiento|cuarentena
+version https://git-lfs.github.com/spec/v1
+oid sha256:227c2d137c9f2ad673c5b5994a85f9cd56474d7256e0a73e7abea4be337fdf10
+size 631

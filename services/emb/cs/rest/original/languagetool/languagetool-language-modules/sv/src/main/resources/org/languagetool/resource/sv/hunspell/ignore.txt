@@ -1,5 +1,3 @@
-# words to be ignored by the spellchecker (auto-generated)
-fl
-acta
-notam
-hoc
+version https://git-lfs.github.com/spec/v1
+oid sha256:6330d9c2fbf30a9db3ba4fd89573bd3b38972c11591da67d6fee8428455bda9f
+size 77

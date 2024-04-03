@@ -1,7 +1,3 @@
-# test neural network confusion set file
-their|example 2; there|example 1; 5  # this is a comment
-goo; lol; 1.1
-bar; foo; 0.5
-baz; foo; 0.8
-goo; something; 1.2
-im; um; 1  # German
+version https://git-lfs.github.com/spec/v1
+oid sha256:dc3f9b4aa72739ce834cb460142999bcae2eff1ff09a310cfd0d56ffd117112a
+size 180

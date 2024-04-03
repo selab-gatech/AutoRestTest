@@ -1,6 +1,3 @@
-# stopped using this module
-# since support for Dutch is not good enough
-# because - is a word char in Dutch
-#
-#only item (to prevent tests to fail)
-zee-egel*
+version https://git-lfs.github.com/spec/v1
+oid sha256:875e1ceaf998f5f793507fdd8af6ab1b42be8e77b502f55fa589b2bd9405251d
+size 159

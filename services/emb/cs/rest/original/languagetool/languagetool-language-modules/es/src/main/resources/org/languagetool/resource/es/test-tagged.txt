@@ -1,2 +1,3 @@
-anhelar: anhelar*VMN0000
-zurrar: zurrar*VMN0000
+version https://git-lfs.github.com/spec/v1
+oid sha256:dcd34892f8c8effb398b49f3541521b7aeafe884a43405e1c4deab1d46943ebd
+size 48

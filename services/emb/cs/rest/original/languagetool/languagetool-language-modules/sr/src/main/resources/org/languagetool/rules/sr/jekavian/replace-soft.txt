@@ -1,2 +1,3 @@
-# Simple replace table for soft suggestions
-# Format: word=ctx: context|suggestion1|suggestion2|suggestion3...
+version https://git-lfs.github.com/spec/v1
+oid sha256:6b73591128451ecd3a432de6a05d63a65b94bbc1413b3b1f7ca75ec71ee230b7
+size 110

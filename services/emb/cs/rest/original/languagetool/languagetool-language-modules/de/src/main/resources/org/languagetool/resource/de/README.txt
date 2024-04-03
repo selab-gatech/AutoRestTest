@@ -1,6 +1,3 @@
-See https://github.com/languagetool-org/german-pos-dict:
-
-The German data for part-of-speech tagging is taken from Morphy
-(http://morphy.wolfganglezius.de/) with extensions
-and corrections from Julian von Heyl (https://www.korrekturen.de/flexion/)
-under Creative Commons Attribution-Share Alike 4.0.
+version https://git-lfs.github.com/spec/v1
+oid sha256:71dcdb9517318746b4bffa5f0b00d334d8067daa6ef755767787a687f56b2932
+size 300

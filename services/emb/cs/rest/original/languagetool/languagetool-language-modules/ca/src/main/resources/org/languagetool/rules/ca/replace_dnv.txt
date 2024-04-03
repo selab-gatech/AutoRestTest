@@ -1,36 +1,3 @@
-acevament=encebament
-acevar=encebar
-acolxar=encoixinar|capitonar|embuatar|enconxar|esmorteir
-acolxat=encoixinament|embuatament
-afincament=establiment|instal·lació
-agoniós=angoixós
-arrastró=arrossegada
-arropiment=arrupiment
-arropir=arrupir
-arrunsament=arronsament
-arrunsar=arronsar
-arxipèleg=arxipèlag
-bollida=bullida
-bollidor=bullidor
-bolliment=bulliment
-bollit=bullit
-bollitori=bullitori
-bàlsem=bàlsam
-celest=celeste
-colmena=buc|rusc
-desembainar=desembeinar
-embainador=embeinador
-embainar=embeinar
-embalsemador=embalsamador
-embalsemament=embalsamement
-embalsemar=embalsamar
-habilidós=traçut|manyós
-incautació=confiscació|requisició|embargament|segrest
-incautar=confiscar|requisar|comissar|decomissar
-manifessejar=manifassejar
-manifesser=manifasser
-manifesseria=manifasseria
-màsquera=màscara
-opobàlsem=opobàlsam
-pèleg=pèlag
-refregó=refregada
+version https://git-lfs.github.com/spec/v1
+oid sha256:d47d8504dd1adae60f132899dd85e53531bf5ffb8b81b179200c8458cf1c4b7f
+size 863

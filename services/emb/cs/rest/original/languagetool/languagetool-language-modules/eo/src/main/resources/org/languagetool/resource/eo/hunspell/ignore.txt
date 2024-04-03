@@ -1,32 +1,3 @@
-# words to be ignored by the spellchecker (auto-generated)
-Lingvoilo
-Lingvoilon
-Vikidatumoj
-Vikidatumojn
-Vikivortaro
-Vikivortaroj
-Vikivortarojn
-Vikivortaron
-dank
-gufujo
-gufujoj
-gufujojn
-gufujon
-mojosa
-mojosaj
-mojosajn
-mojosan
-ri
-ria
-riaj
-riajn
-rian
-rin
-telekunveno
-telekunvenoj
-telekunvenojn
-telekunvenon
-videkunveno
-videkunvenoj
-videkunvenojn
-videkunvenon
+version https://git-lfs.github.com/spec/v1
+oid sha256:993050437c0aeaa6ca3a27a4bfe1dd165ca8ed2c527aa1e165289c915cb88e6f
+size 357

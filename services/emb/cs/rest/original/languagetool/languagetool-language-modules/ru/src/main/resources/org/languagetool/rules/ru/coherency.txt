@@ -1,21 +1,3 @@
-# Words that have two valid spellings. Used by RussianWordCoherencyRule.
-# This file must be encoded in UTF-8.
-# NOTE: to also find fullforms (e.g. aufwendiges, aufwendigeres), those 
-# forms may need to be added to added.txt
-блогер;блоггер
-внебюджетный;небюджетный
-внекорневой;некорневой
-внеочередной;неочередной
-внеслужебный;неслужебный
-внешкольный;нешкольный
-внештатный;заштатный
-времяисчисление;времясчисление
-времяпрепровождение;времяпровождение
-дискутировать;дискуссировать
-летоисчисление;летосчиcление
-ноль;нуль
-опосредствованный;опосредованный
-офлайн;оффлайн
-патронажем;патронатом
-произошедший;происшедший
-пуэр;пу-эр
+version https://git-lfs.github.com/spec/v1
+oid sha256:f6b282c5da932fc5025ce068ba96261c24255d7b1cc8c95dd56d6dd400167bd2
+size 987

@@ -1,2 +1,3 @@
-# words to be ignored by the spellchecker (auto-generated)
-experință
+version https://git-lfs.github.com/spec/v1
+oid sha256:6d6558d582ce6b72036dca38edea86d7dbaa644d908b1032ad6526d2592df7f5
+size 71

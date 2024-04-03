@@ -1,9 +1,3 @@
-# Words to be marked as spelling errors even if the spell checker
-# accepts them. Useful to improve the spell checker without touching
-# its files (which are usually not from LT).
-mui
-muis
-autoregulación
-autoregulaciones
-autoregresión
-autoregresiones
+version https://git-lfs.github.com/spec/v1
+oid sha256:dd0de6f37360eae6c528aa6acac0e9487cbb19cd924967b4c5c81b4dde307565
+size 252

@@ -1,9 +1,3 @@
-LICENSE:
-"Asturian spellchecking dictionary"
-Beta version 0.03
-
-Dictionary based apon the Normative Dictionary from Asturian Language Academy (2000) by Softastur.org asociation..
-
-Asturies, 2010, 2011
-
-Distributed under GPL license v3
+version https://git-lfs.github.com/spec/v1
+oid sha256:9ec7ec52833b4c082230df38cde0150b7e2312feffd9d7833c513e21ae608b03
+size 235

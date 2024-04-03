@@ -1,3 +1,3 @@
-# Add terms here that should *not* be accepted by the LanguageTool spell checker, one word (or phrase) per line
-irgendwas
-falsch
+version https://git-lfs.github.com/spec/v1
+oid sha256:285159e7efd57d0d11e016d4533b9582372c4e0df5e12025340192ffe48f37f6
+size 129

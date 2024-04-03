@@ -1,7 +1,3 @@
-hurlaicean=hurlacan
-n-urlaicean=n-urlacan
-t-urlaicean=t-urlacan
-urlaicean=urlacan
-hurlamh=hullamh
-urlamh=ullamh
-urlamha=ullamha
+version https://git-lfs.github.com/spec/v1
+oid sha256:69c2a734126feaccc8010c687745d75afc0b127b4ebfa2365e97799da53405d7
+size 128

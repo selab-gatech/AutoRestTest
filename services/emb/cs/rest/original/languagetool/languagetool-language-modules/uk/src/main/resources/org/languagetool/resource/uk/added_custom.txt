@@ -1,4 +1,3 @@
-# A part-of-speech dictionary that's used additionally to the binary dictionary (*.dict).
-# This does not add words to the spell checker, see hunspell/spelling.txt for that.
-# File Encoding: UTF-8
-# Format: three tab-separated fields: fullform baseform postags
+version https://git-lfs.github.com/spec/v1
+oid sha256:30c7602fe9a69730e194dbe5f5b332fba6adf00f49af85d8c5358055c17d339b
+size 260

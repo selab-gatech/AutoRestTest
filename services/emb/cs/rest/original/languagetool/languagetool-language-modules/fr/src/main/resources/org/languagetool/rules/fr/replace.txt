@@ -1,21 +1,3 @@
-# General replacement rules, used by org.languagetool.rules.en.SimpleReplaceRule
-# Format: UTF-8, one entry per line in format: phrase=replacement
-# 'phrase' is what the text is searched for. 'replacement' is the suggestion shown to the user.
-# 'phrase' is searched for case-insensitively.
-# Both 'phrase' and 'replacement' can contain more than one value when separated by '|'.
-# Example:
-# incorrect=suggestion one|suggestion two
-jai=j'ai
-ca=ça|CA
-journé=journée|ajourné
-boton=bouton|bâton|béton|Boston
-qu=que|qu'
-puisqu=puisque|puisqu'
-aus=aux|au|os
-pa=pas
-puit=puits
-antitartre=détartrant
-construirent=construisirent
-alloo=allô|allo
-ceque=ce que
-language=langage
+version https://git-lfs.github.com/spec/v1
+oid sha256:294b027f7a835228997630b3a4f5e56dc38a0477156582182a8fefb943340a09
+size 675

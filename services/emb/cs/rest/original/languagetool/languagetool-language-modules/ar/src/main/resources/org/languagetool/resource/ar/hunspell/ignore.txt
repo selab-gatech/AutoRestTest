@@ -1,10 +1,3 @@
-# words to be ignored by the spellchecker (auto-generated)
-#الكلمات ينبغي أن يتجاهلها المدقق الإملائي
-يونيسيف
-أردوغان
-بوتفليقة
-أيفون
-الخبوزية
-أندرويد
-ميكروسوفت
-سيلفي
+version https://git-lfs.github.com/spec/v1
+oid sha256:041fae0e94d2de7a6e9f322a51a79927740795df574dba345d90f0c1b23d56b3
+size 258

@@ -112,7 +112,7 @@ class NaiveRequestGenerator:
                 response = select_method(full_url, params=parameters)
 
             # Handle the response as needed
-            print(f"Request to {http_method.upper()} {endpoint_path} completed with status code {response.status_code}")
+            #print(f"Request to {http_method.upper()} {endpoint_path} completed with status code {response.status_code}")
             return response
 
         except requests.exceptions.RequestException as err:
@@ -164,11 +164,14 @@ class NaiveRequestGenerator:
         '''
         Generate low-level requests (with no dependencies and hence high depth) first
         '''
+        local_visited_set = set()
         visited.add(curr_node.operation_id)
         for edge in curr_node.outgoing_edges:
             if edge.destination.operation_id not in visited:
                 self.depth_traversal(edge.destination, visited)
+                local_visited_set.add(edge.destination.operation_id)
         request_data = self.process_operation(curr_node.operation_properties)
+        #handle response
         response = self.send_operation_request(request_data)
         if response is not None:
             self.process_response(response, request_data)
@@ -184,7 +187,7 @@ class NaiveRequestGenerator:
             if operation_id not in visited:
                 self.depth_traversal(operation_node, visited)
 
-
+#I am guessing this is only used for testing, and that we will do it in a more organized way in the future
 def setup_request_generation(api_url, spec_path, spec_name, cached_graph=False):
     # Create and populate the operation graph -- useful for development
     if cached_graph:
@@ -200,6 +203,7 @@ def setup_request_generation(api_url, spec_path, spec_name, cached_graph=False):
     else:
         operation_graph = OperationGraph(spec_path, spec_name=spec_name, initialize_graph=False)
         operation_graph.create_graph()
+    
     
 
     for operation_id, operation_node in operation_graph.operation_nodes.items():
