@@ -1,25 +1,63 @@
+from .classification_prompts import FEW_SHOT_CLASSIFICATON_PREFIX, CLASSIFICATION_SUFFIX
 from bs4 import BeautifulSoup
-import time
+from openai import OpenAI
+import os
+
 class ResponseHandler:
     def __init__(self):
-        pass 
+        self.parser_type = "html.parser"
+        self.language_model = ResponseLanguageModelHandler()
     def extract_response_text(self,response):
         if not response:
-            raise Exception("Tried to extract None Response -- Response Object is None")
-        
+            raise ValueError()
         response_text = response.text
-        result = ' '.join(BeautifulSoup(response_text, "html.parser").stripped_strings)
-        #assume the response_text is html since that is the worst case scenario
+        result = ' '.join(BeautifulSoup(response_text, self.parser_type).stripped_strings)
         return result
     def classify_error(self, response):
         response_text = self.extract_response_text(response)
-        #TODO: classify the error 
-    def handle_error(self):
-        pass 
-        #TODO:handle the error
-    
-    
-
+        return self.language_model.classify_response(response_text) 
+    def handle_error(self, response):
+        error_classification = self.classify_error(response)
+        if error_classification == "PARAMETER CONSTRAINT":
+            pass 
+        elif error_classification == "FORMAT":
+            pass
+        elif error_classification == "PARAMETER DEPENDENCY":
+            pass
+        elif error_classification == "OPERATION DEPENDENCY":
+            pass
+        else:
+            return None
+class ResponseLanguageModelHandler:
+    def __init__(self, language_model="OPENAI", **kwargs):
+        if language_model == "OPENAI":
+            env_var = os.getenv("OPENAI_API_KEY")
+            if env_var is None or env_var.strip() == "":
+                raise ValueError()
+            self.client = OpenAI()
+        else:
+            raise Exception("Unsupported language model")        
+    def language_model_query(self, response_text):
+        #get openai chat completion 
+        return self.client.chat.completions.create(
+            engine="gpt-4-turbo-preview",
+            messages=[
+                {'role': 'user', 'content': FEW_SHOT_CLASSIFICATON_PREFIX + query + CLASSIFICATION_SUFFIX},
+            ]
+        ).choices[0].message['content']
+    def extract_classification(self, response_text):
+        classification = None
+        if "PARAMETER CONSTRAINT" in response_text:
+            classification = "PARAMETER CONSTRAINT"
+        elif "FORMAT" in response_text:
+            classification = "FORMAT"
+        elif "PARAMETER DEPENDENCY" in response_text:
+            classification = "PARAMETER DEPENDENCY"
+        elif "OPERATION DEPENDENCY" in response_text:
+            classification = "OPERATION DEPENDENCY"
+        return classification
+    def classify_response(self, response_text):
+        return self.extract_classification(self.language_model_query(response_text))
 class DummyResponse:
     def __init__(self, type="html"):
         if type == "html":
@@ -37,8 +75,5 @@ class DummyResponse:
 
         
 if __name__ == '__main__':
-    start_time = time.time()
     response_handler = ResponseHandler() 
     print(response_handler.extract_response_text(DummyResponse(type="html")))
-    end_time = time.time() 
-    print(f"elapsed extraction time {end_time - start_time}")
