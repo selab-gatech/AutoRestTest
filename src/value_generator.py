@@ -90,3 +90,13 @@ class NaiveValueGenerator:
             randomized_value = self.generate_value(item_properties)
             request_properties[item_name] = randomized_value # save diff mime types
         return request_properties
+class InformedValueGenerator: 
+    def __init__(self, parameters: Dict[AnyStr, ParameterProperties], request_body: Dict[AnyStr, SchemaProperties]):
+        self.parameters: Dict[AnyStr, ParameterProperties] = parameters
+        self.request_body: Dict[AnyStr, SchemaProperties] = request_body
+    def generate_value(self, item_properties: SchemaProperties) -> Any:
+        pass 
+    def generate_parameters(self) -> Dict[AnyStr, Any]:
+        pass
+    def generate_request_body(self):
+        pass

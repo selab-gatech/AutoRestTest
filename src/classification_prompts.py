@@ -57,3 +57,27 @@ Return the answer as simply "CLASSIFICATION: class".
 MESSAGE:
 '''
 FEW_SHOT_CLASSIFICATON_PREFIX = CLASSIFICATION_PROMPT + '\n' + FEW_SHOT_PARAMETER_DEPENDENCY_ERROR + '\n' + FEW_SHOT_FORMAT_ERROR + '\n' + FEW_SHOT_PARAMETER_CONSTRAINT_ERROR + '\n' + FEW_SHOT_OPERATION_DEPENDENCY_ERROR + '\n'
+
+PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX = '''
+Given a server response to an API call, and a list of parameters used to make that call, identify any parameters that need to be constrained, if any. For example:
+MESSAGE: {"message": "One or more parameters are invalid", "details" : [{"field": "age", "constraint" : "must be a positive integer"}]}
+PARAMETERS: age, name, date
+IDENTIFICATION: age
+
+MESSAGE: <error><code>400</code><message>Age is not a valid parameter</message><details><field>age</field><constraint>must be a positive integer</constraint></details></error>
+PARAMETERS: age, name, date
+IDENTIFICATION: age
+
+MESSAGE: the email must be 10 characters long 
+PARAMETERS: email, password, date
+IDENTIFICATION: email
+
+MESSAGE: invalid parameter values
+PARAMETERS: variant, transaction_id, date
+IDENTIFICATION: none
+
+Return your answer in the format "IDENTIFICATION: " followed by a comma seperated list of identified parameters. If no parameters need to be constrained, return "IDENTIFICATION: none". Do not include any other information in your response. \n
+'''
+MESSAGE_HEADER = '''MESSAGE: '''
+PARAMETERS_HEADER = '''PARAMETERS: '''
+IDENTIFICATION_HEADER = '''IDENTIFICATION: '''
