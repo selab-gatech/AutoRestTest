@@ -86,10 +86,6 @@ class NaiveRequestGenerator:
         request_data = self.process_operation(operation_properties)
         return self.send_operation_request(request_data, operation_node)
 
-    
-
-        
-
     def send_operation_request(self, request_data: RequestData, operation_node: OperationNode):
         '''
         Generate naive requests based on the default values and types
@@ -221,7 +217,6 @@ def setup_request_generation(api_url, spec_path, spec_name, cached_graph=False):
     else:
         operation_graph = OperationGraph(spec_path, spec_name=spec_name, initialize_graph=False)
         operation_graph.create_graph()
-    
     
 
     for operation_id, operation_node in operation_graph.operation_nodes.items():
