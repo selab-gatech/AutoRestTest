@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Dict, AnyStr, Set, Any, List
 
+from requests import Response
+
 from src.handle_response import ResponseHandler
 
 from .generate_graph import OperationGraph, OperationNode, OperationEdge
@@ -86,7 +88,7 @@ class NaiveRequestGenerator:
         request_data = self.process_operation(operation_properties)
         return self.send_operation_request(request_data, operation_node)
 
-    def send_operation_request(self, request_data: RequestData, operation_node: OperationNode):
+    def send_operation_request(self, request_data: RequestData, operation_node: OperationNode) -> Response:
         '''
         Generate naive requests based on the default values and types
         '''

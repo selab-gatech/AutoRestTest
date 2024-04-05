@@ -1,3 +1,5 @@
+from requests import Response
+
 from src.request_generator import NaiveRequestGenerator
 from .classification_prompts import *
 from .specification_parser import SchemaProperties
@@ -22,10 +24,12 @@ class ResponseHandler:
         response_text = self.extract_response_text(response)
         return self.language_model.classify_response(response_text) 
     
-    def is_valid_dependency(self, source_response, destination_request):
-        #logic for checking if the tentative operation edge is a valid dependency here
-        #comparing response schema to req body schema??
-        return True  # Assume it's valid for now
+    def is_valid_dependency(self, failed_response: Response, tentative_response: Response):
+        if failed_response is None or tentative_response is None:
+            return False
+        if failed_response.status_code // 100 == 2:
+            return True
+        return False
     
     def handle_operation_dependency_error(self, request_generator, failed_operation_node):
         '''
@@ -33,14 +37,13 @@ class ResponseHandler:
         '''
         if not failed_operation_node.tentative_edges:
             return
-        
-        sorted_edges = sorted(failed_operation_node.tentative_edges, key=lambda x: list(x.similar_parameters.values())[0].similarity, reverse=True)
+        sorted_edges = sorted(failed_operation_node.tentative_edges, key=lambda x: list(x.similar_parameters.values())[0].similarity, reverse=True) # sort tentative edges by their one parameter similarity value
         for tentative_edge in sorted_edges:
             # Send a request to the tentative operation and check the response
             tentative_operation_node = tentative_edge.destination  # Use the operation node
-            response = request_generator.create_and_send_request(tentative_operation_node)  # Pass the operation node
-            if response and self.is_valid_dependency(response, failed_operation_node.operation_properties):
-                # If it's a valid dependency, update the graph
+            tentative_response = request_generator.create_and_send_request(tentative_operation_node)  # Pass the operation node
+            failed_response = request_generator.create_and_send_request(failed_operation_node)
+            if tentative_response is not None and failed_response is not None and self.is_valid_dependency(failed_response, tentative_response):
                 request_generator.operation_graph.add_operation_edge(
                     failed_operation_node.operation_id,
                     tentative_edge.destination.operation_id,
