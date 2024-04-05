@@ -1,3 +1,4 @@
+from src.request_generator import NaiveRequestGenerator
 from .classification_prompts import *
 from .specification_parser import SchemaProperties
 from bs4 import BeautifulSoup
@@ -18,7 +19,35 @@ class ResponseHandler:
     def classify_error(self, response):
         response_text = self.extract_response_text(response)
         return self.language_model.classify_response(response_text) 
-    def handle_error(self, response, parameters):
+    
+    def is_valid_dependency(self, source_response, destination_request):
+        #logic for checking if the tentative operation edge is a valid dependency here
+        #comparing response schema to req body schema??
+        return True  # Assume it's valid for now
+    
+    def handle_operation_dependency_error(self, request_generator, failed_operation_node):
+        """
+        Handle the operation dependency error by trying tentative edges.
+        """
+        for tentative_edge in failed_operation_node.tentative_edges:
+            # Send a request to the tentative operation and check the response
+            tentative_operation_node = tentative_edge.destination  # Use the operation node
+            response = NaiveRequestGenerator.create_and_send_request(tentative_operation_node)  # Pass the operation node
+            if response and self.is_valid_dependency(response, failed_operation_node.operation_properties):
+                # If it's a valid dependency, update the graph
+                NaiveRequestGenerator.operation_graph.add_operation_edge(
+                    failed_operation_node.operation_id,
+                    tentative_edge.destination.operation_id,
+                    tentative_edge.similar_parameters
+                )
+                print(f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {tentative_edge.destination.operation_id}")
+            else:
+                #valid dependency not found add highest similarity score to graph
+        
+    
+    
+    
+    def handle_error(self, response, operation_node, request_generator, parameters):
         error_classification = self.classify_error(response)
         if error_classification == "PARAMETER CONSTRAINT":
             #identify parameter constraint and return new parameters and request body dictionary that specifies the parameters to use
@@ -38,7 +67,8 @@ class ResponseHandler:
         elif error_classification == "PARAMETER DEPENDENCY":
             pass
         elif error_classification == "OPERATION DEPENDENCY":
-            pass
+            self.handle_operation_dependency_error(request_generator, operation_node)
+                
         else:
             return None
     
