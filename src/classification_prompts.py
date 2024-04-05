@@ -81,3 +81,36 @@ Return your answer in the format "IDENTIFICATION: " followed by a comma seperate
 MESSAGE_HEADER = '''MESSAGE: '''
 PARAMETERS_HEADER = '''PARAMETERS: '''
 IDENTIFICATION_HEADER = '''IDENTIFICATION: '''
+
+CONSTRAINT_EXTRACTION_PREFIX = '''
+Given the server response message and parameter, return a JSON object to define the following dataclass to create a constrained schema for that parameter.
+
+class SchemaProperties:
+    """
+    Class to store the properties of either the schema values, in the case of parameters, or the request body object values
+    """
+    type: Optional[str] = None
+    format: Optional[str] = None
+    description: Optional[str] = None
+    items: 'SchemaProperties' = None
+    properties: Dict[str, 'SchemaProperties'] = None # property name then schema content as value
+    required: List[str] = field(default_factory=list)
+    default: Optional[Union[str, int, float, bool, List, Dict]] = None
+    enum: Optional[List[str]] = field(default_factory=list)
+    minimum: Optional[int] = None
+    maximum: Optional[int] = None
+    min_length: Optional[int] = None
+    max_length: Optional[int] = None
+    pattern: Optional[str] = None
+    max_items: Optional[int] = None
+    min_items: Optional[int] = None
+    unique_items: Optional[bool] = None
+    additional_properties: Union[bool, 'SchemaProperties', None] = True
+    nullable: Optional[bool] = None
+    read_only: Optional[bool] = None
+    write_only: Optional[bool] = None
+    example: Optional[Union[str, int, float, bool, List, Dict]] = None
+    examples: List[Optional[Union[str, int, float, bool, List, Dict]]] = field(default_factory=list)
+
+Ensure that the returned JSON follows the semantics of Schema Properties.
+'''
