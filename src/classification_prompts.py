@@ -114,3 +114,33 @@ class SchemaProperties:
 
 Ensure that the returned JSON follows the semantics of Schema Properties.
 '''
+EXAMPLE_GENERATION_PROMPT = '''
+Given the server message, generate an example parameter value that would satisfy the server response for the provided paramter. 
+
+MESSAGE: Field 'email' must be a valid email address.
+PARAMETER: email
+EXAMPLE: abc@gmail.com
+
+MESSAGE: Field 'age' must be a positive integer.
+PARAMETER: age
+EXAMPLE: 25
+
+Given the message and parameter, generate an example value. Return the example value as a string with format "EXAMPLE: <example value>". Do not include any additional information.
+'''
+EXTRACT_PARAMETER_DEPENDENCIES = '''
+Given a server response message and a list of parameters, extract any parameter dependencies from the message, and return a list of tuples that highlights the parameter dependencies. 
+Return parameter dependencies in the form of which parameters are required. 
+For example:
+
+MESSAGE: The 'creditCard' payment method requires the 'cardNumber' and 'expirationDate' parameters to be provided.
+PARAMETERS: paymentMethod, cardNumber, expirationDate, shippingAddress, shipToAddress
+DEPENDENCIES: paymentMethod, cardNumber, expirationDate
+
+MESSAGE: The 'shippingAddress' parameter is required when the 'shipToAddress' parameter is set to true.
+PARAMETERS: shippingAddress, shipToAddress, password, date
+DEPENDENCIES: shippingAddress, shipToAddress
+
+MESSAGE: password field requires date
+PARAMETERS: password, date
+DEPENDENCIES: password, date
+'''
