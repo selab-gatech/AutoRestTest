@@ -1,3 +1,6 @@
+from requests import Response
+
+from src.request_generator import NaiveRequestGenerator
 from .classification_prompts import *
 from .specification_parser import SchemaProperties
 from bs4 import BeautifulSoup
@@ -9,16 +12,55 @@ class ResponseHandler:
     def __init__(self):
         self.parser_type = "html.parser"
         self.language_model = ResponseLanguageModelHandler()
+
     def extract_response_text(self,response):
         if not response:
             raise ValueError()
         response_text = response.text
         result = ' '.join(BeautifulSoup(response_text, self.parser_type).stripped_strings)
         return result
+
     def classify_error(self, response):
         response_text = self.extract_response_text(response)
         return self.language_model.classify_response(response_text) 
-    def handle_error(self, response, parameters):
+    
+    def is_valid_dependency(self, failed_response: Response, tentative_response: Response):
+        if failed_response is None or tentative_response is None:
+            return False
+        if failed_response.status_code // 100 == 2:
+            return True
+        return False
+    
+    def handle_operation_dependency_error(self, request_generator, failed_operation_node):
+        '''
+        Handle the operation dependency error by trying tentative edges.
+        '''
+        if not failed_operation_node.tentative_edges:
+            return
+        sorted_edges = sorted(failed_operation_node.tentative_edges, key=lambda x: list(x.similar_parameters.values())[0].similarity, reverse=True) # sort tentative edges by their one parameter similarity value
+        for tentative_edge in sorted_edges:
+            # Send a request to the tentative operation and check the response
+            tentative_operation_node = tentative_edge.destination  # Use the operation node
+            tentative_response = request_generator.create_and_send_request(tentative_operation_node)  # Pass the operation node
+            failed_response = request_generator.create_and_send_request(failed_operation_node)
+            if tentative_response is not None and failed_response is not None and self.is_valid_dependency(failed_response, tentative_response):
+                request_generator.operation_graph.add_operation_edge(
+                    failed_operation_node.operation_id,
+                    tentative_edge.destination.operation_id,
+                    tentative_edge.similar_parameters
+                )
+                failed_operation_node.tentative_edges.remove(tentative_edge)
+                print(f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {tentative_edge.destination.operation_id}")
+                return
+        # add highest similarity edge
+        request_generator.operation_graph.add_operation_edge(
+            failed_operation_node.operation_id,
+            sorted_edges[0].destination.operation_id,
+            sorted_edges[0].similar_parameters
+        )
+        failed_operation_node.tentative_edges.remove(sorted_edges[0])
+
+    def handle_error(self, response, operation_node, request_generator, parameters):
         error_classification = self.classify_error(response)
         if error_classification == "PARAMETER CONSTRAINT":
             #identify parameter constraint and return new parameters and request body dictionary that specifies the parameters to use
@@ -42,8 +84,7 @@ class ResponseHandler:
                     parameters[parameter].required = True
             return {"PARAMETER DEPENDENCY": parameters}
         elif error_classification == "OPERATION DEPENDENCY":
-            #return a list of operations that are dependent on each other
-            return {"OPERATION DEPENDENCY": parameters}
+            self.handle_operation_dependency_error(request_generator, operation_node)
         else:
             return None
     
@@ -75,6 +116,7 @@ class ResponseLanguageModelHandler:
                 ]
             )
         return response.choices[0].message.content.strip()
+
     def _extract_classification(self, response_text):
         classification = None
         if response_text is None: 
@@ -88,6 +130,7 @@ class ResponseLanguageModelHandler:
         elif "OPERATION DEPENDENCY" in response_text:
             classification = "OPERATION DEPENDENCY"
         return classification
+
     def _extract_constrained_parameter_list(self, language_model_response):
         if "IDENTIFICATION:" not in language_model_response:
             return None
@@ -95,6 +138,7 @@ class ResponseLanguageModelHandler:
             return None
         else:
             return language_model_response.split("IDENTIFICATION:")[1].strip().split(",")
+
     def _extract_parameters_to_constrain(self, response_text, request_params):
         parameter_list = [parameter for parameter in request_params]
         #create a comma seperated string of parameters
@@ -123,6 +167,7 @@ class ResponseLanguageModelHandler:
             if hasattr(schema, key):
                 setattr(schema, key, value)
         return schema
+
     def extract_constrained_schemas(self, response_text, request_params):
         parameters_to_constrain = self._extract_constrained_parameter_list(self._extract_parameters_to_constrain(response_text, request_params))
         constrained_schemas = {}
@@ -131,11 +176,14 @@ class ResponseLanguageModelHandler:
                 parameter_schema = request_params[parameter].schema
                 constrained_schemas[parameter] = self.define_constrained_schema(parameter, parameter_schema, response_text)
         return constrained_schemas
+
     def classify_response(self, response_text):
         return self._extract_classification(self.language_model_query(FEW_SHOT_CLASSIFICATON_PREFIX + response_text + CLASSIFICATION_SUFFIX))
+
     def extract_parameter_formatting(self, response_text, request_params):
         params_list = self._extract_constrained_parameter_list(self._extract_parameters_to_constrain(response_text, request_params))
         return self._generate_parameter_value(params_list, response_text)
+    
     def extract_parameter_dependency(self, response_text, request_params):
         list_of_request_parameters = [parameter for parameter in request_params]
         parameters = ",".join(list_of_request_parameters)

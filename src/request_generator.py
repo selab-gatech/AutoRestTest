@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 from typing import Dict, AnyStr, Set, Any, List
 
+from requests import Response
+
+from src.handle_response import ResponseHandler
+
 from .generate_graph import OperationGraph, OperationNode, OperationEdge
 from .specification_parser import OperationProperties, ParameterProperties, SchemaProperties
 import requests
@@ -76,8 +80,15 @@ class NaiveRequestGenerator:
         
         print(f"Request {request_data.operation_id} completed with response text {response.text} and status code {response.status_code}")
 
+    def create_and_send_request(self, operation_node: OperationNode):
+        """
+        Create a RequestData object from an OperationNode and send the request.
+        """
+        operation_properties = operation_node.operation_properties
+        request_data = self.process_operation(operation_properties)
+        return self.send_operation_request(request_data, operation_node)
 
-    def send_operation_request(self, request_data: RequestData):
+    def send_operation_request(self, request_data: RequestData, operation_node: OperationNode) -> Response:
         '''
         Generate naive requests based on the default values and types
         '''
@@ -113,6 +124,11 @@ class NaiveRequestGenerator:
 
             # Handle the response as needed
             #print(f"Request to {http_method.upper()} {endpoint_path} completed with status code {response.status_code}")
+            # Handling non-200 responses
+            if response.status_code // 100 != 2:  # For non-2xx responses
+                response_handler = ResponseHandler()
+                response_handler.handle_error(response, operation_node, self, request_data.parameters)
+                #have to implement logic to ensure tentative edges dont do infinite loop if all of them fail
             return response
 
         except requests.exceptions.RequestException as err:
@@ -172,7 +188,7 @@ class NaiveRequestGenerator:
                 local_visited_set.add(edge.destination.operation_id)
         request_data = self.process_operation(curr_node.operation_properties)
         #handle response
-        response = self.send_operation_request(request_data)
+        response = self.send_operation_request(request_data, curr_node)
         if response is not None:
             self.process_response(response, request_data)
             # self.attempt_retry(response, request_data)
@@ -203,7 +219,6 @@ def setup_request_generation(api_url, spec_path, spec_name, cached_graph=False):
     else:
         operation_graph = OperationGraph(spec_path, spec_name=spec_name, initialize_graph=False)
         operation_graph.create_graph()
-    
     
 
     for operation_id, operation_node in operation_graph.operation_nodes.items():
