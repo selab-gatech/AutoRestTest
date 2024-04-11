@@ -33,6 +33,14 @@ class ResponseHandler:
         if failed_response.status_code // 100 == 2:
             return True
         return False
+
+    def test_tentative_edge(self, request_generator: NaiveRequestGenerator, failed_operation_node: OperationNode, tentative_edge):
+        tentative_operation_node = tentative_edge.destination
+        tentative_response = request_generator.create_and_send_request(tentative_operation_node)
+        failed_response = request_generator.create_and_send_request(failed_operation_node)
+        if tentative_response is not None and failed_response is not None and self.is_valid_dependency(failed_response, tentative_response):
+            return True
+        return False
     
     def handle_operation_dependency_error(self, request_generator: NaiveRequestGenerator, failed_operation_node: OperationNode):
         '''
@@ -43,17 +51,15 @@ class ResponseHandler:
         sorted_edges = sorted(failed_operation_node.tentative_edges, key=lambda x: list(x.similar_parameters.values())[0].similarity, reverse=True) # sort tentative edges by their one parameter similarity value
         for tentative_edge in sorted_edges:
             # Send a request to the tentative operation and check the response
-            tentative_operation_node = tentative_edge.destination  # Use the operation node
-            tentative_response = request_generator.create_and_send_request(tentative_operation_node)  # Pass the operation node
-            failed_response = request_generator.create_and_send_request(failed_operation_node)
-            if tentative_response is not None and failed_response is not None and self.is_valid_dependency(failed_response, tentative_response):
+            if self.test_tentative_edge(request_generator, failed_operation_node, tentative_edge):
                 request_generator.operation_graph.add_operation_edge(
                     failed_operation_node.operation_id,
                     tentative_edge.destination.operation_id,
                     tentative_edge.similar_parameters
                 )
                 failed_operation_node.tentative_edges.remove(tentative_edge)
-                print(f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {tentative_edge.destination.operation_id}")
+                print(
+                    f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {tentative_edge.destination.operation_id}")
                 return
         # add highest similarity edge
         request_generator.operation_graph.add_operation_edge(
@@ -63,54 +69,46 @@ class ResponseHandler:
         )
         failed_operation_node.tentative_edges.remove(sorted_edges[0])
 
-    def handle_parameter_constraint_error(self, response_text: str, request_data: RequestData):
-        parameters = request_data.operation_properties.parameters
-        request_body = request_data.operation_properties.request_body
-
+    def handle_parameter_constraint_error(self, response_text: str, parameters: Dict[str, SchemaProperties]):
         modified_parameter_schemas = self.language_model.extract_constrained_schemas(response_text, parameters)
         for parameter in parameters:
             if parameter in modified_parameter_schemas:
-                parameters[parameter].schema = modified_parameter_schemas[parameter]
+                parameters[parameter] = modified_parameter_schemas[parameter]
 
-        modified_request_body_schemas = self.language_model.extract_constrained_schemas(response_text, request_body)
-        return parameters
+    def handle_format_constraint_error(self, response_text: str, parameters: Dict[str, SchemaProperties]):
+        parameter_format_examples = self.language_model.extract_parameter_formatting(response_text, parameters)
+        for parameter in parameters:
+            if parameter in parameter_format_examples:
+                parameters[parameter].example = parameter_format_examples[parameter]
+
+    def handle_parameter_dependency_error(self, response_text: str, parameters: Dict[str, SchemaProperties]):
+        required_parameters = self.language_model.extract_parameter_dependency(response_text, parameters)
+        for parameter in parameters:
+            if parameter in required_parameters:
+                parameters[parameter].required = True
 
     def handle_error(self, response: Response, operation_node: OperationNode, request_data: RequestData, request_generator: NaiveRequestGenerator):
         # TODO: Implement differentiation of parameters vs req body
         error_classification = self.classify_error(response)
         query_parameters: Dict[str, ParameterProperties] = request_data.operation_properties.parameters
+
         request_body: Dict[str, SchemaProperties] = request_data.operation_properties.request_body
-
-        simplified_parameters: Dict[str, SchemaProperties] = {}
-        for parameter in query_parameters:
-            simplified_parameters[parameter] = query_parameters[parameter].schema
-
-        parameters = None
+        simplified_parameters: Dict[str, SchemaProperties] = {parameter: properties.schema for parameter, properties in query_parameters.items()}
+        response_text = self.extract_response_text(response)
 
         # REMINDER: parameters = Dict[str, ParameterProperties] -> schema = SchemaProperties
         # REMINDER: request_body = Dict[str, SchemaProperties]
-        response_text = self.extract_response_text(response)
         if error_classification == "PARAMETER CONSTRAINT":
             #identify parameter constraint and return new parameters and request body dictionary that specifies the parameters to use
-            modified_parameter_schemas = self.language_model.extract_constrained_schemas(response_text, simplified_parameters)
-            #merge schemas 
-            for parameter in simplified_parameters:
-                if parameter in modified_parameter_schemas:
-                    simplified_parameters[parameter] = modified_parameter_schemas[parameter]
-            return {"PARAMETER CONSTRAINT" : simplified_parameters}
+            self.handle_parameter_constraint_error(response_text, simplified_parameters)
+            self.handle_parameter_constraint_error(response_text, request_body)
         elif error_classification == "FORMAT":
             #should return map from parameter -> example
-            parameter_format_examples = self.language_model.extract_parameter_formatting(response_text, parameters)
-            for parameter in parameters:
-                if parameter in parameter_format_examples:
-                    parameters[parameter].example = parameter_format_examples[parameter]
-            return {"FORMAT" : parameters}
+            self.handle_format_constraint_error(response_text, simplified_parameters)
+            self.handle_format_constraint_error(response_text, request_body)
         elif error_classification == "PARAMETER DEPENDENCY":
-            required_parameters = self.language_model.extract_parameter_dependency(response_text, parameters)
-            for parameter in parameters:
-                if parameter in required_parameters:
-                    parameters[parameter].required = True
-            return {"PARAMETER DEPENDENCY": parameters}
+            self.handle_parameter_dependency_error(response_text, simplified_parameters)
+            self.handle_parameter_dependency_error(response_text, request_body)
         elif error_classification == "OPERATION DEPENDENCY":
             self.handle_operation_dependency_error(request_generator, operation_node)
         else:
@@ -178,8 +176,6 @@ class ResponseLanguageModelHandler:
         extracted_parameter_list = self._extract_constrained_parameter_list(self.language_model_query(PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX + message + parameters))
         #return self._extract_constrained_parameter_list(extracted_paramter_list)
         return extracted_parameter_list
-
-
 
     def _generate_parameter_value(self, parameters_to_generate_for, response_text: str):
         example_value_map = {}
