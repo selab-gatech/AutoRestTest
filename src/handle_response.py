@@ -9,12 +9,15 @@ from .specification_parser import SchemaProperties, ParameterProperties
 from bs4 import BeautifulSoup
 from openai import OpenAI
 import os
-import json 
+import json
+from dotenv import load_dotenv
+
+load_dotenv() # load environmental vars for OpenAI API key
 
 class ResponseHandler:
     def __init__(self):
         self.parser_type = "html.parser"
-        self.language_model = ResponseLanguageModelHandler()
+        self.language_model = ResponseLanguageModelHandler("OPENAI", os.getenv("OPENAI_API_KEY"))
 
     def extract_response_text(self, response: Response):
         if not response:
@@ -115,11 +118,11 @@ class ResponseHandler:
             return None
     
 class ResponseLanguageModelHandler:
-    def __init__(self, language_model="OPENAI", **kwargs):
+    def __init__(self, language_model="OPENAI", api_key = None, **kwargs):
         if language_model == "OPENAI":
-            env_var = os.getenv("OPENAI_API_KEY")
+            self.api_key = api_key
             self.language_model_engine = kwargs.get("language_model_engine", "gpt-4-turbo-preview")
-            if env_var is None or env_var.strip() == "":
+            if api_key is None or api_key.strip() == "":
                 raise ValueError()
             self.client = OpenAI()
         else:
