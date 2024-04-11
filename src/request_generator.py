@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, AnyStr, Set, Any, List
+from typing import Dict, Set, Any, List, Optional
 
 from requests import Response
 
@@ -13,15 +13,13 @@ import os
 
 from .value_generator import NaiveValueGenerator, identify_generator
 
-
 @dataclass
 class RequestData:
-    endpoint_path: AnyStr
-    http_method: AnyStr
-    parameters: Dict[AnyStr, Any] # dict of parameter name to value
-    request_body: AnyStr
-    content_type: AnyStr
-    operation_id: AnyStr
+    endpoint_path: str
+    http_method: str
+    parameters: Dict[str, Any] # dict of parameter name to value
+    request_body: str # composition
+    operation_id: str
     operation_properties: OperationProperties
 
 @dataclass
@@ -36,7 +34,6 @@ class StatusCode:
     count: int
     requests_and_responses: List[RequestResponse]
 
-
 class NaiveRequestGenerator:
     def __init__(self, operation_graph: OperationGraph, api_url: str):
         self.operation_graph: OperationGraph = operation_graph
@@ -45,7 +42,7 @@ class NaiveRequestGenerator:
         self.requests_generated = 0  # Initialize the request count
         self.successful_query_data = [] # List to store successful query data
 
-    def generate_parameter_values(self, parameters: Dict[AnyStr, ParameterProperties], request_body: Dict[AnyStr, SchemaProperties]):
+    def generate_parameter_values(self, parameters: Dict[str, ParameterProperties], request_body: Dict[str, SchemaProperties]):
         value_generator = NaiveValueGenerator(parameters=parameters, request_body=request_body)
         return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
 
@@ -88,17 +85,10 @@ class NaiveRequestGenerator:
         request_data = self.process_operation(operation_properties)
         return self.send_operation_request(request_data, operation_node)
 
-    def send_operation_request(self, request_data: RequestData, operation_node: OperationNode) -> Response:
+    def send_operation_request(self, request_data: RequestData, operation_node: OperationNode) -> Optional[Response]:
         '''
         Generate naive requests based on the default values and types
         '''
-        # endpoint_path: AnyStr = operation_properties.endpoint_path
-        # for parameter_name, parameter_properties in operation_properties.parameters.items():
-        #     if parameter_properties.in_value == "path":
-        #         get_path_value = identify_generator(parameter_properties.schema.type)
-        #         endpoint_path.replace("{"+parameter_name+"}", get_path_value)
-
-        # parameters, request_body = self.generate_parameter_values(operation_properties.parameters, operation_properties.request_body)
 
         '''
         Send the request to the API using the request data.
@@ -107,7 +97,6 @@ class NaiveRequestGenerator:
         http_method = request_data.http_method
         parameters = request_data.parameters
         request_body = request_data.request_body
-        content_type = request_data.content_type
 
         try:
             # Choose the appropriate method from the 'requests' library based on the HTTP method
@@ -127,8 +116,8 @@ class NaiveRequestGenerator:
             # Handling non-200 responses
             if response.status_code // 100 != 2:  # For non-2xx responses
                 response_handler = ResponseHandler()
-                response_handler.handle_error(response, operation_node, self, request_data.parameters)
-                #have to implement logic to ensure tentative edges dont do infinite loop if all of them fail
+                response_handler.handle_error(response, operation_node, request_data, self)
+                # TODO: check if req-body vs. parameters are handled
             return response
 
         except requests.exceptions.RequestException as err:
@@ -160,22 +149,16 @@ class NaiveRequestGenerator:
                 path_value = parameters[parameter_name]
                 endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
 
-        # Determine the content type
-        content_type = "application/json"  
-
         # Create RequestData object
         return RequestData(
             endpoint_path=endpoint_path,
             http_method=http_method,
             parameters=parameters,
             request_body=request_body,
-            content_type=content_type,
             operation_id=operation_properties.operation_id, 
             operation_properties=operation_properties
         )
-    
-    
-    
+
     def depth_traversal(self, curr_node: OperationNode, visited: Set):
         '''
         Generate low-level requests (with no dependencies and hence high depth) first
@@ -192,7 +175,6 @@ class NaiveRequestGenerator:
         if response is not None:
             self.process_response(response, request_data)
             # self.attempt_retry(response, request_data)
-
 
     def generate_requests(self):
         '''

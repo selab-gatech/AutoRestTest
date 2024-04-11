@@ -12,6 +12,8 @@ dependencies:
   - numpy~=1.25.0
   - scipy
   - gensim
+  - openai
+  - bs4
   - pip:
       - prance
       - openapi-spec-validator

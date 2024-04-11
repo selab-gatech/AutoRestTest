@@ -72,11 +72,6 @@ class NaiveValueGenerator:
             return [self.generate_value(item_properties.items) for _ in range(randomized_array_length())]
         return identify_generator(item_properties.type)()
 
-    #def generate_values(self, parameters: Dict[AnyStr, ParameterProperties], request_body: Dict[AnyStr, SchemaProperties]):
-    ##    parameter_mappings = {}
-    #    request_body = None
-    #    for parameter in parameters.items()
-
     def generate_parameters(self) -> Dict[AnyStr, Any]:
         query_parameters = {}
         for parameter_name, parameter_properties in self.parameters.items():
@@ -90,6 +85,7 @@ class NaiveValueGenerator:
             randomized_value = self.generate_value(item_properties)
             request_properties[item_name] = randomized_value # save diff mime types
         return request_properties
+
 class InformedValueGenerator: 
     def __init__(self, parameters: Dict[AnyStr, ParameterProperties], request_body: Dict[AnyStr, SchemaProperties]):
         self.parameters: Dict[AnyStr, ParameterProperties] = parameters
