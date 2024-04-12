@@ -1,3 +1,4 @@
+import argparse
 import os
 
 from src.generate_graph import OperationGraph
@@ -14,6 +15,15 @@ def configure_api_urls(local_test):
         port = base_port + i
         api_urls[service] = f"http://0.0.0.0:{port}"
     return api_urls
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Generate requests based on API specification.')
+    parser.add_argument("num_specs", choices=["one", "many"],
+                        help="Specifies the number of specifications: 'one' or 'many'")
+    parser.add_argument("local_test", type=lambda x: (str(x).lower() == 'true'),
+                        help="Specifies whether the test is local (true/false)")
+    parser.add_argument("-s", "--spec_name", type=str, default=None, help="Optional name of the specification")
+    return parser.parse_args()
 
 class AutoRestTest:
     def __init__(self, spec_dir: str, local_test: bool):
@@ -45,8 +55,11 @@ class AutoRestTest:
         self.generate_requests(operation_graph, api_url)
 
 if __name__ == "__main__":
+    # example of running: python AutoRestTest.py one true -s genome-nexus
     spec_dir = "specs/original/oas"
-    local_test = False
-    auto_rest_test = AutoRestTest(spec_dir, local_test)
-    #auto_rest_test.run_all()
-    auto_rest_test.run_single("genome-nexus")
+    args = parse_args()
+    auto_rest_test = AutoRestTest(spec_dir, args.local_test)
+    if args.num_specs == "one":
+        auto_rest_test.run_single(args.spec_name)
+    else:
+        auto_rest_test.run_all()
