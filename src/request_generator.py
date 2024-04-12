@@ -201,7 +201,6 @@ def setup_request_generation(api_url, spec_path, spec_name, cached_graph=False):
     else:
         operation_graph = OperationGraph(spec_path, spec_name=spec_name, initialize_graph=False)
         operation_graph.create_graph()
-    
 
     for operation_id, operation_node in operation_graph.operation_nodes.items():
         print("=====================================")

@@ -73,24 +73,29 @@ class ResponseHandler:
             sorted_edges[0].destination.operation_id,
             sorted_edges[0].similar_parameters
         )
+        print(
+            f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {sorted_edges[0].destination.operation_id}")
         failed_operation_node.tentative_edges.remove(sorted_edges[0])
 
     def handle_parameter_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
         modified_parameter_schemas = self.language_model.extract_constrained_schemas(response_text, parameters)
         for parameter in parameters:
             if parameter in modified_parameter_schemas:
+                print(f"Updating parameter {parameter} with new schema")
                 parameters[parameter] = modified_parameter_schemas[parameter]
 
     def handle_format_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
         parameter_format_examples = self.language_model.extract_parameter_formatting(response_text, parameters)
         for parameter in parameters:
             if parameter in parameter_format_examples:
+                print(f"Updating parameter {parameter} with new example value")
                 parameters[parameter].example = parameter_format_examples[parameter]
 
     def handle_parameter_dependency_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
         required_parameters = self.language_model.extract_parameter_dependency(response_text, parameters)
         for parameter in parameters:
             if parameter in required_parameters:
+                print(f"Updating parameter {parameter} to required")
                 parameters[parameter].required = True
 
     def handle_error(self, response: Response, operation_node: 'OperationNode', request_data: 'RequestData', request_generator: 'NaiveRequestGenerator'):
