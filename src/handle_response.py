@@ -1,11 +1,8 @@
-from typing import Dict
+from typing import Dict, TYPE_CHECKING
 
 from requests import Response
 
-from src.request_generator import NaiveRequestGenerator, RequestData
 from .classification_prompts import *
-from .generate_graph import OperationNode
-from .specification_parser import SchemaProperties, ParameterProperties
 from bs4 import BeautifulSoup
 from openai import OpenAI
 import os
@@ -13,6 +10,12 @@ import json
 from dotenv import load_dotenv
 
 load_dotenv() # load environmental vars for OpenAI API key
+
+if TYPE_CHECKING:
+    from .generate_graph import OperationNode
+    from .specification_parser import SchemaProperties, ParameterProperties
+    from src.request_generator import NaiveRequestGenerator, RequestData
+
 
 class ResponseHandler:
     def __init__(self):
@@ -37,7 +40,7 @@ class ResponseHandler:
             return True
         return False
 
-    def test_tentative_edge(self, request_generator: NaiveRequestGenerator, failed_operation_node: OperationNode, tentative_edge):
+    def test_tentative_edge(self, request_generator: 'NaiveRequestGenerator', failed_operation_node: 'OperationNode', tentative_edge):
         tentative_operation_node = tentative_edge.destination
         tentative_response = request_generator.create_and_send_request(tentative_operation_node)
         failed_response = request_generator.create_and_send_request(failed_operation_node)
@@ -45,7 +48,7 @@ class ResponseHandler:
             return True
         return False
     
-    def handle_operation_dependency_error(self, request_generator: NaiveRequestGenerator, failed_operation_node: OperationNode):
+    def handle_operation_dependency_error(self, request_generator: 'NaiveRequestGenerator', failed_operation_node: 'OperationNode'):
         '''
         Handle the operation dependency error by trying tentative edges.
         '''
@@ -72,31 +75,31 @@ class ResponseHandler:
         )
         failed_operation_node.tentative_edges.remove(sorted_edges[0])
 
-    def handle_parameter_constraint_error(self, response_text: str, parameters: Dict[str, SchemaProperties]):
+    def handle_parameter_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
         modified_parameter_schemas = self.language_model.extract_constrained_schemas(response_text, parameters)
         for parameter in parameters:
             if parameter in modified_parameter_schemas:
                 parameters[parameter] = modified_parameter_schemas[parameter]
 
-    def handle_format_constraint_error(self, response_text: str, parameters: Dict[str, SchemaProperties]):
+    def handle_format_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
         parameter_format_examples = self.language_model.extract_parameter_formatting(response_text, parameters)
         for parameter in parameters:
             if parameter in parameter_format_examples:
                 parameters[parameter].example = parameter_format_examples[parameter]
 
-    def handle_parameter_dependency_error(self, response_text: str, parameters: Dict[str, SchemaProperties]):
+    def handle_parameter_dependency_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
         required_parameters = self.language_model.extract_parameter_dependency(response_text, parameters)
         for parameter in parameters:
             if parameter in required_parameters:
                 parameters[parameter].required = True
 
-    def handle_error(self, response: Response, operation_node: OperationNode, request_data: RequestData, request_generator: NaiveRequestGenerator):
+    def handle_error(self, response: Response, operation_node: 'OperationNode', request_data: 'RequestData', request_generator: 'NaiveRequestGenerator'):
         # TODO: Implement differentiation of parameters vs req body
         error_classification = self.classify_error(response)
-        query_parameters: Dict[str, ParameterProperties] = request_data.operation_properties.parameters
+        query_parameters: Dict[str, 'ParameterProperties'] = request_data.operation_properties.parameters
 
-        request_body: Dict[str, SchemaProperties] = request_data.operation_properties.request_body
-        simplified_parameters: Dict[str, SchemaProperties] = {parameter: properties.schema for parameter, properties in query_parameters.items()}
+        request_body: Dict[str, 'SchemaProperties'] = request_data.operation_properties.request_body
+        simplified_parameters: Dict[str, 'SchemaProperties'] = {parameter: properties.schema for parameter, properties in query_parameters.items()}
         response_text = self.extract_response_text(response)
 
         # REMINDER: parameters = Dict[str, ParameterProperties] -> schema = SchemaProperties
