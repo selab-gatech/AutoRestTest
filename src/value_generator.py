@@ -66,11 +66,11 @@ class NaiveValueGenerator:
         self.request_body: Dict[AnyStr, SchemaProperties] = request_body
 
     def generate_value(self, item_properties: SchemaProperties) -> Any:
-        if item_properties.type == "object":
+        if item_properties.type == "object" or item_properties.properties is not None:
             return {item_name: self.generate_value(item_properties) for item_name, item_properties in item_properties.properties.items()}
-        if item_properties.type == "array":
+        if item_properties.type == "array" or item_properties.items is not None:
             return [self.generate_value(item_properties.items) for _ in range(randomized_array_length())]
-        return identify_generator(item_properties.type)()
+        return identify_generator(item_properties.type)() if item_properties.type else None
 
     def generate_parameters(self) -> Dict[AnyStr, Any]:
         query_parameters = {}

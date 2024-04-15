@@ -23,8 +23,8 @@ class ResponseHandler:
         self.language_model = ResponseLanguageModelHandler("OPENAI", os.getenv("OPENAI_API_KEY"))
 
     def extract_response_text(self, response: Response):
-        if not response:
-            raise ValueError()
+        if response is None:
+            raise ValueError("Empty response during response handling. Response value is: ", response)
         response_text = response.text
         result = ' '.join(BeautifulSoup(response_text, self.parser_type).stripped_strings) # process HTML response
         return result
@@ -99,7 +99,6 @@ class ResponseHandler:
                 parameters[parameter].required = True
 
     def handle_error(self, response: Response, operation_node: 'OperationNode', request_data: 'RequestData', request_generator: 'NaiveRequestGenerator'):
-        # TODO: Implement differentiation of parameters vs req body
         error_classification = self.classify_error(response)
         query_parameters: Dict[str, 'ParameterProperties'] = request_data.operation_properties.parameters
 
@@ -132,7 +131,7 @@ class ResponseLanguageModelHandler:
             self.language_model_engine = kwargs.get("language_model_engine", "gpt-4-turbo-preview")
             if api_key is None or api_key.strip() == "":
                 raise ValueError()
-            self.client = OpenAI()
+            self.client = OpenAI(api_key=api_key)
         else:
             raise Exception("Unsupported language model")
 

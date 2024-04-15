@@ -18,7 +18,7 @@ class RequestData:
     endpoint_path: str
     http_method: str
     parameters: Dict[str, Any] # dict of parameter name to value
-    request_body: str # composition
+    request_body: Dict[str, Any]
     operation_id: str
     operation_properties: OperationProperties
 
@@ -46,7 +46,7 @@ class NaiveRequestGenerator:
         value_generator = NaiveValueGenerator(parameters=parameters, request_body=request_body)
         return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
 
-    def process_response(self, response: requests.Response, request_data: RequestData):
+    def process_response(self, response: requests.Response, request_data: RequestData, operation_node: OperationNode):
         """
         Process the response from the API.
         """
@@ -74,6 +74,9 @@ class NaiveRequestGenerator:
 
         if response.status_code // 100 == 2:
             self.successful_query_data.append(request_data)
+        else:  # For non-2xx responses
+            response_handler = ResponseHandler()
+            response_handler.handle_error(response, operation_node, request_data, self)
         
         print(f"Request {request_data.operation_id} completed with response text {response.text} and status code {response.status_code}")
 
@@ -83,9 +86,9 @@ class NaiveRequestGenerator:
         """
         operation_properties = operation_node.operation_properties
         request_data = self.process_operation(operation_properties)
-        return self.send_operation_request(request_data, operation_node)
+        return self.send_operation_request(request_data)
 
-    def send_operation_request(self, request_data: RequestData, operation_node: OperationNode) -> Optional[Response]:
+    def send_operation_request(self, request_data: RequestData) -> Optional[Response]:
         '''
         Generate naive requests based on the default values and types
         '''
@@ -97,36 +100,33 @@ class NaiveRequestGenerator:
         http_method = request_data.http_method
         parameters = request_data.parameters
         request_body = request_data.request_body
+        select_request_body = list(request_body.values())[0] if request_body else None
+        # select the first value in the request body dictionary (key is MIME type)
+
+        print("=====================================")
+        print("Attempting to send request to endpoint: ", endpoint_path)
+        print("ATTEMPTING WITH PARAMS: ", parameters)
+        print("ATTEMPTING WITH REQUEST BODY: ", select_request_body)
 
         try:
             # Choose the appropriate method from the 'requests' library based on the HTTP method
             select_method = getattr(requests, http_method)
             full_url = f"{self.api_url}{endpoint_path}"
 
-            # Prepare and send the request
             if http_method in {"put", "post", "patch"}:
                 # For PUT, POST, and PATCH requests, include the request body
-                response = select_method(full_url, params=parameters, json=request_body)
+                response = select_method(full_url, params=parameters, json=select_request_body)
             else:
-                # For GET and DELETE requests, send only the parameters
                 response = select_method(full_url, params=parameters)
-
-            # Handle the response as needed
-            #print(f"Request to {http_method.upper()} {endpoint_path} completed with status code {response.status_code}")
-            # Handling non-200 responses
-            if response.status_code // 100 != 2:  # For non-2xx responses
-                response_handler = ResponseHandler()
-                response_handler.handle_error(response, operation_node, request_data, self)
-                # TODO: check if req-body vs. parameters are handled
             return response
-
         except requests.exceptions.RequestException as err:
-            print(f"Request failed due to error: {err}")
+            print(f"Request exception due to error: {err}")
             print(f"Endpoint Path: {endpoint_path}")
             print(f"Params: {parameters}")
             return None
         except Exception as err:
-            print(f"Request failed due to error: {err}")
+            print(f"Unexpected error due to: {err}")
+            print(f"Error type: {type(err)}")
             print(f"Endpoint Path: {endpoint_path}")
             print(f"Params: {parameters}")
             return None
@@ -171,9 +171,9 @@ class NaiveRequestGenerator:
                 local_visited_set.add(edge.destination.operation_id)
         request_data = self.process_operation(curr_node.operation_properties)
         #handle response
-        response = self.send_operation_request(request_data, curr_node)
+        response = self.send_operation_request(request_data)
         if response is not None:
-            self.process_response(response, request_data)
+            self.process_response(response, request_data, curr_node)
             # self.attempt_retry(response, request_data)
 
     def generate_requests(self):

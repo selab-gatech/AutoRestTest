@@ -4,8 +4,12 @@ import os
 from src.generate_graph import OperationGraph
 from src.request_generator import NaiveRequestGenerator
 
+from dotenv import load_dotenv
+load_dotenv()
+
 def configure_api_urls(local_test):
     base_port = 9000 if local_test else 8000
+    base_url = "0.0.0.0" if local_test else os.getenv("EC2_ADDRESS")
     apis = [
         'fdic', 'genome-nexus', 'language-tool', 'ocvn',
         'ohsome', 'omdb', 'rest-countries', 'spotify', 'youtube'
@@ -13,7 +17,7 @@ def configure_api_urls(local_test):
     api_urls = {}
     for i, service in enumerate(apis, start=1):
         port = base_port + i
-        api_urls[service] = f"http://0.0.0.0:{port}"
+        api_urls[service] = f"http://{base_url}:{port}"
     return api_urls
 
 def parse_args():
@@ -55,7 +59,7 @@ class AutoRestTest:
         self.generate_requests(operation_graph, api_url)
 
 if __name__ == "__main__":
-    # example of running: python AutoRestTest.py one true -s genome-nexus
+    # example of running: python3 AutoRestTest.py one true -s genome-nexus
     spec_dir = "specs/original/oas"
     args = parse_args()
     auto_rest_test = AutoRestTest(spec_dir, args.local_test)
