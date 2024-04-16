@@ -79,24 +79,27 @@ class ResponseHandler:
 
     def handle_parameter_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
         modified_parameter_schemas = self.language_model.extract_constrained_schemas(response_text, parameters)
-        for parameter in parameters:
-            if parameter in modified_parameter_schemas:
-                print(f"Updating parameter {parameter} with new schema")
-                parameters[parameter] = modified_parameter_schemas[parameter]
+        if modified_parameter_schemas:
+            for parameter in parameters:
+                if parameter in modified_parameter_schemas:
+                    print(f"Updating parameter {parameter} with new schema")
+                    parameters[parameter] = modified_parameter_schemas[parameter]
 
     def handle_format_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
         parameter_format_examples = self.language_model.extract_parameter_formatting(response_text, parameters)
-        for parameter in parameters:
-            if parameter in parameter_format_examples:
-                print(f"Updating parameter {parameter} with new example value")
-                parameters[parameter].example = parameter_format_examples[parameter]
+        if parameter_format_examples:
+            for parameter in parameters:
+                if parameter in parameter_format_examples:
+                    print(f"Updating parameter {parameter} with new example value")
+                    parameters[parameter].example = parameter_format_examples[parameter]
 
     def handle_parameter_dependency_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
         required_parameters = self.language_model.extract_parameter_dependency(response_text, parameters)
-        for parameter in parameters:
-            if parameter in required_parameters:
-                print(f"Updating parameter {parameter} to required")
-                parameters[parameter].required = True
+        if required_parameters:
+            for parameter in parameters:
+                if parameter in required_parameters:
+                    print(f"Updating parameter {parameter} to required")
+                    parameters[parameter].required = True
 
     def handle_error(self, response: Response, operation_node: 'OperationNode', request_data: 'RequestData', request_generator: 'NaiveRequestGenerator'):
         error_classification = self.classify_error(response)
@@ -105,24 +108,25 @@ class ResponseHandler:
         request_body: Dict[str, 'SchemaProperties'] = request_data.operation_properties.request_body
         simplified_parameters: Dict[str, 'SchemaProperties'] = {parameter: properties.schema for parameter, properties in query_parameters.items()}
         response_text = self.extract_response_text(response)
-
+        if request_body:
         # REMINDER: parameters = Dict[str, ParameterProperties] -> schema = SchemaProperties
         # REMINDER: request_body = Dict[str, SchemaProperties]
-        if error_classification == "PARAMETER CONSTRAINT":
-            #identify parameter constraint and return new parameters and request body dictionary that specifies the parameters to use
-            self.handle_parameter_constraint_error(response_text, simplified_parameters)
-            self.handle_parameter_constraint_error(response_text, request_body)
-        elif error_classification == "FORMAT":
-            #should return map from parameter -> example
-            self.handle_format_constraint_error(response_text, simplified_parameters)
-            self.handle_format_constraint_error(response_text, request_body)
-        elif error_classification == "PARAMETER DEPENDENCY":
-            self.handle_parameter_dependency_error(response_text, simplified_parameters)
-            self.handle_parameter_dependency_error(response_text, request_body)
-        elif error_classification == "OPERATION DEPENDENCY":
-            self.handle_operation_dependency_error(request_generator, operation_node)
-        else:
-            return None
+            if error_classification == "PARAMETER CONSTRAINT":
+                #identify parameter constraint and return new parameters and request body dictionary that specifies the parameters to use
+                self.handle_parameter_constraint_error(response_text, simplified_parameters)
+                self.handle_parameter_constraint_error(response_text, request_body)
+            elif error_classification == "FORMAT":
+                #should return map from parameter -> example
+                self.handle_format_constraint_error(response_text, simplified_parameters)
+                self.handle_format_constraint_error(response_text, request_body)
+            elif error_classification == "PARAMETER DEPENDENCY":
+                self.handle_parameter_dependency_error(response_text, simplified_parameters)
+                self.handle_parameter_dependency_error(response_text, request_body)
+            elif error_classification == "OPERATION DEPENDENCY":
+                self.handle_operation_dependency_error(request_generator, operation_node)
+            else:
+                return None
+        return None
     
 class ResponseLanguageModelHandler:
     def __init__(self, language_model="OPENAI", api_key = None, **kwargs):
@@ -130,7 +134,7 @@ class ResponseLanguageModelHandler:
             self.api_key = api_key
             self.language_model_engine = kwargs.get("language_model_engine", "gpt-4-turbo-preview")
             if api_key is None or api_key.strip() == "":
-                raise ValueError()
+                raise ValueError("OPENAI API key is required for OpenAI language model, found None or empty string.")
             self.client = OpenAI(api_key=api_key)
         else:
             raise Exception("Unsupported language model")
@@ -152,6 +156,8 @@ class ResponseLanguageModelHandler:
                     {'role': 'user', 'content': query},
                 ]
             )
+        #what if we do not get a response ?
+
         return response.choices[0].message.content.strip()
 
     def _extract_classification(self, response_text: str):
@@ -215,12 +221,13 @@ class ResponseLanguageModelHandler:
         :param request_params:
         :return:
         """
-        parameters_to_constrain = self._extract_constrained_parameter_list(self._extract_parameters_to_constrain(response_text, request_params))
+        parameters_to_constrain = self._extract_parameters_to_constrain(response_text, request_params)
         constrained_schemas = {}
-        for parameter in parameters_to_constrain: 
-            if parameter in request_params:
-                parameter_schema = request_params[parameter].schema
-                constrained_schemas[parameter] = self.define_constrained_schema(parameter, response_text)
+        if parameters_to_constrain:
+            for parameter in parameters_to_constrain: 
+                if parameter in request_params:
+                    parameter_schema = request_params[parameter].schema
+                    constrained_schemas[parameter] = self.define_constrained_schema(parameter, response_text)
         return constrained_schemas
 
     def classify_response(self, response_text: str):
