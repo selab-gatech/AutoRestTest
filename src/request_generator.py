@@ -217,9 +217,9 @@ def setup_request_generation(api_url, spec_path, spec_name, cached_graph=False):
     return request_generator
 
 if __name__ == "__main__":
-    api_url = "http://0.0.0.0:9002"  # API URL for genome-nexus
-    spec_path = "specs/original/oas/genome-nexus.yaml"  # Specification path
-    spec_name = "genome-nexus"  # Specification name
+    api_url = "http://0.0.0.0:9003"  # API URL for genome-nexus
+    spec_path = "specs/original/oas/language-tool.yaml"  # Specification path
+    spec_name = "language-tool"  # Specification name
     cache_graph = True #set to false when you are actively changing the graph, however caching is useful for fast development when testing API side things
     generator = setup_request_generation(api_url, spec_path, spec_name, cached_graph=cache_graph)
     generator.generate_requests()

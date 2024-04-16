@@ -129,7 +129,7 @@ Given the message and parameter, generate an example value. Return the example v
 '''
 EXTRACT_PARAMETER_DEPENDENCIES = '''
 Given a server response message and a list of parameters, extract any parameter dependencies from the message, and return a list of tuples that highlights the parameter dependencies. 
-Return parameter dependencies in the form of which parameters are required. 
+Return parameter dependencies in the form of which parameters are required. Only include the response, and do not include any other information.
 For example:
 
 MESSAGE: The 'creditCard' payment method requires the 'cardNumber' and 'expirationDate' parameters to be provided.
@@ -143,4 +143,8 @@ DEPENDENCIES: shippingAddress, shipToAddress
 MESSAGE: password field requires date
 PARAMETERS: password, date
 DEPENDENCIES: password, date
+
+MESSAGE: The API requires parameters
+PARAMETERS: transactionId, cardNumber, language
+DEPENDENCIES: transcriptId, cardNumber, language
 '''
