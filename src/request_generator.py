@@ -41,6 +41,7 @@ class NaiveRequestGenerator:
         self.status_codes: Dict[int: StatusCode] = {} # dictionary to track status code occurrences
         self.requests_generated = 0  # Initialize the request count
         self.successful_query_data = [] # List to store successful query data
+        self.response_handler = ResponseHandler()
 
     def generate_parameter_values(self, parameters: Dict[str, ParameterProperties], request_body: Dict[str, SchemaProperties]):
         value_generator = NaiveValueGenerator(parameters=parameters, request_body=request_body)
@@ -50,6 +51,8 @@ class NaiveRequestGenerator:
         """
         Process the response from the API.
         """
+        print("PROCESSING RESPONSE")
+
         if response is None:
             return
 
@@ -75,8 +78,8 @@ class NaiveRequestGenerator:
         if response.status_code // 100 == 2:
             self.successful_query_data.append(request_data)
         else:  # For non-2xx responses
-            response_handler = ResponseHandler()
-            response_handler.handle_error(response, operation_node, request_data, self)
+            print("HANDLING ERROR")
+            self.response_handler.handle_error(response, operation_node, request_data, self)
         
         print(f"Request {request_data.operation_id} completed with response text {response.text} and status code {response.status_code}")
 
@@ -118,6 +121,9 @@ class NaiveRequestGenerator:
                 response = select_method(full_url, params=parameters, json=select_request_body)
             else:
                 response = select_method(full_url, params=parameters)
+
+            print(f"Request to {full_url} completed with status code {response.status_code}")
+            #print(f"Response text: {response.text}")
             return response
         except requests.exceptions.RequestException as err:
             print(f"Request exception due to error: {err}")
@@ -172,6 +178,7 @@ class NaiveRequestGenerator:
         request_data = self.process_operation(curr_node.operation_properties)
         #handle response
         response = self.send_operation_request(request_data)
+        print("GOT RESPONSE ", response)
         if response is not None:
             self.process_response(response, request_data, curr_node)
             # self.attempt_retry(response, request_data)

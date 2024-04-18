@@ -19,7 +19,7 @@ def configure_response_logging():
     while os.path.exists(os.path.join(logging_dir, f"response_log{run_number}.log")):
         run_number += 1
     log_file = os.path.join(logging_dir, f"response_log{run_number}.log")
-    logging.basicConfig(filename=log_file, level=logging.DEBUG,
+    logging.basicConfig(filename=log_file, level=logging.INFO,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
     logging.info("Logging started")
@@ -46,8 +46,7 @@ class ResponseHandler:
         logging.info(f"Extracted response text: {result}")
         return result
 
-    def classify_error(self, response: Response):
-        response_text = self.extract_response_text(response)
+    def classify_error(self, response: Response, response_text: str):
         return self.language_model.classify_response(response_text) 
     
     def is_valid_dependency(self, failed_response: Response, tentative_response: Response):
@@ -59,8 +58,11 @@ class ResponseHandler:
 
     def test_tentative_edge(self, request_generator: 'NaiveRequestGenerator', failed_operation_node: 'OperationNode', tentative_edge):
         tentative_operation_node = tentative_edge.destination
+        print(f"Testing tentative edge from {failed_operation_node.operation_id} to {tentative_operation_node.operation_id}")
         tentative_response = request_generator.create_and_send_request(tentative_operation_node)
+        print(f"Tentative response status code: {tentative_response.status_code}")
         failed_response = request_generator.create_and_send_request(failed_operation_node)
+        print(f"Failed response status code: {failed_response.status_code}")
         if tentative_response is not None and failed_response is not None and self.is_valid_dependency(failed_response, tentative_response):
             return True
         return False
@@ -83,6 +85,7 @@ class ResponseHandler:
                 failed_operation_node.tentative_edges.remove(tentative_edge)
                 print(
                     f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {tentative_edge.destination.operation_id}")
+                logging.info(f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {tentative_edge.destination.operation_id}")
                 return
         # add highest similarity edge
         request_generator.operation_graph.add_operation_edge(
@@ -92,6 +95,7 @@ class ResponseHandler:
         )
         print(
             f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {sorted_edges[0].destination.operation_id}")
+        logging.info(f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {sorted_edges[0].destination.operation_id}")
         failed_operation_node.tentative_edges.remove(sorted_edges[0])
 
     def handle_parameter_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
@@ -101,6 +105,7 @@ class ResponseHandler:
                 for parameter in parameters:
                     if parameter in modified_parameter_schemas:
                         print(f"Updating parameter {parameter} with new schema")
+                        logging.info(f"Updating parameter {parameter} with new schema")
                         parameters[parameter] = modified_parameter_schemas[parameter]
 
     def handle_format_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
@@ -110,6 +115,7 @@ class ResponseHandler:
                 for parameter in parameters:
                     if parameter in parameter_format_examples:
                         print(f"Updating parameter {parameter} with new example value")
+                        logging.info(f"Updating parameter {parameter} with new example value")
                         parameters[parameter].example = parameter_format_examples[parameter]
 
     def handle_parameter_dependency_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
@@ -119,16 +125,19 @@ class ResponseHandler:
                 for parameter in parameters:
                     if parameter in required_parameters:
                         print(f"Updating parameter {parameter} to required")
+                        logging.info(f"Updating parameter {parameter} to required")
                         parameters[parameter].required = True
 
     def handle_error(self, response: Response, operation_node: 'OperationNode', request_data: 'RequestData', request_generator: 'NaiveRequestGenerator'):
-        error_classification = self.classify_error(response)
+        response_text = self.extract_response_text(response)
+        error_classification = self.classify_error(response, response_text)
         query_parameters: Dict[str, 'ParameterProperties'] = request_data.operation_properties.parameters
 
         request_body: Dict[str, 'SchemaProperties'] = request_data.operation_properties.request_body
-        logging.info(f"Classified error as: {error_classification}, has request body: {request_body}")
         simplified_parameters: Dict[str, 'SchemaProperties'] = {parameter: properties.schema for parameter, properties in query_parameters.items()}
-        response_text = self.extract_response_text(response)
+
+        logging.info(f"Classified error as: {error_classification}, has request body: {request_body} and query parameters: {simplified_parameters}")
+        print(f"Classified error as: {error_classification}, has request body: {request_body} and query parameters: {simplified_parameters}")
         # REMINDER: parameters = Dict[str, ParameterProperties] -> schema = SchemaProperties
         # REMINDER: request_body = Dict[str, SchemaProperties]
         if error_classification == "PARAMETER CONSTRAINT":

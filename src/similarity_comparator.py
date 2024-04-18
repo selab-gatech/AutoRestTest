@@ -1,4 +1,3 @@
-import heapq
 import os
 from typing import List, Dict, Tuple
 
@@ -69,7 +68,6 @@ class OperationDependencyComparator:
         #self.model = KeyedVectors.load_word2vec_format(word_file, binary=False)
         self.model = load("glove-wiki-gigaword-50")
         self.threshold = 0.65
-        self.next_most_similar_count = 3
 
     def cosine_similarity(self, operation1_parameters: List[str], operation2_responses: List[str], in_value: str = None) -> Dict[str, SimilarityValue]:
         """
@@ -107,8 +105,6 @@ class OperationDependencyComparator:
                 similar_parameters[parameter] = similarity
             else:
                 next_most_similar_parameters.append((parameter, similarity))
-
-        next_most_similar_parameters = heapq.nlargest(self.next_most_similar_count, next_most_similar_parameters, key=lambda x: x[1].similarity) # small n so efficient
 
         return similar_parameters, next_most_similar_parameters
 

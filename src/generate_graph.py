@@ -1,3 +1,4 @@
+import heapq
 from typing import List, Dict, Tuple
 
 from .specification_parser import OperationProperties, SpecificationParser
@@ -25,6 +26,7 @@ class OperationGraph:
         self.spec_name = spec_name
         self.operation_nodes: Dict[str, OperationNode] = {}
         self.operation_edges: List[OperationEdge] = []
+        self.next_most_similar_count = 3
         if initialize_graph:
             self.create_graph()
 
@@ -50,6 +52,8 @@ class OperationGraph:
             similar_parameters[next_closest_similarity[0]] = next_closest_similarity[1]
         edge = OperationEdge(source=source_node, destination=destination_node, similar_parameters=similar_parameters)
         source_node.tentative_edges.append(edge)
+        source_node.tentative_edges = heapq.nlargest(self.next_most_similar_count, source_node.tentative_edges,
+                                                            key=lambda x: next(iter(x.similar_parameters.values())).similarity)  # small n so efficient
 
     def update_operation_dependencies(self, operation_id: str, dependent_operation_id: str, parameters: Dict[str, SimilarityValue], next_closest_similarities: List[Tuple[str, SimilarityValue]]):
         if operation_id not in self.operation_nodes:
@@ -76,11 +80,9 @@ class OperationGraph:
 
     def create_graph(self):
         spec_parser = SpecificationParser(self.spec_path, self.spec_name)
-
         operations: Dict[str, OperationProperties] = spec_parser.parse_specification()
         for operation_id, operation_properties in operations.items():
             self.add_operation_node(operation_properties)
-
         self.determine_dependencies(operations)
 
 if __name__ == "__main__":
