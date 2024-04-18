@@ -51,8 +51,6 @@ class NaiveRequestGenerator:
         """
         Process the response from the API.
         """
-        print("PROCESSING RESPONSE")
-
         if response is None:
             return
 
@@ -78,7 +76,6 @@ class NaiveRequestGenerator:
         if response.status_code // 100 == 2:
             self.successful_query_data.append(request_data)
         else:  # For non-2xx responses
-            print("HANDLING ERROR")
             self.response_handler.handle_error(response, operation_node, request_data, self)
         
         print(f"Request {request_data.operation_id} completed with response text {response.text} and status code {response.status_code}")
