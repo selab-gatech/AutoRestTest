@@ -3,33 +3,34 @@ from typing import Dict, TYPE_CHECKING
 from requests import Response
 
 from .classification_prompts import *
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 from openai import OpenAI
 import os
 import json
+import logging
+import warnings
 from dotenv import load_dotenv
 from .specification_parser import SchemaProperties, ParameterProperties
-load_dotenv() # load environmental vars for OpenAI API key
 
-#log llm events to a logfile timestamped with a run id
-import logging
-
-logging_dir = os.path.join(os.getcwd(), "logs")
-#if there is no log, save file as llm_run_1.log else increment the run number
-if not os.path.exists(logging_dir):
-    os.mkdir(logging_dir)
-    logging.basicConfig(filename=os.path.join(logging_dir, "llm_run_1.log"), level=logging.INFO)
-else:
+def configure_response_logging():
+    logging_dir = os.path.join(os.getcwd(), "logs")
+    os.makedirs(logging_dir, exist_ok=True)
     run_number = 1
-    while os.path.exists(os.path.join(logging_dir, f"llm_run_{run_number}.log")):
+    while os.path.exists(os.path.join(logging_dir, f"response_log{run_number}.log")):
         run_number += 1
-    logging.basicConfig(filename=os.path.join(logging_dir, f"llm_run_{run_number}.log"), level=logging.INFO)    
+    log_file = os.path.join(logging_dir, f"response_log{run_number}.log")
+    logging.basicConfig(filename=log_file, level=logging.DEBUG,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
+    logging.info("Logging started")
 
+warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
+load_dotenv() # load environmental vars for OpenAI API key
+configure_response_logging()
 
 if TYPE_CHECKING:
     from .generate_graph import OperationNode
     from src.request_generator import NaiveRequestGenerator, RequestData
-
 
 class ResponseHandler:
     def __init__(self):
