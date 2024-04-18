@@ -1,4 +1,3 @@
-The POS data comes from an external dependency under LGPL, see https://mvnrepository.com/artifact/ua.net.nlp/morfologik-ukrainian-lt
-
-The Ukrainian data for part-of-speech tagging was created by Andriy Rysin.
-It's based on https://github.com/brown-uk/dict_uk project and is licensed under LGPL.
+version https://git-lfs.github.com/spec/v1
+oid sha256:ca51272c0587784d75019b476d3f292ceb6e63fa049de7d446b42d1633505d65
+size 295

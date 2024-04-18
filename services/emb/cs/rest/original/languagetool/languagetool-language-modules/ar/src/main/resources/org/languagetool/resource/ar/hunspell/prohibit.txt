@@ -1,14 +1,3 @@
-# Words to be marked as spelling errors even if the spell checker
-# accepts them. Useful to improve the spell checker without touching
-# its files (which are usually not from LT).
-# For the opposite (accept words), see spelling.txt.
-# misspelling of 'for a':
-#fora
-# seems to be very rare and is a potential misspelling of 'means':
-#meas
-# كلمات توسم بأنها خاطئة إملائيا، بينما يقبلها  المدقق الإملائي.
-#مفيدة لتحسين التدقيق الإملائي دون تعديل ملفات المدقق
-# تهجئة خاطئة ل""
-# كلمة نادرة، وقد تكون تهجئة خاطئة لـ"ظن"
-ضن
-الأظحى
+version https://git-lfs.github.com/spec/v1
+oid sha256:9f5f32fd5a345a8175bc57911370e55521e70129cd73a8aa5b92d0b818673218
+size 674

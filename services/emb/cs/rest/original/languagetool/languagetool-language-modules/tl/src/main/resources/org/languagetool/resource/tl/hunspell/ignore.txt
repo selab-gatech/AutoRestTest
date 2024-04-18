@@ -1,4 +1,3 @@
-# words to be ignored by the spellchecker (auto-generated)
-iskor
-riserts
-keyk
+version https://git-lfs.github.com/spec/v1
+oid sha256:0fe96cb015d929ecd0a238cb3406d847807c22d945f1af13079ae4b612248ae7
+size 78

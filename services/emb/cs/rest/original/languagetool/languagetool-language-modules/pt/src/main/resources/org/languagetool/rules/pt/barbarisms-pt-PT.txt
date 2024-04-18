@@ -1,20 +1,3 @@
-# See barbarisms-pt.txt
-jeans=calças de ganga
-laptop=portátil
-laptops=portáteis
-link=ligação|conexão
-links=ligações|conexões
-mouse=rato
-mouses=ratos
-notebook=portátil
-notebooks=portáteis
-note-book=portátil
-note-books=portáteis
-outdoor=cartaz
-outdoors=cartazes
-site=sítio web
-sites=sítios web
-short=calção|curta-metragem
-shorts=calções|curta-metragens
-videogame=jogo de vídeo
-videogames=jogos de vídeo
+version https://git-lfs.github.com/spec/v1
+oid sha256:ff3aa283c6f385f30da032422988b32c86710c8abea0c569624f4b0f6ccdfecb
+size 422

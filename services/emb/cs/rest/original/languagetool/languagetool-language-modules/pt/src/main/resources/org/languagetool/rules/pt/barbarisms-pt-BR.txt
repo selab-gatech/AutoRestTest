@@ -1,1 +1,3 @@
-# See barbarisms-pt.txt
+version https://git-lfs.github.com/spec/v1
+oid sha256:081272af4035a89d8e8f715e627c5eb02e18cf35853b4ad257ced311476d29ad
+size 24

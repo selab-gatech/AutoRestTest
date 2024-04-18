@@ -1,1 +1,3 @@
-This is not a valid specification. This is mere text
+version https://git-lfs.github.com/spec/v1
+oid sha256:d088cb3187e72a4f861e650aebb5af3f724cf02c48b335fd59d40f1422aefa0c
+size 52

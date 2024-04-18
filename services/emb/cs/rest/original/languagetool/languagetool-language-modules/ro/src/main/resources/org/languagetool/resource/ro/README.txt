@@ -1,2 +1,3 @@
-The Romanian data for part-of-speech tagging is developed by Ionuț Păduraru
-(http://www.archeus.ro). It's being released here on LGPL license.
+version https://git-lfs.github.com/spec/v1
+oid sha256:e2492aa797e860be7bb5be751626920f7721017b3328f2bb68fc530cfc9694f0
+size 145

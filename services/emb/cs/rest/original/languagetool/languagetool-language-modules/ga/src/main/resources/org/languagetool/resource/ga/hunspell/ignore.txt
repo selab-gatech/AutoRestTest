@@ -1,1 +1,3 @@
-# words to be ignored by the spellchecker
+version https://git-lfs.github.com/spec/v1
+oid sha256:4c516887963c6df0ecfc7ce6641614043bd73362e0c9e8c6e5597d511cb3154f
+size 42

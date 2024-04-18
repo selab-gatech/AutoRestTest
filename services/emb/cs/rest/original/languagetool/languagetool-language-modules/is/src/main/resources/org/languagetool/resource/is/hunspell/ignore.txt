@@ -1,2 +1,3 @@
-# words to be ignored by the spellchecker (auto-generated)
-árdegisverður
+version https://git-lfs.github.com/spec/v1
+oid sha256:44011cdb245fcf5ad5b63dfb42bb7a03c8d062533c054e413c9ceb87f6ed52a5
+size 75

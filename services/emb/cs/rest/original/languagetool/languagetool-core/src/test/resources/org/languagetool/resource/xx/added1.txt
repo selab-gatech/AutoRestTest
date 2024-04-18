@@ -1,1 +1,3 @@
-fullform	baseform1	POSTAG1
+version https://git-lfs.github.com/spec/v1
+oid sha256:d8b2a2f87d445cdde30286dd3fa67136cc14bd4c0e9f4fa84c959debfce0850a
+size 27

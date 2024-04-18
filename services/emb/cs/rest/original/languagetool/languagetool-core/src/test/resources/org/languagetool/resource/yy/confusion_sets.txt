@@ -1,10 +1,3 @@
-# test confusion set file
-their|example 2; there|example 1; 10  # this is a comment
-bar; foo; 5
-baz; foo; 8
-goo; lol; 11
-goo; something; 12
-one -> two; 13
-three -> four; 14
-four -> five; 15
-im; um; 1  # German
+version https://git-lfs.github.com/spec/v1
+oid sha256:f2a7bdb77b94ecedfc4ea0549435553eed3c737690b1d9095a869b45f40056d2
+size 210

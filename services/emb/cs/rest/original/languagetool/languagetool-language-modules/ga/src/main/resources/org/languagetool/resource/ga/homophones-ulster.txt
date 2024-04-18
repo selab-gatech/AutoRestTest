@@ -1,31 +1,3 @@
-# Homophones (via abair.ie)
-# Licence: MIT/LGPL
-bolaigh; bollaí; bulaí
-bí; bith
-cabhair; cóir; comhair
-tóraí; tóraigh; tórraigh
-thigh; hí; hithe
-laoi; luí; lao
-b'fhearr; béar; bearr
-luath; lua; luaith
-cnó; cró; crobh
-gaoth; guí; gcaoi
-bholadh; bholú; mholadh
-ionsaí; ionsaigh; ionsuigh
-gabh; gabha; gó
-bas; bos; bus
-ceann; cionn; cion
-ó; eo; ógh
-hart; thart
-saoi; suí
-dom; dubh; dú; d'ubh
-bholaidh; bholaigh; bholaithe
-dtí; dtigh; dí; díth
-bhí; mhí
-dardaigh; d'ardaigh; d'ordaigh
-aoirigh; éirí; éirigh
-tigh; tí; tuí
-gabhair; gcomhair; gcabhair
-í; uí; aoi
-fhéir; adhair; aeir
-mhéar; bhéar; bhféar
+version https://git-lfs.github.com/spec/v1
+oid sha256:ca4b01cd4af86aef30d12f9b6b821086123a422bbf82b9242a208c29681933cd
+size 633

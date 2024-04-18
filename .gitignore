@@ -20,12 +20,15 @@ restler/
 rest-gitlab/
 **/testing_output/
 **/__pycache__/
+services/service_logs/
 
+.env
 **/glove.6B.50d.w2v.txt
 **/config.py
 test.json
 cp.txt
 *.log
+*.pkl
 log_*
 evomaster-benchmark-cs-rest-artificial-news.iml
 evomaster.jar

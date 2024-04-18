@@ -1,11 +1,3 @@
-The Tamil dictionary, tagset and rules were created by
-Ve. Elanjelian <tamiliam@gmail.com>. It is released under GPLv3 licence.
-
-* The work owes much to his previous work with Hunspell spellchecker, a project
-  that has had many contributors including S. Muguntharaj, Radhakrishnan, Vijay,
-  A. Suji, Malathi Selvaraj, Sri Ramadoss, Yagna Kalyanaraman, and Pranava Swaroop.
-* The work also made use the Tamil corpus created by Crubadan 2.0
-  <http://crubadan.org/> for shortlisting nouns and verbs.
-  The corpus data is released under GPLv3, as well.
-* The grammatical rules themselves are based on "thamizhnadaik kaiyEdu" (2004)
- and "thamizhil nAmum thavaRillAmal ezhuthalAm" (2007)
+version https://git-lfs.github.com/spec/v1
+oid sha256:4e3ddb88206053d85669ae6b4568679ddd30af024258d4af66771b71dcf9671b
+size 684

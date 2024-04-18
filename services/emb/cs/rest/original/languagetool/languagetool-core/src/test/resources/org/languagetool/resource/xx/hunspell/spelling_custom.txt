@@ -1,2 +1,3 @@
-# Add terms here that should be accepted by the LanguageTool spell checker, one word or phrase per line
-auchokay
+version https://git-lfs.github.com/spec/v1
+oid sha256:889d109bf35680f5f1b1a601dfdff8b3a224334ab283523b1cfc3bf34f8be512
+size 113
