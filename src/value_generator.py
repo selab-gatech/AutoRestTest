@@ -2,6 +2,7 @@ import random
 import string
 from typing import Any, AnyStr, Dict
 
+from src.llm import OpenAILanguageModel
 from src.specification_parser import OperationProperties, SchemaProperties, ParameterProperties
 
 def randomize_boolean():
@@ -86,13 +87,24 @@ class NaiveValueGenerator:
             request_properties[item_name] = randomized_value # save diff mime types
         return request_properties
 
-class InformedValueGenerator: 
+class SmartValueGenerator:
     def __init__(self, parameters: Dict[AnyStr, ParameterProperties], request_body: Dict[AnyStr, SchemaProperties]):
         self.parameters: Dict[AnyStr, ParameterProperties] = parameters
         self.request_body: Dict[AnyStr, SchemaProperties] = request_body
-    def generate_value(self, item_properties: SchemaProperties) -> Any:
-        pass 
-    def generate_parameters(self) -> Dict[AnyStr, Any]:
+        self.language_model = OpenAILanguageModel()
+
+    def generate_parameters(self):
+        """
+        Uses the OpenAI language model to generate values for the parameters using JSON outputs
+        :return: A dictionary of the generated parameters
+        """
+        # TODO: Attempt to pass full schema to language model and use JSON response to map all values
         pass
+
     def generate_request_body(self):
+        """
+        Uses the OpenAI language model to generate values for the request body using JSON outputs
+        :return: A dictionary of the generated request body
+        """
+        # TODO: Same approach to generate_parameters
         pass

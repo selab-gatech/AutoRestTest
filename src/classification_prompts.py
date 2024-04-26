@@ -148,3 +148,5 @@ MESSAGE: The API requires parameters
 PARAMETERS: transactionId, cardNumber, language
 DEPENDENCIES: transcriptId, cardNumber, language
 '''
+
+DEFAULT_SYSTEM_MESSAGE = "You will receive instructions and examples. Your goal is to provide a systematic output using the knowledge from the instructions and examples provided."

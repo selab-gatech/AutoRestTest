@@ -2,7 +2,7 @@ import argparse
 import os
 
 from src.generate_graph import OperationGraph
-from src.request_generator import NaiveRequestGenerator
+from src.request_generator import RequestGenerator
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -30,10 +30,11 @@ def parse_args():
     return parser.parse_args()
 
 class AutoRestTest:
-    def __init__(self, spec_dir: str, local_test: bool):
+    def __init__(self, spec_dir: str, local_test: bool, is_naive=False):
         self.spec_dir = spec_dir
         self.local_test = local_test
         self.api_urls = configure_api_urls(local_test)
+        self.is_naive = is_naive
 
     def generate_graph(self, spec_name: str):
         spec_path = f"{self.spec_dir}/{spec_name}.yaml"
@@ -42,7 +43,7 @@ class AutoRestTest:
         return operation_graph
 
     def generate_requests(self, operation_graph: OperationGraph, api_url: str):
-        request_generator = NaiveRequestGenerator(operation_graph, api_url)
+        request_generator = RequestGenerator(operation_graph=operation_graph, api_url=api_url, is_naive=self.is_naive)
         request_generator.generate_requests()
 
     def run_all(self):

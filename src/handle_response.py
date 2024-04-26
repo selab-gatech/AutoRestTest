@@ -1,15 +1,18 @@
+import json
 from typing import Dict, TYPE_CHECKING
 
 from requests import Response
 
-from .classification_prompts import *
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
-from openai import OpenAI
 import os
-import json
 import logging
 import warnings
 from dotenv import load_dotenv
+
+from .classification_prompts import PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX, EXAMPLE_GENERATION_PROMPT, \
+    MESSAGE_HEADER, PARAMETERS_HEADER, CONSTRAINT_EXTRACTION_PREFIX, FEW_SHOT_CLASSIFICATON_PREFIX, \
+    CLASSIFICATION_SUFFIX, EXTRACT_PARAMETER_DEPENDENCIES
+from .llm import OpenAILanguageModel
 from .specification_parser import SchemaProperties, ParameterProperties
 
 def configure_response_logging():
@@ -30,12 +33,12 @@ configure_response_logging()
 
 if TYPE_CHECKING:
     from .generate_graph import OperationNode
-    from src.request_generator import NaiveRequestGenerator, RequestData
+    from src.request_generator import RequestGenerator, RequestData
 
 class ResponseHandler:
     def __init__(self):
         self.parser_type = "html.parser"
-        self.language_model = ResponseLanguageModelHandler("OPENAI", os.getenv("OPENAI_API_KEY"))
+        self.language_model = ResponseLanguageModelHandler("OPENAI")
 
     def extract_response_text(self, response: Response):
         if response is None:
@@ -56,7 +59,7 @@ class ResponseHandler:
             return True
         return False
 
-    def test_tentative_edge(self, request_generator: 'NaiveRequestGenerator', failed_operation_node: 'OperationNode', tentative_edge):
+    def test_tentative_edge(self, request_generator: 'RequestGenerator', failed_operation_node: 'OperationNode', tentative_edge):
         tentative_operation_node = tentative_edge.destination
         print(f"Testing tentative edge from {failed_operation_node.operation_id} to {tentative_operation_node.operation_id}")
         tentative_response = request_generator.create_and_send_request(tentative_operation_node)
@@ -67,7 +70,7 @@ class ResponseHandler:
             return True
         return False
     
-    def handle_operation_dependency_error(self, request_generator: 'NaiveRequestGenerator', failed_operation_node: 'OperationNode'):
+    def handle_operation_dependency_error(self, request_generator: 'RequestGenerator', failed_operation_node: 'OperationNode'):
         '''
         Handle the operation dependency error by trying tentative edges.
         '''
@@ -128,7 +131,7 @@ class ResponseHandler:
                         logging.info(f"Updating parameter {parameter} to required")
                         parameters[parameter].required = True
 
-    def handle_error(self, response: Response, operation_node: 'OperationNode', request_data: 'RequestData', request_generator: 'NaiveRequestGenerator'):
+    def handle_error(self, response: Response, operation_node: 'OperationNode', request_data: 'RequestData', request_generator: 'RequestGenerator'):
         response_text = self.extract_response_text(response)
         error_classification = self.classify_error(response, response_text)
         query_parameters: Dict[str, 'ParameterProperties'] = request_data.operation_properties.parameters
@@ -155,43 +158,18 @@ class ResponseHandler:
             self.handle_operation_dependency_error(request_generator, operation_node)
         else:
             return None
-    
-class ResponseLanguageModelHandler:
-    def __init__(self, language_model="OPENAI", api_key = None, **kwargs):
-        if language_model == "OPENAI":
-            self.api_key = api_key
-            self.language_model_engine = kwargs.get("language_model_engine", "gpt-4-turbo-preview")
-            if api_key is None or api_key.strip() == "":
-                raise ValueError("OPENAI API key is required for OpenAI language model, found None or empty string.")
-            self.client = OpenAI(api_key=api_key)
-        else:
-            raise Exception("Unsupported language model")
 
-    def language_model_query(self,query, json_mode=False):
-        #get openai chat completion 
-        if json_mode:
-            response = self.client.chat.completions.create(
-                model=self.language_model_engine, 
-                messages = [
-                    {'role': 'user', 'content' : query}
-                ], 
-                response_format={ "type": "json_object" }
-            )
-        else: 
-            response = self.client.chat.completions.create(
-                model=self.language_model_engine,
-                messages=[
-                    {'role': 'user', 'content': query},
-                ]
-            )
-        #what if we do not get a response ?
-        logging.info(f"Received response from language model: {response.choices[0].message.content.strip()}")
-        return response.choices[0].message.content.strip()
+class ResponseLanguageModelHandler:
+    def __init__(self, language_model="OPENAI"):
+        if language_model == "OPENAI":
+            self.language_model = OpenAILanguageModel()
+        else:
+            raise ValueError("Language model not supported")
 
     def _extract_classification(self, response_text: str):
         classification = None
-        if response_text is None: 
-            return classification 
+        if response_text is None:
+            return classification
         if "PARAMETER CONSTRAINT" in response_text:
             classification = "PARAMETER CONSTRAINT"
         elif "FORMAT" in response_text:
@@ -203,7 +181,7 @@ class ResponseLanguageModelHandler:
         return classification
 
     def _extract_constrained_parameter_list(self, language_model_response):
-        
+
         if "IDENTIFICATION:" not in language_model_response:
             return None
         elif language_model_response.strip() == 'IDENTIFICATION:' or language_model_response.strip() == 'IDENTIFICATION: none':
@@ -217,8 +195,8 @@ class ResponseLanguageModelHandler:
         parameters = ",".join(parameter_list)
         parameters = "PARAMETERS: " + parameters + "\n"
         message = "MESSAGE: " + response_text + "\n"
-        
-        llm_query_response = self.language_model_query(PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX + message + parameters)
+
+        llm_query_response = self.language_model.query(user_message=PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX + message + parameters)
         logging.info(f"Extracted parameters to constrain: {llm_query_response}")
         extracted_parameter_list = self._extract_constrained_parameter_list(llm_query_response)
         #return self._extract_constrained_parameter_list(extracted_paramter_list)
@@ -227,7 +205,7 @@ class ResponseLanguageModelHandler:
     def _generate_parameter_value(self, parameters_to_generate_for, response_text: str):
         example_value_map = {}
         for parameter in parameters_to_generate_for:
-            raw_result = self.language_model_query(EXAMPLE_GENERATION_PROMPT + MESSAGE_HEADER + response_text + PARAMETERS_HEADER + parameter)
+            raw_result = self.language_model.query(user_message=EXAMPLE_GENERATION_PROMPT + MESSAGE_HEADER + response_text + PARAMETERS_HEADER + parameter)
             #parse the result to get the example value
             example_value = raw_result.split("EXAMPLE:")[1].strip()
             example_value_map[parameter] = example_value
@@ -235,8 +213,9 @@ class ResponseLanguageModelHandler:
 
     def define_constrained_schema(self, parameter, response_text: str):
         extract_query = CONSTRAINT_EXTRACTION_PREFIX + MESSAGE_HEADER + response_text + PARAMETERS_HEADER + parameter
-        json_schema_properties = self.language_model_query(extract_query, json_mode=True)
-        #read the json string into a dictionary 
+
+        json_schema_properties = self.language_model.query(user_message=extract_query, json_mode=True)
+        #read the json string into a dictionary
         schema_properties = json.loads(json_schema_properties)
         #map it to a schema properties dataclass, ensure checking of failures and only map what is possible
         schema = SchemaProperties()
@@ -255,28 +234,28 @@ class ResponseLanguageModelHandler:
         parameters_to_constrain = self._extract_parameters_to_constrain(response_text, request_params)
         constrained_schemas = {}
         if parameters_to_constrain:
-            for parameter in parameters_to_constrain: 
+            for parameter in parameters_to_constrain:
                 if parameter in request_params:
                     constrained_schemas[parameter] = self.define_constrained_schema(parameter, response_text)
         return constrained_schemas
 
     def classify_response(self, response_text: str):
-        return self._extract_classification(self.language_model_query(FEW_SHOT_CLASSIFICATON_PREFIX + response_text + CLASSIFICATION_SUFFIX))
+        return self._extract_classification(self.language_model.query(user_message=FEW_SHOT_CLASSIFICATON_PREFIX + response_text + CLASSIFICATION_SUFFIX))
 
     def extract_parameter_formatting(self, response_text: str, request_params):
-        params_list = self._extract_parameters_to_constrain(response_text, request_params) #this can be none 
+        params_list = self._extract_parameters_to_constrain(response_text, request_params) #this can be none
         if params_list is not None:
             return self._generate_parameter_value(params_list, response_text)
         else:
             return None
-    
+
     def extract_parameter_dependency(self, response_text: str, request_params):
         list_of_request_parameters = [parameter for parameter in request_params]
         parameters = ",".join(list_of_request_parameters)
         parameters = "PARAMETERS: " + parameters + "\n"
         message = "MESSAGE: " + response_text + "\n"
-        extracted_paramter_list = self._extract_constrained_parameter_list(self.language_model_query(EXTRACT_PARAMETER_DEPENDENCIES + message + parameters)) 
-        #clean the response 
+        extracted_paramter_list = self._extract_constrained_parameter_list(self.language_model.query(user_message=EXTRACT_PARAMETER_DEPENDENCIES + message + parameters))
+        #clean the response
         if extracted_paramter_list is None:
             return None
         else:

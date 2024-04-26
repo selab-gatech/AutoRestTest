@@ -34,18 +34,30 @@ class StatusCode:
     count: int
     requests_and_responses: List[RequestResponse]
 
-class NaiveRequestGenerator:
-    def __init__(self, operation_graph: OperationGraph, api_url: str):
+def generate_naive_values(parameters: Dict[str, ParameterProperties], request_body: Dict[str, SchemaProperties]):
+    value_generator = NaiveValueGenerator(parameters=parameters, request_body=request_body)
+    return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
+
+def generate_smart_values(parameters: Dict[str, ParameterProperties], request_body: Dict[str, SchemaProperties]):
+    """
+    Generate smart values for parameters and request body using LLMs
+    :param parameters: Dictionary mapping parameter name to parameter properties
+    :param request_body: Dictionary mapping of MIME type to request body properties
+    :return: a tuple of the generated parameters and request body
+    """
+    # TODO: Need to make prompts for the LLMs before implementing this
+    value_generator = None
+    return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
+
+class RequestGenerator:
+    def __init__(self, operation_graph: OperationGraph, api_url: str, is_naive=True):
         self.operation_graph: OperationGraph = operation_graph
         self.api_url = api_url  
         self.status_codes: Dict[int: StatusCode] = {} # dictionary to track status code occurrences
         self.requests_generated = 0  # Initialize the request count
         self.successful_query_data = [] # List to store successful query data
         self.response_handler = ResponseHandler()
-
-    def generate_parameter_values(self, parameters: Dict[str, ParameterProperties], request_body: Dict[str, SchemaProperties]):
-        value_generator = NaiveValueGenerator(parameters=parameters, request_body=request_body)
-        return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
+        self.is_naive = is_naive
 
     def process_response(self, response: requests.Response, request_data: RequestData, operation_node: OperationNode):
         """
@@ -53,16 +65,12 @@ class NaiveRequestGenerator:
         """
         if response is None:
             return
-
         self.requests_generated += 1
-
-        # print(response.text)
         request_and_response = RequestResponse(
             request=request_data,
             response=response,
             response_text=response.text
         )
-
         if response.status_code not in self.status_codes:
             self.status_codes[response.status_code] = StatusCode(
                 status_code=response.status_code,
@@ -72,13 +80,45 @@ class NaiveRequestGenerator:
         else:
             self.status_codes[response.status_code].count += 1
             self.status_codes[response.status_code].requests_and_responses.append(request_and_response)
-
         if response.status_code // 100 == 2:
             self.successful_query_data.append(request_data)
         else:  # For non-2xx responses
             self.response_handler.handle_error(response, operation_node, request_data, self)
         
         print(f"Request {request_data.operation_id} completed with response text {response.text} and status code {response.status_code}")
+
+    def process_operation(self, operation_properties: OperationProperties) -> RequestData:
+        '''
+        Process the operation properties by preparing request data for queries with mapping values to parameters and request body
+        '''
+        endpoint_path = operation_properties.endpoint_path
+        http_method = operation_properties.http_method.lower()
+
+        # Generate values for parameters and request body
+        if self.is_naive:
+            parameters, request_body = generate_naive_values(
+                operation_properties.parameters, operation_properties.request_body
+            )
+        else:
+            parameters, request_body = generate_smart_values(
+                operation_properties.parameters, operation_properties.request_body
+            )
+
+        # Replace path parameters in the endpoint path
+        for parameter_name, parameter_properties in operation_properties.parameters.items():
+            if parameter_properties.in_value == "path":
+                path_value = parameters[parameter_name]
+                endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
+
+        # Create RequestData object
+        return RequestData(
+            endpoint_path=endpoint_path,
+            http_method=http_method,
+            parameters=parameters,
+            request_body=request_body,
+            operation_id=operation_properties.operation_id,
+            operation_properties=operation_properties
+        )
 
     def create_and_send_request(self, operation_node: OperationNode):
         """
@@ -133,34 +173,6 @@ class NaiveRequestGenerator:
             print(f"Endpoint Path: {endpoint_path}")
             print(f"Params: {parameters}")
             return None
-        
-    def process_operation(self, operation_properties: OperationProperties) -> RequestData:
-        '''
-        Process the operation properties to prepare the request data.
-        '''
-        endpoint_path = operation_properties.endpoint_path
-        http_method = operation_properties.http_method.lower()
-
-        # Generate values for parameters and request body
-        parameters, request_body = self.generate_parameter_values(
-            operation_properties.parameters, operation_properties.request_body
-        )
-
-        # Replace path parameters in the endpoint path
-        for parameter_name, parameter_properties in operation_properties.parameters.items():
-            if parameter_properties.in_value == "path":
-                path_value = parameters[parameter_name]
-                endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
-
-        # Create RequestData object
-        return RequestData(
-            endpoint_path=endpoint_path,
-            http_method=http_method,
-            parameters=parameters,
-            request_body=request_body,
-            operation_id=operation_properties.operation_id, 
-            operation_properties=operation_properties
-        )
 
     def depth_traversal(self, curr_node: OperationNode, visited: Set):
         '''
@@ -182,7 +194,7 @@ class NaiveRequestGenerator:
 
     def generate_requests(self):
         '''
-        Generate naive requests based on the operation graph
+        Generate requests based on the operation graph
         '''
         visited = set()
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
@@ -217,7 +229,7 @@ def setup_request_generation(api_url, spec_path, spec_name, cached_graph=False):
         print()
 
     # Create the request generator with the populated graph
-    request_generator = NaiveRequestGenerator(operation_graph, api_url)
+    request_generator = RequestGenerator(operation_graph, api_url)
     return request_generator
 
 if __name__ == "__main__":
