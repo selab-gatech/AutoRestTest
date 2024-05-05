@@ -1,9 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Dict, Set, Any, List, Optional
 
 from requests import Response
 
 from src.handle_response import ResponseHandler
+from src.utils import remove_nulls
 
 from .generate_graph import OperationGraph, OperationNode, OperationEdge
 from .specification_parser import OperationProperties, ParameterProperties, SchemaProperties
@@ -11,7 +12,8 @@ import requests
 import pickle
 import os 
 
-from .value_generator import NaiveValueGenerator, identify_generator
+from .value_generator import NaiveValueGenerator, identify_generator, SmartValueGenerator
+
 
 @dataclass
 class RequestData:
@@ -38,15 +40,16 @@ def generate_naive_values(parameters: Dict[str, ParameterProperties], request_bo
     value_generator = NaiveValueGenerator(parameters=parameters, request_body=request_body)
     return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
 
-def generate_smart_values(parameters: Dict[str, ParameterProperties], request_body: Dict[str, SchemaProperties]):
+def generate_smart_values(operation_properties: Dict, parameters: Dict[str, Dict], request_body: Dict[str, Dict]):
     """
     Generate smart values for parameters and request body using LLMs
+    :param operation_properties: Dictionary mapping of operation properties
     :param parameters: Dictionary mapping parameter name to parameter properties
     :param request_body: Dictionary mapping of MIME type to request body properties
     :return: a tuple of the generated parameters and request body
     """
     # TODO: Need to make prompts for the LLMs before implementing this
-    value_generator = None
+    value_generator = SmartValueGenerator(operation_properties=operation_properties, parameters=parameters, request_body=request_body)
     return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
 
 class RequestGenerator:
@@ -94,14 +97,18 @@ class RequestGenerator:
         endpoint_path = operation_properties.endpoint_path
         http_method = operation_properties.http_method.lower()
 
+        print("=====================================")
+        print(f"Processing operation {operation_properties.operation_id} with method {http_method} and path {endpoint_path}")
+
         # Generate values for parameters and request body
         if self.is_naive:
             parameters, request_body = generate_naive_values(
                 operation_properties.parameters, operation_properties.request_body
             )
         else:
+            parsed_operation = remove_nulls(asdict(operation_properties))
             parameters, request_body = generate_smart_values(
-                operation_properties.parameters, operation_properties.request_body
+                operation_properties=parsed_operation, parameters=parsed_operation.get("parameters"), request_body=parsed_operation.get("request_body")
             )
 
         # Replace path parameters in the endpoint path
@@ -142,11 +149,6 @@ class RequestGenerator:
         request_body = request_data.request_body
         select_request_body = list(request_body.values())[0] if request_body else None
         # select the first value in the request body dictionary (key is MIME type)
-
-        print("=====================================")
-        print("Attempting to send request to endpoint: ", endpoint_path)
-        print("ATTEMPTING WITH PARAMS: ", parameters)
-        print("ATTEMPTING WITH REQUEST BODY: ", select_request_body)
 
         try:
             # Choose the appropriate method from the 'requests' library based on the HTTP method

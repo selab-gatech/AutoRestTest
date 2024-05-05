@@ -9,10 +9,10 @@ import logging
 import warnings
 from dotenv import load_dotenv
 
-from .classification_prompts import PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX, EXAMPLE_GENERATION_PROMPT, \
+from src.prompts.classification_prompts import PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX, EXAMPLE_GENERATION_PROMPT, \
     MESSAGE_HEADER, PARAMETERS_HEADER, CONSTRAINT_EXTRACTION_PREFIX, FEW_SHOT_CLASSIFICATON_PREFIX, \
     CLASSIFICATION_SUFFIX, EXTRACT_PARAMETER_DEPENDENCIES
-from .llm import OpenAILanguageModel
+from .utils import OpenAILanguageModel
 from .specification_parser import SchemaProperties, ParameterProperties
 
 def configure_response_logging():

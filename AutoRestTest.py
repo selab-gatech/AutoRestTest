@@ -63,7 +63,7 @@ if __name__ == "__main__":
     # example of running: python3 AutoRestTest.py one true -s genome-nexus
     spec_dir = "specs/original/oas"
     args = parse_args()
-    auto_rest_test = AutoRestTest(spec_dir, args.local_test)
+    auto_rest_test = AutoRestTest(spec_dir=spec_dir, local_test=args.local_test, is_naive=False)
     if args.num_specs == "one":
         auto_rest_test.run_single(args.spec_name)
     else:
