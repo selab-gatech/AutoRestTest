@@ -1,8 +1,15 @@
 import random
 import string
+import json
 from dataclasses import asdict
 from typing import Any, AnyStr, Dict, Iterable
 
+from src.prompts.generator_prompts import (REQUEST_BODY_GEN_PROMPT,
+                                           FEWSHOT_REQUEST_BODY_GEN_PROMPT,
+                                           PARAMETERS_GEN_PROMPT,
+                                           template_gen_prompt,
+                                           FEWSHOT_PARAMETER_GEN_PROMPT)
+from src.prompts.system_prompts import PARAMETERS_GEN_SYSTEM_MESSAGE, REQUEST_BODY_GEN_SYSTEM_MESSAGE
 from src.utils import OpenAILanguageModel
 from src.specification_parser import OperationProperties, SchemaProperties, ParameterProperties
 
@@ -89,30 +96,70 @@ class NaiveValueGenerator:
         return request_properties
 
 class SmartValueGenerator:
-    def __init__(self, operation_properties: Dict, parameters: Dict[AnyStr, Dict], request_body: Dict[AnyStr, Dict]):
+    def __init__(self, operation_properties: Dict):
         self.operation_properties: Dict = operation_properties
-        self.parameters: Dict[AnyStr, Dict] = parameters
-        self.request_body: Dict[AnyStr, Dict] = request_body
-        self.language_model = OpenAILanguageModel()
+        self.parameters: Dict[str, Dict] = operation_properties.get("parameters")
+        # TODO: ATM we use just the first MIME type for the request body
+        #self.request_body: Dict = next(iter(operation_properties.get("request_body").values())) if operation_properties.get("request_body") else None
+        self.request_body: Dict[str, Dict] = operation_properties.get("request_body")
+        self.summary: str = operation_properties.get("summary")
+        self.language_model = OpenAILanguageModel(temperature=0.6)
 
-    def generate_parameters(self):
+    def _compose_parameter_gen_prompt(self, GEN_PROMPT, FEWSHOT_PROMPT, schema, is_request_body: bool):
+        prompt = f"{GEN_PROMPT}\n{FEWSHOT_PROMPT}\n"
+        prompt += template_gen_prompt(summary=self.summary, schema=schema, is_request_body=is_request_body)
+        return prompt
+
+    def _form_parameter_gen_prompt(self, schema: Dict, is_request_body: bool):
+        if is_request_body:
+            return self._compose_parameter_gen_prompt(REQUEST_BODY_GEN_PROMPT,
+                                                     FEWSHOT_REQUEST_BODY_GEN_PROMPT,
+                                                     schema,
+                                                     is_request_body)
+        else:
+            return self._compose_parameter_gen_prompt(PARAMETERS_GEN_PROMPT,
+                                                      FEWSHOT_PARAMETER_GEN_PROMPT,
+                                                     schema,
+                                                     is_request_body)
+
+    def _validate_parameters(self, schema: Dict) -> Dict:
+        if schema is None:
+            return None
+
+        parameters = {}
+        for parameter_name, parameter_value in schema.items():
+            if parameter_name in self.parameters:
+                parameters[parameter_name] = parameter_value
+        return parameters
+
+    def generate_parameters(self) -> Dict[str, Any]:
         """
         Uses the OpenAI language model to generate values for the parameters using JSON outputs
         :return: A dictionary of the generated parameters
         """
-        # TODO: Attempt to pass full schema to language model and use JSON response to map all values
-        print("PARAMETERS:")
-        print(self.parameters)
+        if self.parameters is None or len(self.parameters) == 0:
+            return None
 
-    def generate_request_body(self):
+        parameter_prompt = self._form_parameter_gen_prompt(schema=self.parameters, is_request_body=False)
+        generated_parameters = self.language_model.query(user_message=parameter_prompt, system_message=PARAMETERS_GEN_SYSTEM_MESSAGE, json_mode=True)
+        generated_parameters = json.loads(generated_parameters)
+        parameter_matchings = self._validate_parameters(generated_parameters.get("parameters"))
+        return parameter_matchings
+
+    def generate_request_body(self) -> Any:
         """
         Uses the OpenAI language model to generate values for the request body using JSON outputs
         :return: A dictionary of the generated request body
         """
-        print("REQUEST BODY:")
-        print(self.request_body)
-        # TODO: Attempt to pass operation "description" + requestBody details to language model
-        # TODO: Use "summary" (added to operation) to provide more context for model
-        for item_name, item_properties in self.request_body.items():
-            pass
+        if self.request_body is None or len(self.request_body) == 0:
+            return None
+
+        request_body = {}
+        for mime_type, schema in self.request_body.items():
+            request_body_prompt = self._form_parameter_gen_prompt(schema, is_request_body=True)
+            generated_request_body = self.language_model.query(user_message=request_body_prompt, system_message=REQUEST_BODY_GEN_SYSTEM_MESSAGE, json_mode=True)
+            generated_request_body = json.loads(generated_request_body)
+            request_body[mime_type] = generated_request_body.get("request_body")
+        return request_body
+
 

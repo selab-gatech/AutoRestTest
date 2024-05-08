@@ -2,8 +2,9 @@ from typing import Iterable
 
 from openai import OpenAI
 from dotenv import load_dotenv
-from src.prompts.classification_prompts import *
 import os
+
+from src.prompts.system_prompts import DEFAULT_SYSTEM_MESSAGE
 
 load_dotenv()
 

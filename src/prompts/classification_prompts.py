@@ -118,7 +118,7 @@ Ensure that the returned JSON follows the semantics of Schema Properties.
 '''
 
 EXAMPLE_GENERATION_PROMPT = '''
-Given the server message, generate an example parameter value that would satisfy the server response for the provided paramter. 
+Given the server message, generate an example parameter value that would satisfy the server response for the provided parameter. 
 
 MESSAGE: Field 'email' must be a valid email address.
 PARAMETER: email
@@ -152,6 +152,3 @@ PARAMETERS: transactionId, cardNumber, language
 DEPENDENCIES: transcriptId, cardNumber, language
 '''
 
-
-
-DEFAULT_SYSTEM_MESSAGE = "You will receive instructions and examples. Your goal is to provide a systematic output using the knowledge from the instructions and examples provided."

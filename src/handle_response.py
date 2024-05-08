@@ -139,8 +139,8 @@ class ResponseHandler:
         request_body: Dict[str, 'SchemaProperties'] = request_data.operation_properties.request_body
         simplified_parameters: Dict[str, 'SchemaProperties'] = {parameter: properties.schema for parameter, properties in query_parameters.items()}
 
-        logging.info(f"Classified error as: {error_classification}, has request body: {request_body} and query parameters: {simplified_parameters}")
-        print(f"Classified error as: {error_classification}, has request body: {request_body} and query parameters: {simplified_parameters}")
+        #logging.info(f"Classified error as: {error_classification}, has request body: {request_body} and query parameters: {simplified_parameters}")
+        #print(f"Classified error as: {error_classification}, has request body: {request_body} and query parameters: {simplified_parameters}")
         # REMINDER: parameters = Dict[str, ParameterProperties] -> schema = SchemaProperties
         # REMINDER: request_body = Dict[str, SchemaProperties]
         if error_classification == "PARAMETER CONSTRAINT":

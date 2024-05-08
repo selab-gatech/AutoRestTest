@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass, asdict
 from typing import Dict, Set, Any, List, Optional
 
@@ -40,7 +41,7 @@ def generate_naive_values(parameters: Dict[str, ParameterProperties], request_bo
     value_generator = NaiveValueGenerator(parameters=parameters, request_body=request_body)
     return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
 
-def generate_smart_values(operation_properties: Dict, parameters: Dict[str, Dict], request_body: Dict[str, Dict]):
+def generate_smart_values(operation_properties: Dict):
     """
     Generate smart values for parameters and request body using LLMs
     :param operation_properties: Dictionary mapping of operation properties
@@ -49,8 +50,8 @@ def generate_smart_values(operation_properties: Dict, parameters: Dict[str, Dict
     :return: a tuple of the generated parameters and request body
     """
     # TODO: Need to make prompts for the LLMs before implementing this
-    value_generator = SmartValueGenerator(operation_properties=operation_properties, parameters=parameters, request_body=request_body)
-    return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
+    value_generator = SmartValueGenerator(operation_properties=operation_properties)
+    return value_generator.generate_parameters(), value_generator.generate_request_body()
 
 class RequestGenerator:
     def __init__(self, operation_graph: OperationGraph, api_url: str, is_naive=True):
@@ -100,6 +101,8 @@ class RequestGenerator:
         print("=====================================")
         print(f"Processing operation {operation_properties.operation_id} with method {http_method} and path {endpoint_path}")
 
+        parameters = {}
+        request_body = None
         # Generate values for parameters and request body
         if self.is_naive:
             parameters, request_body = generate_naive_values(
@@ -108,8 +111,11 @@ class RequestGenerator:
         else:
             parsed_operation = remove_nulls(asdict(operation_properties))
             parameters, request_body = generate_smart_values(
-                operation_properties=parsed_operation, parameters=parsed_operation.get("parameters"), request_body=parsed_operation.get("request_body")
+                operation_properties=parsed_operation,
             )
+
+        print(f"Parameters: {parameters}")
+        print(f"Request Body: {request_body}")
 
         # Replace path parameters in the endpoint path
         for parameter_name, parameter_properties in operation_properties.parameters.items():
@@ -135,6 +141,24 @@ class RequestGenerator:
         request_data = self.process_operation(operation_properties)
         return self.send_operation_request(request_data)
 
+    def _send_mime_type(self, select_method, full_url, parameters, request_body):
+        params = parameters if parameters else {}
+        if "application/json" in request_body:
+            req_body = request_body["application/json"]
+            print(
+                f"Sending request JSON to {full_url} with parameters {parameters} and request body {req_body}")
+            response = select_method(full_url, params=params, json=req_body)
+        elif "application/x-www-form-urlencoded" in request_body:
+            req_body = request_body["application/x-www-form-urlencoded"]
+            print(
+                f"Sending request ENCODED to {full_url} with parameters {parameters} and request body {req_body}")
+            response = select_method(full_url, params=params, data=req_body)
+        else:
+            # should not reach here
+            print(f"Sending request to {full_url} with parameters {parameters}")
+            response = select_method(full_url, params=params)
+        return response
+
     def send_operation_request(self, request_data: RequestData) -> Optional[Response]:
         '''
         Generate naive requests based on the default values and types
@@ -147,7 +171,7 @@ class RequestGenerator:
         http_method = request_data.http_method
         parameters = request_data.parameters
         request_body = request_data.request_body
-        select_request_body = list(request_body.values())[0] if request_body else None
+        #select_request_body = list(request_body.values())[0] if request_body else None
         # select the first value in the request body dictionary (key is MIME type)
 
         try:
@@ -157,12 +181,12 @@ class RequestGenerator:
 
             if http_method in {"put", "post", "patch"}:
                 # For PUT, POST, and PATCH requests, include the request body
-                response = select_method(full_url, params=parameters, json=select_request_body)
+                response = self._send_mime_type(select_method, full_url, parameters, request_body)
             else:
                 response = select_method(full_url, params=parameters)
 
             print(f"Request to {full_url} completed with status code {response.status_code}")
-            #print(f"Response text: {response.text}")
+            print(f"Response text: {response.text}")
             return response
         except requests.exceptions.RequestException as err:
             print(f"Request exception due to error: {err}")
@@ -189,7 +213,6 @@ class RequestGenerator:
         request_data = self.process_operation(curr_node.operation_properties)
         #handle response
         response = self.send_operation_request(request_data)
-        print("GOT RESPONSE ", response)
         if response is not None:
             self.process_response(response, request_data, curr_node)
             # self.attempt_retry(response, request_data)
