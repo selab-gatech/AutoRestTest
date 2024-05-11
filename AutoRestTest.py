@@ -36,28 +36,23 @@ class AutoRestTest:
         self.api_urls = configure_api_urls(local_test)
         self.is_naive = is_naive
 
-    def generate_graph(self, spec_name: str):
+    def generate_graph(self, spec_name: str, api_url: str):
         spec_path = f"{self.spec_dir}/{spec_name}.yaml"
         operation_graph = OperationGraph(spec_path=spec_path, spec_name=spec_name)
+        request_generator = RequestGenerator(operation_graph=operation_graph, api_url=api_url, is_naive=self.is_naive)
+        operation_graph.assign_request_generator(request_generator)
         operation_graph.create_graph()
         return operation_graph
-
-    def generate_requests(self, operation_graph: OperationGraph, api_url: str):
-        request_generator = RequestGenerator(operation_graph=operation_graph, api_url=api_url, is_naive=self.is_naive)
-        request_generator.generate_requests()
 
     def run_all(self):
         for spec in os.listdir(self.spec_dir):
             spec_name = spec.split(".")[0]
             print(f"Running tests for {spec_name}")
-            operation_graph = self.generate_graph(spec_name)
-            api_url = self.api_urls[spec_name]
-            self.generate_requests(operation_graph, api_url)
+            self.run_single(spec_name)
 
     def run_single(self, spec_name: str):
-        operation_graph = self.generate_graph(spec_name)
         api_url = self.api_urls[spec_name]
-        self.generate_requests(operation_graph, api_url)
+        operation_graph = self.generate_graph(spec_name, api_url)
 
 if __name__ == "__main__":
     # example of running: python3 AutoRestTest.py one true -s genome-nexus

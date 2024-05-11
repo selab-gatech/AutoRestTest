@@ -32,7 +32,7 @@ load_dotenv() # load environmental vars for OpenAI API key
 configure_response_logging()
 
 if TYPE_CHECKING:
-    from .generate_graph import OperationNode
+    from .generate_graph import OperationNode, OperationEdge
     from src.request_generator import RequestGenerator, RequestData
 
 class ResponseHandler:
@@ -52,21 +52,21 @@ class ResponseHandler:
     def classify_error(self, response: Response, response_text: str):
         return self.language_model.classify_response(response_text) 
     
-    def is_valid_dependency(self, failed_response: Response, tentative_response: Response):
+    def _is_valid_dependency(self, failed_response: Response, tentative_response: Response):
         if failed_response is None or tentative_response is None:
             return False
         if failed_response.status_code // 100 == 2:
             return True
         return False
 
-    def test_tentative_edge(self, request_generator: 'RequestGenerator', failed_operation_node: 'OperationNode', tentative_edge):
+    def _test_tentative_edge(self, request_generator: 'RequestGenerator', failed_operation_node: 'OperationNode', tentative_edge: 'OperationEdge'):
         tentative_operation_node = tentative_edge.destination
         print(f"Testing tentative edge from {failed_operation_node.operation_id} to {tentative_operation_node.operation_id}")
         tentative_response = request_generator.create_and_send_request(tentative_operation_node)
         print(f"Tentative response status code: {tentative_response.status_code}")
         failed_response = request_generator.create_and_send_request(failed_operation_node)
         print(f"Failed response status code: {failed_response.status_code}")
-        if tentative_response is not None and failed_response is not None and self.is_valid_dependency(failed_response, tentative_response):
+        if tentative_response is not None and failed_response is not None and self._is_valid_dependency(failed_response, tentative_response):
             return True
         return False
     
@@ -79,7 +79,7 @@ class ResponseHandler:
         sorted_edges = sorted(failed_operation_node.tentative_edges, key=lambda x: list(x.similar_parameters.values())[0].similarity, reverse=True) # sort tentative edges by their one parameter similarity value
         for tentative_edge in sorted_edges:
             # Send a request to the tentative operation and check the response
-            if self.test_tentative_edge(request_generator, failed_operation_node, tentative_edge):
+            if self._test_tentative_edge(request_generator, failed_operation_node, tentative_edge):
                 request_generator.operation_graph.add_operation_edge(
                     failed_operation_node.operation_id,
                     tentative_edge.destination.operation_id,
@@ -181,7 +181,6 @@ class ResponseLanguageModelHandler:
         return classification
 
     def _extract_constrained_parameter_list(self, language_model_response):
-
         if "IDENTIFICATION:" not in language_model_response:
             return None
         elif language_model_response.strip() == 'IDENTIFICATION:' or language_model_response.strip() == 'IDENTIFICATION: none':

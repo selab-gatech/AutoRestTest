@@ -99,8 +99,6 @@ class SmartValueGenerator:
     def __init__(self, operation_properties: Dict):
         self.operation_properties: Dict = operation_properties
         self.parameters: Dict[str, Dict] = operation_properties.get("parameters")
-        # TODO: ATM we use just the first MIME type for the request body
-        #self.request_body: Dict = next(iter(operation_properties.get("request_body").values())) if operation_properties.get("request_body") else None
         self.request_body: Dict[str, Dict] = operation_properties.get("request_body")
         self.summary: str = operation_properties.get("summary")
         self.language_model = OpenAILanguageModel(temperature=0.6)
@@ -108,6 +106,7 @@ class SmartValueGenerator:
     def _compose_parameter_gen_prompt(self, GEN_PROMPT, FEWSHOT_PROMPT, schema, is_request_body: bool):
         prompt = f"{GEN_PROMPT}\n{FEWSHOT_PROMPT}\n"
         prompt += template_gen_prompt(summary=self.summary, schema=schema, is_request_body=is_request_body)
+        #print("Prompt: ", prompt)
         return prompt
 
     def _form_parameter_gen_prompt(self, schema: Dict, is_request_body: bool):

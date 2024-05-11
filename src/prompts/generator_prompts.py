@@ -1,3 +1,4 @@
+import json
 from typing import Dict
 
 REQUEST_BODY_GEN_PROMPT = """
@@ -7,7 +8,8 @@ Given a summary of an operation its request body schema, generate a valid contex
 }
 In the case where the request body is an object, use an object with keys to represent the object field names and values to represent their respective field values for the request body value. Attempt to generate values for all required fields for object request bodies. Attempt to generate as much as possible.
 In the case where the request body is an array, use a list as the request_body value.
-Ensure all required fields are present in the request body. Read the associated description, types, etc... for each field to ensure the correct value is generated."""
+Ensure maximum fields are present in the request body. Read the associated description, types, etc... for each field to ensure the correct value is generated. Look for key words like 'required' in the description to determine if a field is required.
+Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 PARAMETERS_GEN_PROMPT = """
 Given a summary of an operation and its parameters schema, generate valid context-aware values for the parameters of the operation. Attempt to generate values for all required parameters. Return the answer as a JSON object with the following structure:
@@ -20,7 +22,8 @@ Given a summary of an operation and its parameters schema, generate valid contex
 }
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value. 
 In the case where a given parameter is an array, use a list as the parameter value.
-Ensure all required parameters are present in the parameters object. Read the associated description, types, etc... for each field to ensure the correct value is generated."""
+Ensure maximum parameters are present in the parameters object. Read the associated description, types, etc... for each field to ensure the correct value is generated. Look for key words like 'required' in the description to determine if a field is required.
+Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 #FEWSHOT_REQUEST_BODY_GEN_PROMPT = """
 #SUMMARY:
@@ -33,6 +36,10 @@ FEWSHOT_REQUEST_BODY_GEN_PROMPT = """"""
 FEWSHOT_PARAMETER_GEN_PROMPT = """"""
 
 def template_gen_prompt(summary: str, schema: Dict, is_request_body: bool) -> str:
+    try:
+        schema = json.dumps(schema, indent=2)
+    except:
+        schema = str(schema)
     if is_request_body:
         return f"SUMMARY: {summary}\nSCHEMA: {schema}\nREQUEST_BODY: "
     else:
