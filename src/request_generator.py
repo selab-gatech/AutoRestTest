@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from typing import Dict, Set, Any, List, Optional, TYPE_CHECKING
 
 from requests import Response
@@ -24,16 +24,17 @@ class RequestData:
     parameters: Dict[str, Any] # dict of parameter name to value
     request_body: Dict[str, Any]
     operation_properties: OperationProperties
+    requirements: 'RequestRequirements' = None
 
 @dataclass
 class RequestRequirements:
     edge: 'OperationEdge'
-    parameter_requirements: Dict[str, Any]
-    request_body_requirements: Dict[str, Any]
+    parameter_requirements: Dict[str, Any] = field(default_factory=dict)
+    request_body_requirements: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class RequestResponse:
-    request: RequestData
+    request: 'RequestData'
     response: requests.Response
     response_text: str
 
@@ -52,6 +53,8 @@ class RequestGenerator:
         self.successful_query_data = [] # List to store successful query data
         self.response_handler = ResponseHandler()
         self.is_naive = is_naive
+        self.responses: Dict[str, RequestResponse] = {}
+        self.allowed_retries = 1
 
     @staticmethod
     def generate_naive_values(parameters: Dict[str, ParameterProperties], request_body: Dict[str, SchemaProperties]):
@@ -66,7 +69,7 @@ class RequestGenerator:
         :param requirements: RequestRequirements object that contains any parameters or request body requirements
         :return: a tuple of the generated parameters and request body
         """
-        value_generator = SmartValueGenerator(operation_properties=operation_properties)
+        value_generator = SmartValueGenerator(operation_properties=operation_properties, requirements=requirements)
         return value_generator.generate_parameters(), value_generator.generate_request_body()
 
     def process_response(self, request_response: RequestResponse, operation_node: 'OperationNode'):
@@ -114,6 +117,7 @@ class RequestGenerator:
             parsed_operation = remove_nulls(asdict(operation_properties))
             parameters, request_body = self.generate_smart_values(
                 operation_properties=parsed_operation,
+                requirements=requirements
             )
 
         print(f"Parameters: {parameters}")
@@ -132,21 +136,42 @@ class RequestGenerator:
             parameters=parameters,
             request_body=request_body,
             operation_properties=operation_properties,
+            requirements=requirements
         )
 
-    def send_operation_request(self, request_data: RequestData) -> Optional[RequestResponse]:
-        '''
-        Generate naive requests based on the default values and types
-        '''
+    def make_request_retry_data(self, request_data: RequestData, response: requests.Response) -> RequestData:
+        if self.is_naive:
+            return request_data
+        else:
+            parsed_operation = remove_nulls(asdict(request_data.operation_properties))
+            requirements = request_data.requirements
+            value_generator = SmartValueGenerator(operation_properties=parsed_operation, requirements=requirements, engine="gpt-4o")
+            parameters, request_body = value_generator.generate_retry_parameters(request_data, response), value_generator.generate_retry_request_body(request_data, response)
+            return RequestData(
+                endpoint_path=request_data.endpoint_path,
+                http_method=request_data.http_method,
+                parameters=parameters,
+                request_body=request_body,
+                operation_properties=request_data.operation_properties,
+                requirements=requirements
+            )
 
-        '''
-        Send the request to the API using the request data.
-        '''
+    def _handle_retry(self, request_data: RequestData, response: requests.Response, curr_retry: int):
+        retry_data = self.make_request_retry_data(request_data, response)
+        response = self.send_operation_request(retry_data, retry_nums=curr_retry + 1)
+        return response
+
+    def send_operation_request(self, request_data: RequestData, retry_nums: int = 0) -> Optional[RequestResponse]:
+        """
+        Send the operation request to the API
+        :param request_data:
+        :param is_retry:
+        :return:
+        """
         endpoint_path = request_data.endpoint_path
         http_method = request_data.http_method
         parameters = request_data.parameters
         request_body = request_data.request_body
-
         try:
             select_method = getattr(requests, http_method) # selects correct http method
             full_url = f"{self.api_url}{endpoint_path}"
@@ -155,11 +180,14 @@ class RequestGenerator:
             else:
                 response = select_method(full_url, params=parameters)
             if response is not None:
-                return RequestResponse(
-                    request=request_data,
-                    response=response,
-                    response_text=response.text
-                )
+                if not response.ok and retry_nums < self.allowed_retries:
+                    return self._handle_retry(request_data, response, retry_nums)
+                else:
+                    return RequestResponse(
+                        request=request_data,
+                        response=response,
+                        response_text=response.text
+                    )
             return None
         except requests.exceptions.RequestException as err:
             print(f"Request exception due to error: {err}")
@@ -243,11 +271,11 @@ class RequestGenerator:
         if not responses:
             return None
         for response in responses:
-            if response.response.status_code // 100 == 2:
+            if response and response.response and response.response.ok:
                 return response
         return responses[0]
 
-    def depth_traversal(self, curr_node: 'OperationNode', visited: Set) -> Optional[RequestResponse]:
+    def depth_traversal(self, curr_node: 'OperationNode', visited: Set):
         """
         Generate low-level requests (with no dependencies and hence high depth) first
         :param curr_node: Current operation node
@@ -255,16 +283,17 @@ class RequestGenerator:
         :return: RequestResponse object to allow for requirements parsing
         """
         visited.add(curr_node.operation_id)
-        dependent_responses: List[RequestResponse] = []
+        dependent_responses: Dict['OperationEdge', RequestResponse] = {}
         for edge in curr_node.outgoing_edges:
             if edge.destination.operation_id not in visited:
-                dependent_response = self.depth_traversal(edge.destination, visited)
-                if dependent_response is not None and dependent_response.response.ok:
-                    dependent_responses.append(dependent_response)
+                self.depth_traversal(edge.destination, visited)
+            dependent_response = self.responses[edge.destination.operation_id]
+            if dependent_response is not None and dependent_response.response.ok:
+                dependent_responses[edge] = dependent_response
         best_response = self.handle_request_and_dependencies(curr_node, dependent_responses)
-        return best_response
+        self.responses[curr_node.operation_id] = best_response
 
-    def handle_request_and_dependencies(self, curr_node: 'OperationNode', dependent_responses: List[RequestResponse] = None) -> Optional[RequestResponse]:
+    def handle_request_and_dependencies(self, curr_node: 'OperationNode', dependent_responses: Dict['OperationEdge', RequestResponse] = None) -> Optional[RequestResponse]:
         if not dependent_responses:
             response = self.create_and_send_request(curr_node)
             if response is not None:
@@ -273,9 +302,10 @@ class RequestGenerator:
         else:
             print(f"Handling dependencies for operation {curr_node.operation_id}")
             responses: List[RequestResponse] = []
-            for dependent_response in dependent_responses:
-                requirement: RequestRequirements = self.determine_requirement(dependent_response)
+            for edge, dependent_response in dependent_responses.items():
+                requirement: RequestRequirements = self.determine_requirement(dependent_response, edge)
                 response = self.create_and_send_request(curr_node, requirement)
+                # TODO: Remove edge from edges if response is unsuccessful
                 responses.append(response)
                 if response is not None:
                     self.process_response(response, curr_node)

@@ -119,8 +119,16 @@ class SpecificationParser:
         if spec_path is not None:
             self.resolving_parser = ResolvingParser(spec_path, strict=False)
             self.base_parser = BaseParser(spec_path, strict=False)
+        else:
+            raise ValueError("No specification path provided.")
         self.directory_path = 'specs/original/oas/'
         self.all_specs = {}
+
+    def get_api_url(self) -> str:
+        """
+        Extract the server URL from the specification file.
+        """
+        return self.resolving_parser.specification.get('servers')[0].get('url')
 
     def process_parameter_object_properties(self, properties: Dict) -> Dict[str, SchemaProperties]:
         """
@@ -129,7 +137,6 @@ class SpecificationParser:
         """
         if properties is None:
             return None
-
         object_properties = {}
         for name, values in properties.items():
             object_properties.setdefault(name, self.process_parameter_schema(values)) # check if this is correct, or if it should be process_parameter

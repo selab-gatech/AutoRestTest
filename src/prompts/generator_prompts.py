@@ -8,7 +8,6 @@ Given a summary of an operation its request body schema, generate a valid contex
 }
 In the case where the request body is an object, use an object with keys to represent the object field names and values to represent their respective field values for the request body value. Attempt to generate values for all required fields for object request bodies. Attempt to generate as much as possible.
 In the case where the request body is an array, use a list as the request_body value.
-Ensure maximum fields are present in the request body. Read the associated description, types, etc... for each field to ensure the correct value is generated. Look for key words like 'required' in the description to determine if a field is required.
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 PARAMETERS_GEN_PROMPT = """
@@ -22,7 +21,6 @@ Given a summary of an operation and its parameters schema, generate valid contex
 }
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value. 
 In the case where a given parameter is an array, use a list as the parameter value.
-Ensure maximum parameters are present in the parameters object. Read the associated description, types, etc... for each field to ensure the correct value is generated. Look for key words like 'required' in the description to determine if a field is required.
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 #FEWSHOT_REQUEST_BODY_GEN_PROMPT = """
@@ -31,16 +29,34 @@ Do not solely rely on the given constraint values, and ensure you read the assoc
 #REQUEST_BODY:
 #"""
 
+#PARAMETER_REQUIREMENTS_PROMPT = """
+#Read each 'description' field for each parameter in the schema to determine restrictions and if the parameter is mutually exclusive with another parameter. Look for key words like 'or' in the description to determine if a parameter is mutually exclusive with another parameter.
+#You must generate values for the following parameters unless the description states that the parameter is mutually exclusive with another parameter:
+#"""
+
+PARAMETER_REQUIREMENTS_PROMPT = """
+Attempt to generate values for the following parameters (attempt the most possible). Ensure the values are compatible with eachother:
+"""
+
+RETRY_PARAMETER_REQUIREMENTS_PROMPT = """
+Attempt to generate values for the following parameters, unless otherwise specified in the failed response. Ensure the values are compatible with eachother:
+"""
+
+FAILED_PARAMETER_MATCHINGS_PROMPT = """
+You generated the following values for the parameters, but the request was not successful. Here are the values you generated for the parameters:
+"""
+
+FAILED_PARAMETER_RESPONSE_PROMPT = """
+Here is the response indicating the reason for the operation failure. Attempt to generate new values for the parameters based on the response. You can exclude certain parameters if indicated by the response:
+"""
+
 FEWSHOT_REQUEST_BODY_GEN_PROMPT = """"""
 
 FEWSHOT_PARAMETER_GEN_PROMPT = """"""
 
-def template_gen_prompt(summary: str, schema: Dict, is_request_body: bool) -> str:
+def template_gen_prompt(summary: str, schema: Dict) -> str:
     try:
         schema = json.dumps(schema, indent=2)
     except:
         schema = str(schema)
-    if is_request_body:
-        return f"SUMMARY: {summary}\nSCHEMA: {schema}\nREQUEST_BODY: "
-    else:
-        return f"SUMMARY: {summary}\nSCHEMA: {schema}\nPARAMETERS: "
+    return f"SUMMARY: {summary}\nSCHEMA: {schema}\n"

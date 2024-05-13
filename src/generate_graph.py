@@ -22,9 +22,10 @@ class OperationEdge:
         self.similar_parameters: Dict[str, SimilarityValue] = similar_parameters # have parameters as the key (similarity value has response param and in_value)
 
 class OperationGraph:
-    def __init__(self, spec_path, spec_name=None):
+    def __init__(self, spec_path, spec_name=None, spec_parser: SpecificationParser = None):
         self.spec_path = spec_path
         self.spec_name = spec_name
+        self.spec_parser = spec_parser
         self.request_generator: Optional[RequestGenerator] = None
         self.operation_nodes: Dict[str, OperationNode] = {}
         self.operation_edges: List[OperationEdge] = []
@@ -44,6 +45,7 @@ class OperationGraph:
         edge = OperationEdge(source=source_node, destination=destination_node, similar_parameters=parameters)
         self.operation_edges.append(edge)
         source_node.outgoing_edges.append(edge)
+        print(f"Added edge from {operation_id} to {dependent_operation_id} with parameters: {parameters}")
 
     def add_tentative_edge(self, operation_id: str, dependent_operation_id: str, next_closest_similarities: List[Tuple[str, SimilarityValue]]):
         if operation_id not in self.operation_nodes:
@@ -85,8 +87,7 @@ class OperationGraph:
         self.request_generator.perform_all_requests()
 
     def create_graph(self):
-        spec_parser = SpecificationParser(self.spec_path, self.spec_name)
-        operations: Dict[str, OperationProperties] = spec_parser.parse_specification()
+        operations: Dict[str, OperationProperties] = self.spec_parser.parse_specification()
         for operation_id, operation_properties in operations.items():
             self.add_operation_node(operation_properties)
         self.determine_dependencies(operations)

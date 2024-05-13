@@ -33,7 +33,7 @@ configure_response_logging()
 
 if TYPE_CHECKING:
     from .generate_graph import OperationNode, OperationEdge
-    from src.request_generator import RequestGenerator, RequestData
+    from src.request_generator import RequestGenerator, RequestData, RequestResponse
 
 class ResponseHandler:
     def __init__(self):
@@ -62,10 +62,10 @@ class ResponseHandler:
     def _test_tentative_edge(self, request_generator: 'RequestGenerator', failed_operation_node: 'OperationNode', tentative_edge: 'OperationEdge'):
         tentative_operation_node = tentative_edge.destination
         print(f"Testing tentative edge from {failed_operation_node.operation_id} to {tentative_operation_node.operation_id}")
-        tentative_response = request_generator.create_and_send_request(tentative_operation_node)
-        print(f"Tentative response status code: {tentative_response.status_code}")
-        failed_response = request_generator.create_and_send_request(failed_operation_node)
-        print(f"Failed response status code: {failed_response.status_code}")
+        tentative_response: 'RequestResponse' = request_generator.create_and_send_request(tentative_operation_node)
+        print(f"Tentative response status code: {tentative_response.response.status_code}")
+        failed_response: 'RequestResponse' = request_generator.create_and_send_request(failed_operation_node)
+        print(f"Failed response status code: {failed_response.response.status_code}")
         if tentative_response is not None and failed_response is not None and self._is_valid_dependency(failed_response, tentative_response):
             return True
         return False
