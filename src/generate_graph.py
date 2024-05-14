@@ -69,6 +69,16 @@ class OperationGraph:
         if len(next_closest_similarities) > 0:
             self.add_tentative_edge(operation_id, dependent_operation_id, next_closest_similarities)
 
+    def delete_edge(self, operation_id: str, dependent_operation_id: str):
+        if operation_id not in self.operation_nodes:
+            raise ValueError(f"Operation {operation_id} not found in the graph")
+        source_node = self.operation_nodes[operation_id]
+        for edge in source_node.outgoing_edges:
+            if edge.destination.operation_id == dependent_operation_id:
+                source_node.outgoing_edges.remove(edge)
+                self.operation_edges.remove(edge)
+                return
+
     def determine_dependencies(self, operations):
         operation_dependency_comparator = OperationDependencyComparator()
         for operation_id, operation_properties in operations.items():

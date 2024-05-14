@@ -4,13 +4,15 @@ from typing import Dict, Set, Any, List, Optional, TYPE_CHECKING
 
 from requests import Response
 
+import itertools
+
 from src.handle_response import ResponseHandler
 from src.utils import remove_nulls
 
 from .specification_parser import OperationProperties, ParameterProperties, SchemaProperties
 import requests
 import pickle
-import os 
+import os
 
 from .value_generator import NaiveValueGenerator, identify_generator, SmartValueGenerator
 
@@ -31,6 +33,47 @@ class RequestRequirements:
     edge: 'OperationEdge'
     parameter_requirements: Dict[str, Any] = field(default_factory=dict)
     request_body_requirements: Dict[str, Any] = field(default_factory=dict)
+
+    def generate_combinations(self) -> List['RequestRequirements']:
+        combinations = []
+
+        param_combinations = [] if not self.parameter_requirements else []
+        for i in range(1, len(self.parameter_requirements) + 1):
+            for subset in itertools.combinations(self.parameter_requirements.keys(), i):
+                param_combinations.append({key: self.parameter_requirements[key] for key in subset})
+
+        body_combinations = []
+        for i in range(1, len(self.request_body_requirements) + 1):
+            for subset in itertools.combinations(self.request_body_requirements.keys(), i):
+                body_combinations.append({key: self.request_body_requirements[key] for key in subset})
+
+        if not param_combinations and not body_combinations:
+            return [self]
+        elif not param_combinations:
+            for body_comb in body_combinations:
+                combinations.append(RequestRequirements(
+                    edge=self.edge,
+                    parameter_requirements={},
+                    request_body_requirements=body_comb
+                ))
+        elif not body_combinations:
+            for param_comb in param_combinations:
+                combinations.append(RequestRequirements(
+                    edge=self.edge,
+                    parameter_requirements=param_comb,
+                    request_body_requirements={}
+                ))
+        else:
+            for param_comb in param_combinations:
+                for body_comb in body_combinations:
+                    combinations.append(RequestRequirements(
+                        edge=self.edge,
+                        parameter_requirements=param_comb,
+                        request_body_requirements=body_comb
+                    ))
+
+        combinations.sort(key=lambda x: len(x.parameter_requirements) + len(x.request_body_requirements), reverse=True)
+        return combinations
 
 @dataclass
 class RequestResponse:
@@ -156,7 +199,7 @@ class RequestGenerator:
                 requirements=requirements
             )
 
-    def _handle_retry(self, request_data: RequestData, response: requests.Response, curr_retry: int):
+    def _handle_retry(self, request_data: RequestData, response: requests.Response, curr_retry: int) -> Optional[RequestResponse]:
         retry_data = self.make_request_retry_data(request_data, response)
         response = self.send_operation_request(retry_data, retry_nums=curr_retry + 1)
         return response
@@ -249,16 +292,19 @@ class RequestGenerator:
         except:
             print("FAILED TO PARSE JSON RESPONSE ", dependent_response.response.text)
             response_mappings = {}
+
         if not response_mappings:
             return None
         request_body_matchings = {}
         parameter_matchings = {}
+
         for parameter, similarity_value in edge.similar_parameters.items():
             if similarity_value.response_val in response_mappings:
                 if similarity_value.in_value == "query":
                     parameter_matchings[parameter] = response_mappings[similarity_value.response_val]
                 elif similarity_value.in_value == "request body":
                     request_body_matchings[parameter] = response_mappings[similarity_value.response_val]
+
         request_requirement = RequestRequirements(
             edge=edge,
             parameter_requirements=parameter_matchings,
@@ -295,23 +341,49 @@ class RequestGenerator:
 
     def handle_request_and_dependencies(self, curr_node: 'OperationNode', dependent_responses: Dict['OperationEdge', RequestResponse] = None) -> Optional[RequestResponse]:
         if not dependent_responses:
-            response = self.create_and_send_request(curr_node)
-            if response is not None:
-                self.process_response(response, curr_node)
-            return response
+            return self._send_req_handle_respo(curr_node)
         else:
-            print(f"Handling dependencies for operation {curr_node.operation_id}")
             responses: List[RequestResponse] = []
             for edge, dependent_response in dependent_responses.items():
-                requirement: RequestRequirements = self.determine_requirement(dependent_response, edge)
-                response = self.create_and_send_request(curr_node, requirement)
-                # TODO: Remove edge from edges if response is unsuccessful
-                responses.append(response)
-                if response is not None:
-                    self.process_response(response, curr_node)
+                self.handle_dependency(curr_node, dependent_response, edge, responses)
             return self._determine_best_response(responses)
 
-    def create_and_send_request(self, curr_node: 'OperationNode', requirement: RequestRequirements=None):
+    def handle_dependency(self, curr_node, dependent_response, edge, responses):
+        requirement: RequestRequirements = self.determine_requirement(dependent_response, edge)
+        req_combos: List[RequestRequirements] = requirement.generate_combinations()
+
+        for requirement in req_combos:
+            response = self._send_req_handle_respo(curr_node, requirement)
+            if response and response.response and response.response.ok:
+                responses.append(response)
+                self.handle_edge_adjustment(edge, requirement)
+                return
+
+        self.handle_edge_adjustment(edge)
+        responses.append(None)
+
+    def _send_req_handle_respo(self, curr_node, requirement=None) -> RequestResponse:
+        response = self.create_and_send_request(curr_node, requirement)
+        if response is not None:
+            self.process_response(response, curr_node)
+        return response
+
+    def handle_edge_adjustment(self, edge: 'OperationEdge', requirement: RequestRequirements=None):
+        if not requirement:
+            self.operation_graph.delete_edge(edge.source.operation_id, edge.destination.operation_id)
+            return
+
+        adjusted_similar_parameters = {
+            parameter: similarity_value for parameter, similarity_value in edge.similar_parameters.items()
+            if parameter in requirement.parameter_requirements or parameter in requirement.request_body_requirements
+        }
+
+        if adjusted_similar_parameters:
+            edge.similar_parameters = adjusted_similar_parameters
+        else:
+            self.operation_graph.delete_edge(edge.source.operation_id, edge.destination.operation_id)
+
+    def create_and_send_request(self, curr_node: 'OperationNode', requirement: RequestRequirements=None) -> RequestResponse:
         request_data: RequestData = self.make_request_data(curr_node.operation_properties, requirement)
         response: RequestResponse = self.send_operation_request(request_data)
         return response
