@@ -52,10 +52,12 @@ CLASSIFICATION: OPERATION DEPENDENCY
 '''.strip()
 CLASSIFICATION_PROMPT = '''
 Given an error message, classify the error as one of "PARAMETER CONSTRAINT, FORMAT, PARAMETER DEPENDENCY, OPERATION DEPENDENCY". '''
+
 CLASSIFICATION_SUFFIX = '''
 Return the answer as simply "CLASSIFICATION: class". 
 MESSAGE:
 '''
+
 FEW_SHOT_CLASSIFICATON_PREFIX = CLASSIFICATION_PROMPT + '\n' + FEW_SHOT_PARAMETER_DEPENDENCY_ERROR + '\n' + FEW_SHOT_FORMAT_ERROR + '\n' + FEW_SHOT_PARAMETER_CONSTRAINT_ERROR + '\n' + FEW_SHOT_OPERATION_DEPENDENCY_ERROR + '\n'
 
 PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX = '''
@@ -114,8 +116,9 @@ class SchemaProperties:
 
 Ensure that the returned JSON follows the semantics of Schema Properties.
 '''
+
 EXAMPLE_GENERATION_PROMPT = '''
-Given the server message, generate an example parameter value that would satisfy the server response for the provided paramter. 
+Given the server message, generate an example parameter value that would satisfy the server response for the provided parameter. 
 
 MESSAGE: Field 'email' must be a valid email address.
 PARAMETER: email
@@ -148,3 +151,4 @@ MESSAGE: The API requires parameters
 PARAMETERS: transactionId, cardNumber, language
 DEPENDENCIES: transcriptId, cardNumber, language
 '''
+

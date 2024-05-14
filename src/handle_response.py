@@ -1,15 +1,18 @@
+import json
 from typing import Dict, TYPE_CHECKING
 
 from requests import Response
 
-from .classification_prompts import *
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
-from openai import OpenAI
 import os
-import json
 import logging
 import warnings
 from dotenv import load_dotenv
+
+from src.prompts.classification_prompts import PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX, EXAMPLE_GENERATION_PROMPT, \
+    MESSAGE_HEADER, PARAMETERS_HEADER, CONSTRAINT_EXTRACTION_PREFIX, FEW_SHOT_CLASSIFICATON_PREFIX, \
+    CLASSIFICATION_SUFFIX, EXTRACT_PARAMETER_DEPENDENCIES
+from .utils import OpenAILanguageModel
 from .specification_parser import SchemaProperties, ParameterProperties
 
 def configure_response_logging():
@@ -19,7 +22,7 @@ def configure_response_logging():
     while os.path.exists(os.path.join(logging_dir, f"response_log{run_number}.log")):
         run_number += 1
     log_file = os.path.join(logging_dir, f"response_log{run_number}.log")
-    logging.basicConfig(filename=log_file, level=logging.DEBUG,
+    logging.basicConfig(filename=log_file, level=logging.INFO,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
     logging.info("Logging started")
@@ -29,13 +32,13 @@ load_dotenv() # load environmental vars for OpenAI API key
 configure_response_logging()
 
 if TYPE_CHECKING:
-    from .generate_graph import OperationNode
-    from src.request_generator import NaiveRequestGenerator, RequestData
+    from .generate_graph import OperationNode, OperationEdge
+    from src.request_generator import RequestGenerator, RequestData, RequestResponse
 
 class ResponseHandler:
     def __init__(self):
         self.parser_type = "html.parser"
-        self.language_model = ResponseLanguageModelHandler("OPENAI", os.getenv("OPENAI_API_KEY"))
+        self.language_model = ResponseLanguageModelHandler("OPENAI")
 
     def extract_response_text(self, response: Response):
         if response is None:
@@ -46,26 +49,28 @@ class ResponseHandler:
         logging.info(f"Extracted response text: {result}")
         return result
 
-    def classify_error(self, response: Response):
-        response_text = self.extract_response_text(response)
+    def classify_error(self, response: Response, response_text: str):
         return self.language_model.classify_response(response_text) 
     
-    def is_valid_dependency(self, failed_response: Response, tentative_response: Response):
+    def _is_valid_dependency(self, failed_response: Response, tentative_response: Response):
         if failed_response is None or tentative_response is None:
             return False
         if failed_response.status_code // 100 == 2:
             return True
         return False
 
-    def test_tentative_edge(self, request_generator: 'NaiveRequestGenerator', failed_operation_node: 'OperationNode', tentative_edge):
+    def _test_tentative_edge(self, request_generator: 'RequestGenerator', failed_operation_node: 'OperationNode', tentative_edge: 'OperationEdge'):
         tentative_operation_node = tentative_edge.destination
-        tentative_response = request_generator.create_and_send_request(tentative_operation_node)
-        failed_response = request_generator.create_and_send_request(failed_operation_node)
-        if tentative_response is not None and failed_response is not None and self.is_valid_dependency(failed_response, tentative_response):
+        print(f"Testing tentative edge from {failed_operation_node.operation_id} to {tentative_operation_node.operation_id}")
+        tentative_response: 'RequestResponse' = request_generator.create_and_send_request(tentative_operation_node)
+        print(f"Tentative response status code: {tentative_response.response.status_code}")
+        failed_response: 'RequestResponse' = request_generator.create_and_send_request(failed_operation_node)
+        print(f"Failed response status code: {failed_response.response.status_code}")
+        if tentative_response is not None and failed_response is not None and self._is_valid_dependency(failed_response, tentative_response):
             return True
         return False
     
-    def handle_operation_dependency_error(self, request_generator: 'NaiveRequestGenerator', failed_operation_node: 'OperationNode'):
+    def handle_operation_dependency_error(self, request_generator: 'RequestGenerator', failed_operation_node: 'OperationNode'):
         '''
         Handle the operation dependency error by trying tentative edges.
         '''
@@ -73,26 +78,8 @@ class ResponseHandler:
             return
         sorted_edges = sorted(failed_operation_node.tentative_edges, key=lambda x: list(x.similar_parameters.values())[0].similarity, reverse=True) # sort tentative edges by their one parameter similarity value
         for tentative_edge in sorted_edges:
-            # Send a request to the tentative operation and check the response
-            if self.test_tentative_edge(request_generator, failed_operation_node, tentative_edge):
-                request_generator.operation_graph.add_operation_edge(
-                    failed_operation_node.operation_id,
-                    tentative_edge.destination.operation_id,
-                    tentative_edge.similar_parameters
-                )
-                failed_operation_node.tentative_edges.remove(tentative_edge)
-                print(
-                    f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {tentative_edge.destination.operation_id}")
+            if request_generator.handle_tentative_dependency(tentative_edge=tentative_edge, failed_operation_node=failed_operation_node):
                 return
-        # add highest similarity edge
-        request_generator.operation_graph.add_operation_edge(
-            failed_operation_node.operation_id,
-            sorted_edges[0].destination.operation_id,
-            sorted_edges[0].similar_parameters
-        )
-        print(
-            f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {sorted_edges[0].destination.operation_id}")
-        failed_operation_node.tentative_edges.remove(sorted_edges[0])
 
     def handle_parameter_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
         if parameters:
@@ -101,6 +88,7 @@ class ResponseHandler:
                 for parameter in parameters:
                     if parameter in modified_parameter_schemas:
                         print(f"Updating parameter {parameter} with new schema")
+                        logging.info(f"Updating parameter {parameter} with new schema")
                         parameters[parameter] = modified_parameter_schemas[parameter]
 
     def handle_format_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
@@ -110,6 +98,7 @@ class ResponseHandler:
                 for parameter in parameters:
                     if parameter in parameter_format_examples:
                         print(f"Updating parameter {parameter} with new example value")
+                        logging.info(f"Updating parameter {parameter} with new example value")
                         parameters[parameter].example = parameter_format_examples[parameter]
 
     def handle_parameter_dependency_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
@@ -119,16 +108,19 @@ class ResponseHandler:
                 for parameter in parameters:
                     if parameter in required_parameters:
                         print(f"Updating parameter {parameter} to required")
+                        logging.info(f"Updating parameter {parameter} to required")
                         parameters[parameter].required = True
 
-    def handle_error(self, response: Response, operation_node: 'OperationNode', request_data: 'RequestData', request_generator: 'NaiveRequestGenerator'):
-        error_classification = self.classify_error(response)
+    def handle_error(self, response: Response, operation_node: 'OperationNode', request_data: 'RequestData', request_generator: 'RequestGenerator'):
+        response_text = self.extract_response_text(response)
+        error_classification = self.classify_error(response, response_text)
         query_parameters: Dict[str, 'ParameterProperties'] = request_data.operation_properties.parameters
 
         request_body: Dict[str, 'SchemaProperties'] = request_data.operation_properties.request_body
-        logging.info(f"Classified error as: {error_classification}, has request body: {request_body}")
         simplified_parameters: Dict[str, 'SchemaProperties'] = {parameter: properties.schema for parameter, properties in query_parameters.items()}
-        response_text = self.extract_response_text(response)
+
+        #logging.info(f"Classified error as: {error_classification}, has request body: {request_body} and query parameters: {simplified_parameters}")
+        #print(f"Classified error as: {error_classification}, has request body: {request_body} and query parameters: {simplified_parameters}")
         # REMINDER: parameters = Dict[str, ParameterProperties] -> schema = SchemaProperties
         # REMINDER: request_body = Dict[str, SchemaProperties]
         if error_classification == "PARAMETER CONSTRAINT":
@@ -146,43 +138,18 @@ class ResponseHandler:
             self.handle_operation_dependency_error(request_generator, operation_node)
         else:
             return None
-    
-class ResponseLanguageModelHandler:
-    def __init__(self, language_model="OPENAI", api_key = None, **kwargs):
-        if language_model == "OPENAI":
-            self.api_key = api_key
-            self.language_model_engine = kwargs.get("language_model_engine", "gpt-4-turbo-preview")
-            if api_key is None or api_key.strip() == "":
-                raise ValueError("OPENAI API key is required for OpenAI language model, found None or empty string.")
-            self.client = OpenAI(api_key=api_key)
-        else:
-            raise Exception("Unsupported language model")
 
-    def language_model_query(self,query, json_mode=False):
-        #get openai chat completion 
-        if json_mode:
-            response = self.client.chat.completions.create(
-                model=self.language_model_engine, 
-                messages = [
-                    {'role': 'user', 'content' : query}
-                ], 
-                response_format={ "type": "json_object" }
-            )
-        else: 
-            response = self.client.chat.completions.create(
-                model=self.language_model_engine,
-                messages=[
-                    {'role': 'user', 'content': query},
-                ]
-            )
-        #what if we do not get a response ?
-        logging.info(f"Received response from language model: {response.choices[0].message.content.strip()}")
-        return response.choices[0].message.content.strip()
+class ResponseLanguageModelHandler:
+    def __init__(self, language_model="OPENAI"):
+        if language_model == "OPENAI":
+            self.language_model = OpenAILanguageModel()
+        else:
+            raise ValueError("Language model not supported")
 
     def _extract_classification(self, response_text: str):
         classification = None
-        if response_text is None: 
-            return classification 
+        if response_text is None:
+            return classification
         if "PARAMETER CONSTRAINT" in response_text:
             classification = "PARAMETER CONSTRAINT"
         elif "FORMAT" in response_text:
@@ -194,7 +161,6 @@ class ResponseLanguageModelHandler:
         return classification
 
     def _extract_constrained_parameter_list(self, language_model_response):
-        
         if "IDENTIFICATION:" not in language_model_response:
             return None
         elif language_model_response.strip() == 'IDENTIFICATION:' or language_model_response.strip() == 'IDENTIFICATION: none':
@@ -208,8 +174,8 @@ class ResponseLanguageModelHandler:
         parameters = ",".join(parameter_list)
         parameters = "PARAMETERS: " + parameters + "\n"
         message = "MESSAGE: " + response_text + "\n"
-        
-        llm_query_response = self.language_model_query(PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX + message + parameters)
+
+        llm_query_response = self.language_model.query(user_message=PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX + message + parameters)
         logging.info(f"Extracted parameters to constrain: {llm_query_response}")
         extracted_parameter_list = self._extract_constrained_parameter_list(llm_query_response)
         #return self._extract_constrained_parameter_list(extracted_paramter_list)
@@ -218,7 +184,7 @@ class ResponseLanguageModelHandler:
     def _generate_parameter_value(self, parameters_to_generate_for, response_text: str):
         example_value_map = {}
         for parameter in parameters_to_generate_for:
-            raw_result = self.language_model_query(EXAMPLE_GENERATION_PROMPT + MESSAGE_HEADER + response_text + PARAMETERS_HEADER + parameter)
+            raw_result = self.language_model.query(user_message=EXAMPLE_GENERATION_PROMPT + MESSAGE_HEADER + response_text + PARAMETERS_HEADER + parameter)
             #parse the result to get the example value
             example_value = raw_result.split("EXAMPLE:")[1].strip()
             example_value_map[parameter] = example_value
@@ -226,8 +192,9 @@ class ResponseLanguageModelHandler:
 
     def define_constrained_schema(self, parameter, response_text: str):
         extract_query = CONSTRAINT_EXTRACTION_PREFIX + MESSAGE_HEADER + response_text + PARAMETERS_HEADER + parameter
-        json_schema_properties = self.language_model_query(extract_query, json_mode=True)
-        #read the json string into a dictionary 
+
+        json_schema_properties = self.language_model.query(user_message=extract_query, json_mode=True)
+        #read the json string into a dictionary
         schema_properties = json.loads(json_schema_properties)
         #map it to a schema properties dataclass, ensure checking of failures and only map what is possible
         schema = SchemaProperties()
@@ -246,28 +213,28 @@ class ResponseLanguageModelHandler:
         parameters_to_constrain = self._extract_parameters_to_constrain(response_text, request_params)
         constrained_schemas = {}
         if parameters_to_constrain:
-            for parameter in parameters_to_constrain: 
+            for parameter in parameters_to_constrain:
                 if parameter in request_params:
                     constrained_schemas[parameter] = self.define_constrained_schema(parameter, response_text)
         return constrained_schemas
 
     def classify_response(self, response_text: str):
-        return self._extract_classification(self.language_model_query(FEW_SHOT_CLASSIFICATON_PREFIX + response_text + CLASSIFICATION_SUFFIX))
+        return self._extract_classification(self.language_model.query(user_message=FEW_SHOT_CLASSIFICATON_PREFIX + response_text + CLASSIFICATION_SUFFIX))
 
     def extract_parameter_formatting(self, response_text: str, request_params):
-        params_list = self._extract_parameters_to_constrain(response_text, request_params) #this can be none 
+        params_list = self._extract_parameters_to_constrain(response_text, request_params) #this can be none
         if params_list is not None:
             return self._generate_parameter_value(params_list, response_text)
         else:
             return None
-    
+
     def extract_parameter_dependency(self, response_text: str, request_params):
         list_of_request_parameters = [parameter for parameter in request_params]
         parameters = ",".join(list_of_request_parameters)
         parameters = "PARAMETERS: " + parameters + "\n"
         message = "MESSAGE: " + response_text + "\n"
-        extracted_paramter_list = self._extract_constrained_parameter_list(self.language_model_query(EXTRACT_PARAMETER_DEPENDENCIES + message + parameters)) 
-        #clean the response 
+        extracted_paramter_list = self._extract_constrained_parameter_list(self.language_model.query(user_message=EXTRACT_PARAMETER_DEPENDENCIES + message + parameters))
+        #clean the response
         if extracted_paramter_list is None:
             return None
         else:

@@ -1,0 +1,5 @@
+DEFAULT_SYSTEM_MESSAGE = "You will receive instructions and examples. Your goal is to provide a systematic output using the knowledge from the instructions and examples provided."
+
+PARAMETERS_GEN_SYSTEM_MESSAGE = "You will optionally receive a summary of an operation alongside a required schema for the parameters. Your goal is to generate valid context-aware values for the provided parameters. Analyze the restrictions placed on each field to generate the correct values. Ensure the parameter values are compatible with eachother."
+
+REQUEST_BODY_GEN_SYSTEM_MESSAGE = "You will optionally receive a summary of an operation alongside a required schema for the request body. Your goal is to generate valid context-aware values for the provided request body. Analyze the restrictions placed on each field to generate the correct values. Ensure the request body values are compatible with eachother."

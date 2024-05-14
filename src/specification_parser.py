@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import List, Dict, Optional, Union, Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 import json
 
 from prance import ResolvingParser, BaseParser
@@ -14,9 +14,9 @@ def to_dict_helper(item):
     if hasattr(item, 'to_dict'):
         return item.to_dict()
     elif isinstance(item, dict):
-        return {k: to_dict_helper(v) for k, v in item.items()}
+        return {k: to_dict_helper(v) for k, v in item.items() if v is not None and to_dict_helper(v) is not None}
     elif isinstance(item, Iterable) and not isinstance(item, (str, bytes)):
-        return [to_dict_helper(i) for i in item]
+        return [to_dict_helper(i) for i in item if to_dict_helper(i) is not None]
     else:
         return item
 
@@ -38,10 +38,7 @@ class ResponseProperties:
     content: Dict[str, 'SchemaProperties'] = field(default_factory=dict) # MIME type as first key, then schema content as result
 
     def to_dict(self):
-        result = {k: to_dict_helper(v) for k, v in self.__dict__.items() if v is not None}
-        if 'content' in result and self.content:
-            result['content'] = {k: v.to_dict() for k, v in self.content.items()}
-        return result
+        return to_dict_helper(asdict(self))
 
 @dataclass
 class SchemaProperties:
@@ -72,14 +69,7 @@ class SchemaProperties:
     examples: List[Optional[Union[str, int, float, bool, List, Dict]]] = field(default_factory=list)
 
     def to_dict(self):
-        result = {k: to_dict_helper(v) for k, v in self.__dict__.items() if v is not None}
-        if 'items' in result and self.items is not None:
-            result['items'] = self.items.to_dict()
-        if 'properties' in result and self.properties:
-            result['properties'] = {k: v.to_dict() for k, v in self.properties.items()}
-        if 'additional_properties' in result and isinstance(self.additional_properties, SchemaProperties):
-            result['additional_properties'] = self.additional_properties.to_dict()
-        return result
+        return to_dict_helper(asdict(self))
 
 @dataclass
 class ParameterProperties:
@@ -101,12 +91,7 @@ class ParameterProperties:
     content: Dict[str, SchemaProperties] = field(default_factory=dict)
 
     def to_dict(self):
-        result = {k: to_dict_helper(v) for k, v in self.__dict__.items() if v is not None}
-        if 'schema' in result and self.schema is not None:
-            result['schema'] = self.schema.to_dict()
-        if 'content' in result and self.content:
-            result['content'] = {k: v.to_dict() for k, v in self.content.items()}
-        return result
+        return to_dict_helper(asdict(self))
 
 @dataclass
 class OperationProperties:
@@ -116,18 +101,13 @@ class OperationProperties:
     operation_id: str = ''
     endpoint_path: str = ''
     http_method: str = ''
+    summary: Optional[str] = None
     parameters: Dict[str, ParameterProperties] = field(default_factory=dict) # parameter name as first key, then parameter properties as second dict
     request_body: Dict[str, SchemaProperties] = None # MIME type as first key, then each parameter with its properties as second dict
     responses: Dict[str, ResponseProperties] = None # status code as first key, then each response with its properties as second dict
 
     def to_dict(self):
-        result = {k: to_dict_helper(v) for k, v in self.__dict__.items() if v is not None}
-        if 'parameters' in result and self.parameters:
-            result['parameters'] = {k: v.to_dict() for k, v in self.parameters.items()}
-        if 'request_body' in result and self.request_body:
-            result['request_body'] = {k: v.to_dict() for k, v in self.request_body.items()}
-        return result
-
+        return to_dict_helper(asdict(self))
 
 class SpecificationParser:
     """
@@ -139,8 +119,16 @@ class SpecificationParser:
         if spec_path is not None:
             self.resolving_parser = ResolvingParser(spec_path, strict=False)
             self.base_parser = BaseParser(spec_path, strict=False)
+        else:
+            raise ValueError("No specification path provided.")
         self.directory_path = 'specs/original/oas/'
         self.all_specs = {}
+
+    def get_api_url(self) -> str:
+        """
+        Extract the server URL from the specification file.
+        """
+        return self.resolving_parser.specification.get('servers')[0].get('url')
 
     def process_parameter_object_properties(self, properties: Dict) -> Dict[str, SchemaProperties]:
         """
@@ -149,13 +137,12 @@ class SpecificationParser:
         """
         if properties is None:
             return None
-
         object_properties = {}
         for name, values in properties.items():
             object_properties.setdefault(name, self.process_parameter_schema(values)) # check if this is correct, or if it should be process_parameter
         return object_properties
 
-    def process_parameter_schema(self, schema: Dict) -> SchemaProperties:
+    def process_parameter_schema(self, schema: Dict, description: str = None) -> SchemaProperties:
         """
         Process the schema of a parameter to return a ValueProperties object
         """
@@ -165,7 +152,7 @@ class SpecificationParser:
         value_properties = SchemaProperties(
             type=schema.get('type'),
             format=schema.get('format'),
-            description=schema.get('description'),
+            description=schema.get('description') if not description else description,
             items=self.process_parameter_schema(schema.get('items')), # recursively process items
             properties=self.process_parameter_object_properties(schema.get('properties')),
             required=schema.get('required'),
@@ -225,12 +212,13 @@ class SpecificationParser:
 
         request_body_properties = {}
         content = request_body.get('content')
+        description = request_body.get('description')
         if content:
             for mime_type, mime_details in content.items():
                 # if we need to check required list, do it here
                 schema = mime_details.get('schema')
                 if schema:
-                    request_body_properties[mime_type] = self.process_parameter_schema(schema)
+                    request_body_properties[mime_type] = self.process_parameter_schema(schema, description)
 
         return request_body_properties
 
@@ -260,7 +248,8 @@ class SpecificationParser:
         operation_properties = OperationProperties(
             operation_id=operation_details.get('operationId'),
             endpoint_path=endpoint_path,
-            http_method=http_method
+            http_method=http_method,
+            summary=operation_details.get('summary')
         )
         if operation_details.get("parameters"):
             operation_properties.parameters = self.process_parameters(parameter_list=operation_details.get('parameters'))

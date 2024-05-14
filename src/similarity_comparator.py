@@ -1,4 +1,3 @@
-import heapq
 import os
 from typing import List, Dict, Tuple
 
@@ -14,53 +13,16 @@ from .specification_parser import OperationProperties, SchemaProperties
 
 @dataclass
 class SimilarityValue:
-    response: str = ""
+    response_val: str = ""
     in_value: str = ""
     similarity: float = 0.0
 
     def to_dict(self):
         return {
-            "response": self.response,
+            "response": self.response_val,
             "in_value": self.in_value,
             "similarity": self.similarity
         }
-
-def get_parameter_list(operation: OperationProperties) -> List[str]:
-    if operation.parameters is None:
-        return []
-    return [parameter.lower().strip() for parameter, parameter_details in operation.parameters.items()]
-
-def handle_properties(properties: Dict[str, SchemaProperties]) -> List[str]:
-    property_list = []
-    for item, item_details in properties.items():
-        property_list.append(item.lower().strip())
-    return property_list
-
-def handle_schema_parameters(schema: SchemaProperties) -> List[str]:
-    if schema.properties:
-        return handle_properties(schema.properties)
-    elif schema.items:
-        return handle_schema_parameters(schema.items)
-    return []
-
-def get_request_body_list(operation: OperationProperties) -> List[str]:
-    if operation.request_body is None:
-        return []
-    request_body_list = []
-    for request_body_type, request_body_properties in operation.request_body.items():
-        request_body_list += handle_schema_parameters(request_body_properties)
-    return request_body_list
-
-def get_response_list(operation: OperationProperties) -> List[str]:
-    if operation.responses is None:
-        return []
-    response_list = []
-    for response_type, response_properties in operation.responses.items():
-        if response_properties.content:
-            for response, response_details in response_properties.content.items():
-                response_list += handle_schema_parameters(response_details)
-
-    return response_list
 
 class OperationDependencyComparator:
     def __init__(self):
@@ -69,7 +31,47 @@ class OperationDependencyComparator:
         #self.model = KeyedVectors.load_word2vec_format(word_file, binary=False)
         self.model = load("glove-wiki-gigaword-50")
         self.threshold = 0.65
-        self.next_most_similar_count = 3
+
+    @staticmethod
+    def get_parameter_list(operation: OperationProperties) -> List[str]:
+        if operation.parameters is None:
+            return []
+        return [parameter.lower().strip() for parameter, parameter_details in operation.parameters.items()]
+
+    @staticmethod
+    def handle_properties(properties: Dict[str, SchemaProperties]) -> List[str]:
+        property_list = []
+        for item, item_details in properties.items():
+            property_list.append(item.lower().strip())
+        return property_list
+
+    @staticmethod
+    def handle_schema_parameters(schema: SchemaProperties) -> List[str]:
+        if schema.properties:
+            return OperationDependencyComparator.handle_properties(schema.properties)
+        elif schema.items:
+            return OperationDependencyComparator.handle_schema_parameters(schema.items)
+        return []
+
+    @staticmethod
+    def get_request_body_list(operation: OperationProperties) -> List[str]:
+        if operation.request_body is None:
+            return []
+        request_body_list = []
+        for request_body_type, request_body_properties in operation.request_body.items():
+            request_body_list += OperationDependencyComparator.handle_schema_parameters(request_body_properties)
+        return request_body_list
+
+    @staticmethod
+    def get_response_list(operation: OperationProperties) -> List[str]:
+        if operation.responses is None:
+            return []
+        response_list = []
+        for response_type, response_properties in operation.responses.items():
+            if response_properties.content:
+                for response, response_details in response_properties.content.items():
+                    response_list += OperationDependencyComparator.handle_schema_parameters(response_details)
+        return response_list
 
     def cosine_similarity(self, operation1_parameters: List[str], operation2_responses: List[str], in_value: str = None) -> Dict[str, SimilarityValue]:
         """
@@ -82,7 +84,7 @@ class OperationDependencyComparator:
                     similarity = 1 - cosine(self.model[parameter], self.model[response])
                     print(similarity, parameter, response)
                     parameter_similarity[parameter] = SimilarityValue(
-                        response=response,
+                        response_val=response,
                         in_value=in_value,
                         similarity=similarity
                     )
@@ -93,13 +95,13 @@ class OperationDependencyComparator:
         parameter_matchings: Dict[str, SimilarityValue] = {}
         similar_parameters: Dict[str, SimilarityValue] = {}
         next_most_similar_parameters: List[(str, SimilarityValue)] = []
-        operation2_responses = get_response_list(operation2)
+        operation2_responses = self.get_response_list(operation2)
 
         if operation1.parameters:
-            operation1_parameters = get_parameter_list(operation1)
+            operation1_parameters = self.get_parameter_list(operation1)
             parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_responses, in_value="query")
         if operation1.request_body:
-            operation1_parameters = get_request_body_list(operation1)
+            operation1_parameters = self.get_request_body_list(operation1)
             parameter_matchings.update(self.cosine_similarity(operation1_parameters, operation2_responses, in_value="request body"))
 
         for parameter, similarity in parameter_matchings.items():
@@ -107,8 +109,6 @@ class OperationDependencyComparator:
                 similar_parameters[parameter] = similarity
             else:
                 next_most_similar_parameters.append((parameter, similarity))
-
-        next_most_similar_parameters = heapq.nlargest(self.next_most_similar_count, next_most_similar_parameters, key=lambda x: x[1].similarity) # small n so efficient
 
         return similar_parameters, next_most_similar_parameters
 

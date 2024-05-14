@@ -1,17 +1,23 @@
-from dataclasses import dataclass
-from typing import Dict, Set, Any, List, Optional
+import json
+from dataclasses import dataclass, asdict, field
+from typing import Dict, Set, Any, List, Optional, TYPE_CHECKING
 
 from requests import Response
 
-from src.handle_response import ResponseHandler
+import itertools
 
-from .generate_graph import OperationGraph, OperationNode, OperationEdge
+from src.handle_response import ResponseHandler
+from src.utils import remove_nulls
+
 from .specification_parser import OperationProperties, ParameterProperties, SchemaProperties
 import requests
 import pickle
-import os 
+import os
 
-from .value_generator import NaiveValueGenerator, identify_generator
+from .value_generator import NaiveValueGenerator, identify_generator, SmartValueGenerator
+
+if TYPE_CHECKING:
+    from .generate_graph import OperationGraph, OperationNode, OperationEdge
 
 @dataclass
 class RequestData:
@@ -19,12 +25,59 @@ class RequestData:
     http_method: str
     parameters: Dict[str, Any] # dict of parameter name to value
     request_body: Dict[str, Any]
-    operation_id: str
     operation_properties: OperationProperties
+    requirements: 'RequestRequirements' = None
+
+@dataclass
+class RequestRequirements:
+    edge: 'OperationEdge'
+    parameter_requirements: Dict[str, Any] = field(default_factory=dict)
+    request_body_requirements: Dict[str, Any] = field(default_factory=dict)
+
+    def generate_combinations(self) -> List['RequestRequirements']:
+        combinations = []
+
+        param_combinations = [] if not self.parameter_requirements else []
+        for i in range(1, len(self.parameter_requirements) + 1):
+            for subset in itertools.combinations(self.parameter_requirements.keys(), i):
+                param_combinations.append({key: self.parameter_requirements[key] for key in subset})
+
+        body_combinations = []
+        for i in range(1, len(self.request_body_requirements) + 1):
+            for subset in itertools.combinations(self.request_body_requirements.keys(), i):
+                body_combinations.append({key: self.request_body_requirements[key] for key in subset})
+
+        if not param_combinations and not body_combinations:
+            return [self]
+        elif not param_combinations:
+            for body_comb in body_combinations:
+                combinations.append(RequestRequirements(
+                    edge=self.edge,
+                    parameter_requirements={},
+                    request_body_requirements=body_comb
+                ))
+        elif not body_combinations:
+            for param_comb in param_combinations:
+                combinations.append(RequestRequirements(
+                    edge=self.edge,
+                    parameter_requirements=param_comb,
+                    request_body_requirements={}
+                ))
+        else:
+            for param_comb in param_combinations:
+                for body_comb in body_combinations:
+                    combinations.append(RequestRequirements(
+                        edge=self.edge,
+                        parameter_requirements=param_comb,
+                        request_body_requirements=body_comb
+                    ))
+
+        combinations.sort(key=lambda x: len(x.parameter_requirements) + len(x.request_body_requirements), reverse=True)
+        return combinations
 
 @dataclass
 class RequestResponse:
-    request: RequestData
+    request: 'RequestData'
     response: requests.Response
     response_text: str
 
@@ -34,114 +87,84 @@ class StatusCode:
     count: int
     requests_and_responses: List[RequestResponse]
 
-class NaiveRequestGenerator:
-    def __init__(self, operation_graph: OperationGraph, api_url: str):
-        self.operation_graph: OperationGraph = operation_graph
+class RequestGenerator:
+    def __init__(self, operation_graph: 'OperationGraph', api_url: str, is_naive=True):
+        self.operation_graph: 'OperationGraph' = operation_graph
         self.api_url = api_url  
         self.status_codes: Dict[int: StatusCode] = {} # dictionary to track status code occurrences
         self.requests_generated = 0  # Initialize the request count
         self.successful_query_data = [] # List to store successful query data
+        self.response_handler = ResponseHandler()
+        self.is_naive = is_naive
+        self.responses: Dict[str, RequestResponse] = {}
+        self.allowed_retries = 1
 
-    def generate_parameter_values(self, parameters: Dict[str, ParameterProperties], request_body: Dict[str, SchemaProperties]):
+    @staticmethod
+    def generate_naive_values(parameters: Dict[str, ParameterProperties], request_body: Dict[str, SchemaProperties]):
         value_generator = NaiveValueGenerator(parameters=parameters, request_body=request_body)
         return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
 
-    def process_response(self, response: requests.Response, request_data: RequestData, operation_node: OperationNode):
+    @staticmethod
+    def generate_smart_values(operation_properties: Dict, requirements: RequestRequirements = None):
+        """
+        Generate smart values for parameters and request body using LLMs
+        :param operation_properties: Dictionary mapping of operation properties
+        :param requirements: RequestRequirements object that contains any parameters or request body requirements
+        :return: a tuple of the generated parameters and request body
+        """
+        value_generator = SmartValueGenerator(operation_properties=operation_properties, requirements=requirements)
+        return value_generator.generate_parameters(), value_generator.generate_request_body()
+
+    def process_response(self, request_response: RequestResponse, operation_node: 'OperationNode'):
         """
         Process the response from the API.
         """
-        if response is None:
+        if request_response is None:
             return
+        request_data = request_response.request
+        response = request_response.response
 
         self.requests_generated += 1
-
-        # print(response.text)
-        request_and_response = RequestResponse(
-            request=request_data,
-            response=response,
-            response_text=response.text
-        )
-
         if response.status_code not in self.status_codes:
             self.status_codes[response.status_code] = StatusCode(
                 status_code=response.status_code,
                 count=1,
-                requests_and_responses=[request_and_response],
+                requests_and_responses=[request_response],
             )
         else:
             self.status_codes[response.status_code].count += 1
-            self.status_codes[response.status_code].requests_and_responses.append(request_and_response)
-
-        if response.status_code // 100 == 2:
+            self.status_codes[response.status_code].requests_and_responses.append(request_response)
+        if response.ok:
             self.successful_query_data.append(request_data)
         else:  # For non-2xx responses
-            response_handler = ResponseHandler()
-            response_handler.handle_error(response, operation_node, request_data, self)
+            self.response_handler.handle_error(response, operation_node, request_data, self)
         
-        print(f"Request {request_data.operation_id} completed with response text {response.text} and status code {response.status_code}")
+        print(f"Request {request_data.operation_properties.operation_id} completed with response text {response.text} and status code {response.status_code}")
 
-    def create_and_send_request(self, operation_node: OperationNode):
-        """
-        Create a RequestData object from an OperationNode and send the request.
-        """
-        operation_properties = operation_node.operation_properties
-        request_data = self.process_operation(operation_properties)
-        return self.send_operation_request(request_data)
-
-    def send_operation_request(self, request_data: RequestData) -> Optional[Response]:
+    def make_request_data(self, operation_properties: OperationProperties, requirements: RequestRequirements = None) -> RequestData:
         '''
-        Generate naive requests based on the default values and types
-        '''
-
-        '''
-        Send the request to the API using the request data.
-        '''
-        endpoint_path = request_data.endpoint_path
-        http_method = request_data.http_method
-        parameters = request_data.parameters
-        request_body = request_data.request_body
-        select_request_body = list(request_body.values())[0] if request_body else None
-        # select the first value in the request body dictionary (key is MIME type)
-
-        print("=====================================")
-        print("Attempting to send request to endpoint: ", endpoint_path)
-        print("ATTEMPTING WITH PARAMS: ", parameters)
-        print("ATTEMPTING WITH REQUEST BODY: ", select_request_body)
-
-        try:
-            # Choose the appropriate method from the 'requests' library based on the HTTP method
-            select_method = getattr(requests, http_method)
-            full_url = f"{self.api_url}{endpoint_path}"
-
-            if http_method in {"put", "post", "patch"}:
-                # For PUT, POST, and PATCH requests, include the request body
-                response = select_method(full_url, params=parameters, json=select_request_body)
-            else:
-                response = select_method(full_url, params=parameters)
-            return response
-        except requests.exceptions.RequestException as err:
-            print(f"Request exception due to error: {err}")
-            print(f"Endpoint Path: {endpoint_path}")
-            print(f"Params: {parameters}")
-            return None
-        except Exception as err:
-            print(f"Unexpected error due to: {err}")
-            print(f"Error type: {type(err)}")
-            print(f"Endpoint Path: {endpoint_path}")
-            print(f"Params: {parameters}")
-            return None
-        
-    def process_operation(self, operation_properties: OperationProperties) -> RequestData:
-        '''
-        Process the operation properties to prepare the request data.
+        Process the operation properties by preparing request data for queries with mapping values to parameters and request body
         '''
         endpoint_path = operation_properties.endpoint_path
         http_method = operation_properties.http_method.lower()
 
+        print("=====================================")
+        print(f"Processing operation {operation_properties.operation_id} with method {http_method} and path {endpoint_path}")
+
         # Generate values for parameters and request body
-        parameters, request_body = self.generate_parameter_values(
-            operation_properties.parameters, operation_properties.request_body
-        )
+        if self.is_naive:
+            parameters, request_body = self.generate_naive_values(
+                operation_properties.parameters, operation_properties.request_body
+            )
+        else:
+            parsed_operation = remove_nulls(asdict(operation_properties))
+            parameters, request_body = self.generate_smart_values(
+                operation_properties=parsed_operation,
+                requirements=requirements
+            )
+
+        print(f"Parameters: {parameters}")
+        print(f"Request Body: {request_body}")
 
         # Replace path parameters in the endpoint path
         for parameter_name, parameter_properties in operation_properties.parameters.items():
@@ -155,30 +178,232 @@ class NaiveRequestGenerator:
             http_method=http_method,
             parameters=parameters,
             request_body=request_body,
-            operation_id=operation_properties.operation_id, 
-            operation_properties=operation_properties
+            operation_properties=operation_properties,
+            requirements=requirements
         )
 
-    def depth_traversal(self, curr_node: OperationNode, visited: Set):
-        '''
+    def make_request_retry_data(self, request_data: RequestData, response: requests.Response) -> RequestData:
+        if self.is_naive:
+            return request_data
+        else:
+            parsed_operation = remove_nulls(asdict(request_data.operation_properties))
+            requirements = request_data.requirements
+            value_generator = SmartValueGenerator(operation_properties=parsed_operation, requirements=requirements, engine="gpt-4o")
+            parameters, request_body = value_generator.generate_retry_parameters(request_data, response), value_generator.generate_retry_request_body(request_data, response)
+            return RequestData(
+                endpoint_path=request_data.endpoint_path,
+                http_method=request_data.http_method,
+                parameters=parameters,
+                request_body=request_body,
+                operation_properties=request_data.operation_properties,
+                requirements=requirements
+            )
+
+    def _handle_retry(self, request_data: RequestData, response: requests.Response, curr_retry: int) -> Optional[RequestResponse]:
+        retry_data = self.make_request_retry_data(request_data, response)
+        response = self.send_operation_request(retry_data, retry_nums=curr_retry + 1)
+        return response
+
+    def send_operation_request(self, request_data: RequestData, retry_nums: int = 0) -> Optional[RequestResponse]:
+        """
+        Send the operation request to the API
+        :param request_data:
+        :param is_retry:
+        :return:
+        """
+        endpoint_path = request_data.endpoint_path
+        http_method = request_data.http_method
+        parameters = request_data.parameters
+        request_body = request_data.request_body
+        try:
+            select_method = getattr(requests, http_method) # selects correct http method
+            full_url = f"{self.api_url}{endpoint_path}"
+            if http_method in {"put", "post", "patch"}:
+                response = self._send_mime_type(select_method, full_url, parameters, request_body)
+            else:
+                response = select_method(full_url, params=parameters)
+            if response is not None:
+                if not response.ok and retry_nums < self.allowed_retries:
+                    return self._handle_retry(request_data, response, retry_nums)
+                else:
+                    return RequestResponse(
+                        request=request_data,
+                        response=response,
+                        response_text=response.text
+                    )
+            return None
+        except requests.exceptions.RequestException as err:
+            print(f"Request exception due to error: {err}")
+            print(f"Endpoint Path: {endpoint_path}")
+            print(f"Params: {parameters}")
+            return None
+        except Exception as err:
+            print(f"Unexpected error due to: {err}")
+            print(f"Error type: {type(err)}")
+            print(f"Endpoint Path: {endpoint_path}")
+            print(f"Params: {parameters}")
+            return None
+
+    def _send_mime_type(self, select_method, full_url, parameters, request_body):
+        params = parameters if parameters else {}
+        if "application/json" in request_body:
+            req_body = request_body["application/json"]
+            print(
+                f"Sending request JSON to {full_url} with parameters {parameters} and request body {req_body}")
+            response = select_method(full_url, params=params, json=req_body)
+        elif "application/x-www-form-urlencoded" in request_body:
+            req_body = request_body["application/x-www-form-urlencoded"]
+            print(
+                f"Sending request ENCODED to {full_url} with parameters {parameters} and request body {req_body}")
+            response = select_method(full_url, params=params, data=req_body)
+        else:
+            # should not reach here
+            print(f"Sending request to {full_url} with parameters {parameters}")
+            response = select_method(full_url, params=params)
+        return response
+
+    def get_response_mappings(self, response: Any) -> Optional[Dict[str, Any]]:
+        """
+        Get the response mappings for the given response
+        :param response: The requests response object
+        :return:
+        """
+        if not response:
+            return None
+        mappings = {}
+        if type(response) == dict:
+            for key, value in response.items():
+                mappings[key] = value
+        elif type(response) == list and len(response) > 0:
+            mappings = self.get_response_mappings(response[0])
+        return mappings
+
+    def determine_requirement(self, dependent_response: RequestResponse, edge: 'OperationEdge') -> Optional[RequestRequirements]:
+        """
+        Determine the requirement values and mappings for the given request using the responses of its dependent requests
+        :param dependent_response: Dependent response object
+        :param edge: Contains the operation edge information to dictate what is required
+        :return: A RequestRequirements object containing the requirements
+        """
+        if dependent_response is None or not dependent_response.response.ok or dependent_response.response is None:
+            return None
+        try:
+            response_mappings = self.get_response_mappings(dependent_response.response.json())
+        except:
+            print("FAILED TO PARSE JSON RESPONSE ", dependent_response.response.text)
+            response_mappings = {}
+
+        if not response_mappings:
+            return None
+        request_body_matchings = {}
+        parameter_matchings = {}
+
+        for parameter, similarity_value in edge.similar_parameters.items():
+            if similarity_value.response_val in response_mappings:
+                if similarity_value.in_value == "query":
+                    parameter_matchings[parameter] = response_mappings[similarity_value.response_val]
+                elif similarity_value.in_value == "request body":
+                    request_body_matchings[parameter] = response_mappings[similarity_value.response_val]
+
+        request_requirement = RequestRequirements(
+            edge=edge,
+            parameter_requirements=parameter_matchings,
+            request_body_requirements=request_body_matchings
+        )
+        return request_requirement if parameter_matchings or request_body_matchings else None
+
+    @staticmethod
+    def _determine_best_response(responses: List[RequestResponse]) -> Optional[RequestResponse]:
+        if not responses:
+            return None
+        for response in responses:
+            if response and response.response and response.response.ok:
+                return response
+        return responses[0]
+
+    def depth_traversal(self, curr_node: 'OperationNode', visited: Set):
+        """
         Generate low-level requests (with no dependencies and hence high depth) first
-        '''
-        local_visited_set = set()
+        :param curr_node: Current operation node
+        :param visited: Set of visited operation nodes
+        :return: RequestResponse object to allow for requirements parsing
+        """
         visited.add(curr_node.operation_id)
+        dependent_responses: Dict['OperationEdge', RequestResponse] = {}
         for edge in curr_node.outgoing_edges:
             if edge.destination.operation_id not in visited:
                 self.depth_traversal(edge.destination, visited)
-                local_visited_set.add(edge.destination.operation_id)
-        request_data = self.process_operation(curr_node.operation_properties)
-        #handle response
-        response = self.send_operation_request(request_data)
-        if response is not None:
-            self.process_response(response, request_data, curr_node)
-            # self.attempt_retry(response, request_data)
+            dependent_response = self.responses[edge.destination.operation_id]
+            if dependent_response is not None and dependent_response.response.ok:
+                dependent_responses[edge] = dependent_response
+        best_response = self.handle_request_and_dependencies(curr_node, dependent_responses)
+        self.responses[curr_node.operation_id] = best_response
 
-    def generate_requests(self):
+    def handle_request_and_dependencies(self, curr_node: 'OperationNode', dependent_responses: Dict['OperationEdge', RequestResponse] = None) -> Optional[RequestResponse]:
+        if not dependent_responses:
+            return self._send_req_handle_respo(curr_node)
+        else:
+            responses: List[RequestResponse] = []
+            for edge, dependent_response in dependent_responses.items():
+                self.handle_dependency(curr_node, dependent_response, edge, responses)
+            return self._determine_best_response(responses)
+
+    def handle_dependency(self, curr_node, dependent_response, edge, responses):
+        requirement: RequestRequirements = self.determine_requirement(dependent_response, edge)
+        req_combos: List[RequestRequirements] = requirement.generate_combinations()
+
+        for requirement in req_combos:
+            response = self._send_req_handle_respo(curr_node, requirement)
+            if response and response.response and response.response.ok:
+                responses.append(response)
+                self.handle_edge_adjustment(edge, requirement)
+                return
+
+        self.handle_edge_adjustment(edge)
+        responses.append(None)
+
+    def _send_req_handle_respo(self, curr_node, requirement=None) -> RequestResponse:
+        response = self.create_and_send_request(curr_node, requirement)
+        if response is not None:
+            self.process_response(response, curr_node)
+        return response
+
+    def handle_edge_adjustment(self, edge: 'OperationEdge', requirement: RequestRequirements=None):
+        if not requirement:
+            self.operation_graph.remove_edge(edge.source.operation_id, edge.destination.operation_id)
+            return
+
+        adjusted_similar_parameters = {
+            parameter: similarity_value for parameter, similarity_value in edge.similar_parameters.items()
+            if parameter in requirement.parameter_requirements or parameter in requirement.request_body_requirements
+        }
+
+        if adjusted_similar_parameters:
+            edge.similar_parameters = adjusted_similar_parameters
+        else:
+            self.operation_graph.remove_edge(edge.source.operation_id, edge.destination.operation_id)
+
+    def handle_tentative_dependency(self, tentative_edge, failed_operation_node) -> bool:
+        dependent_response = self.create_and_send_request(tentative_edge.distination)
+        if dependent_response and dependent_response.response and dependent_response.response.ok:
+            requirement = self.determine_requirement(dependent_response, tentative_edge)
+            response = self.create_and_send_request(failed_operation_node, requirement)
+            if response and response.response and response.response.ok:
+                self.operation_graph.add_operation_edge(tentative_edge.source.operation_id, tentative_edge.destination.operation_id, tentative_edge.similar_parameters)
+                self.operation_graph.remove_tentative_edge(tentative_edge.source.operation_id, tentative_edge.destination.operation_id)
+                return True
+            elif response and response.response:
+                self.operation_graph.remove_tentative_edge(tentative_edge.source.operation_id, tentative_edge.destination.operation_id)
+        return False
+
+    def create_and_send_request(self, curr_node: 'OperationNode', requirement: RequestRequirements=None) -> RequestResponse:
+        request_data: RequestData = self.make_request_data(curr_node.operation_properties, requirement)
+        response: RequestResponse = self.send_operation_request(request_data)
+        return response
+
+    def perform_all_requests(self):
         '''
-        Generate naive requests based on the operation graph
+        Generate requests based on the operation graph
         '''
         visited = set()
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
@@ -213,7 +438,7 @@ def setup_request_generation(api_url, spec_path, spec_name, cached_graph=False):
         print()
 
     # Create the request generator with the populated graph
-    request_generator = NaiveRequestGenerator(operation_graph, api_url)
+    request_generator = RequestGenerator(operation_graph, api_url)
     return request_generator
 
 if __name__ == "__main__":
@@ -222,4 +447,4 @@ if __name__ == "__main__":
     spec_name = "language-tool"  # Specification name
     cache_graph = True #set to false when you are actively changing the graph, however caching is useful for fast development when testing API side things
     generator = setup_request_generation(api_url, spec_path, spec_name, cached_graph=cache_graph)
-    generator.generate_requests()
+    generator.perform_all_requests()
