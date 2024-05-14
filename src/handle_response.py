@@ -78,28 +78,8 @@ class ResponseHandler:
             return
         sorted_edges = sorted(failed_operation_node.tentative_edges, key=lambda x: list(x.similar_parameters.values())[0].similarity, reverse=True) # sort tentative edges by their one parameter similarity value
         for tentative_edge in sorted_edges:
-            # Send a request to the tentative operation and check the response
-            if self._test_tentative_edge(request_generator, failed_operation_node, tentative_edge):
-                request_generator.operation_graph.add_operation_edge(
-                    failed_operation_node.operation_id,
-                    tentative_edge.destination.operation_id,
-                    tentative_edge.similar_parameters
-                )
-                failed_operation_node.tentative_edges.remove(tentative_edge)
-                print(
-                    f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {tentative_edge.destination.operation_id}")
-                logging.info(f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {tentative_edge.destination.operation_id}")
+            if request_generator.handle_tentative_dependency(tentative_edge=tentative_edge, failed_operation_node=failed_operation_node):
                 return
-        # add highest similarity edge
-        request_generator.operation_graph.add_operation_edge(
-            failed_operation_node.operation_id,
-            sorted_edges[0].destination.operation_id,
-            sorted_edges[0].similar_parameters
-        )
-        print(
-            f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {sorted_edges[0].destination.operation_id}")
-        logging.info(f"Updated the graph with a new edge from {failed_operation_node.operation_id} to {sorted_edges[0].destination.operation_id}")
-        failed_operation_node.tentative_edges.remove(sorted_edges[0])
 
     def handle_parameter_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
         if parameters:

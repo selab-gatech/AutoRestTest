@@ -134,7 +134,7 @@ class RequestGenerator:
         else:
             self.status_codes[response.status_code].count += 1
             self.status_codes[response.status_code].requests_and_responses.append(request_response)
-        if response.status_code // 100 == 2:
+        if response.ok:
             self.successful_query_data.append(request_data)
         else:  # For non-2xx responses
             self.response_handler.handle_error(response, operation_node, request_data, self)
@@ -370,7 +370,7 @@ class RequestGenerator:
 
     def handle_edge_adjustment(self, edge: 'OperationEdge', requirement: RequestRequirements=None):
         if not requirement:
-            self.operation_graph.delete_edge(edge.source.operation_id, edge.destination.operation_id)
+            self.operation_graph.remove_edge(edge.source.operation_id, edge.destination.operation_id)
             return
 
         adjusted_similar_parameters = {
@@ -381,7 +381,20 @@ class RequestGenerator:
         if adjusted_similar_parameters:
             edge.similar_parameters = adjusted_similar_parameters
         else:
-            self.operation_graph.delete_edge(edge.source.operation_id, edge.destination.operation_id)
+            self.operation_graph.remove_edge(edge.source.operation_id, edge.destination.operation_id)
+
+    def handle_tentative_dependency(self, tentative_edge, failed_operation_node) -> bool:
+        dependent_response = self.create_and_send_request(tentative_edge.distination)
+        if dependent_response and dependent_response.response and dependent_response.response.ok:
+            requirement = self.determine_requirement(dependent_response, tentative_edge)
+            response = self.create_and_send_request(failed_operation_node, requirement)
+            if response and response.response and response.response.ok:
+                self.operation_graph.add_operation_edge(tentative_edge.source.operation_id, tentative_edge.destination.operation_id, tentative_edge.similar_parameters)
+                self.operation_graph.remove_tentative_edge(tentative_edge.source.operation_id, tentative_edge.destination.operation_id)
+                return True
+            elif response and response.response:
+                self.operation_graph.remove_tentative_edge(tentative_edge.source.operation_id, tentative_edge.destination.operation_id)
+        return False
 
     def create_and_send_request(self, curr_node: 'OperationNode', requirement: RequestRequirements=None) -> RequestResponse:
         request_data: RequestData = self.make_request_data(curr_node.operation_properties, requirement)
@@ -396,19 +409,6 @@ class RequestGenerator:
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
             if operation_id not in visited:
                 self.depth_traversal(operation_node, visited)
-
-    def test_tentative_edge(self, failed_operation_node: 'OperationNode', tentative_edge: 'OperationEdge'):
-        '''
-        Test the tentative edge by generating a request for the failed operation node
-        '''
-        request_data = self.make_request_data(failed_operation_node.operation_properties)
-        dependent_parameter_requirements = []
-        for parameter, dependent_parameter in tentative_edge.similar_parameters.items():
-            dependent_parameter_requirements.append(dependent_parameter)
-
-        response: RequestResponse = self.send_operation_request(request_data)
-        if response is not None:
-            self.process_response(response, failed_operation_node)
 
 #I am guessing this is only used for testing, and that we will do it in a more organized way in the future
 def setup_request_generation(api_url, spec_path, spec_name, cached_graph=False):
