@@ -1,0 +1,266 @@
+openapi: 3.0.1
+info:
+  title: API for Numerical Case Study (NCS)
+  description: Examples of different numerical algorithms accessible via REST
+  version: "1.0"
+servers:
+- url: //localhost:30102/
+tags:
+- name: ncs-rest
+  description: Ncs Rest
+paths:
+  /api/bessj/{n}/{x}:
+    get:
+      tags:
+      - ncs-rest
+      summary: bessj
+      operationId: bessjUsingGET
+      parameters:
+      - name: "n"
+        in: path
+        description: "n"
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: x
+        in: path
+        description: x
+        required: true
+        schema:
+          type: number
+          format: double
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dto'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      deprecated: false
+  /api/expint/{n}/{x}:
+    get:
+      tags:
+      - ncs-rest
+      summary: expint
+      operationId: expintUsingGET
+      parameters:
+      - name: "n"
+        in: path
+        description: "n"
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: x
+        in: path
+        description: x
+        required: true
+        schema:
+          type: number
+          format: double
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dto'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      deprecated: false
+  /api/fisher/{m}/{n}/{x}:
+    get:
+      tags:
+      - ncs-rest
+      summary: fisher
+      operationId: fisherUsingGET
+      parameters:
+      - name: m
+        in: path
+        description: m
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: "n"
+        in: path
+        description: "n"
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: x
+        in: path
+        description: x
+        required: true
+        schema:
+          type: number
+          format: double
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dto'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      deprecated: false
+  /api/gammq/{a}/{x}:
+    get:
+      tags:
+      - ncs-rest
+      summary: gammq
+      operationId: gammqUsingGET
+      parameters:
+      - name: a
+        in: path
+        description: a
+        required: true
+        schema:
+          type: number
+          format: double
+      - name: x
+        in: path
+        description: x
+        required: true
+        schema:
+          type: number
+          format: double
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dto'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      deprecated: false
+  /api/remainder/{a}/{b}:
+    get:
+      tags:
+      - ncs-rest
+      summary: remainder
+      operationId: remainderUsingGET
+      parameters:
+      - name: a
+        in: path
+        description: a
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: b
+        in: path
+        description: b
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dto'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      deprecated: false
+  /api/triangle/{a}/{b}/{c}:
+    get:
+      tags:
+      - ncs-rest
+      summary: Check the triangle type of the given three edges
+      operationId: checkTriangleUsingGET
+      parameters:
+      - name: a
+        in: path
+        description: First edge
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: b
+        in: path
+        description: Second edge
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: c
+        in: path
+        description: Third edge
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dto'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      deprecated: false
+components:
+  schemas:
+    Dto:
+      title: Dto
+      type: object
+      properties:
+        resultAsDouble:
+          type: number
+          format: double
+        resultAsInt:
+          type: integer
+          format: int32
+x-original-swagger-version: "2.0"

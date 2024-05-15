@@ -1,0 +1,452 @@
+openapi: 3.0.1
+info:
+  title: Quick start project
+  description: "Quick start project using Java, Spring boot and MongoDB"
+  contact:
+    name: Maxime Beugnet
+    url: https://github.com/MaBeuLux88
+    email: maxime.beugnet@gmail.com
+  license:
+    name: Apache License Version 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+  version: 1.0.0
+servers:
+- url: //localhost:30111/
+tags:
+- name: person-controller
+  description: Person Controller
+paths:
+  /api/person:
+    put:
+      tags:
+      - person-controller
+      summary: putPerson
+      operationId: putPersonUsingPUT
+      requestBody:
+        description: person
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonReq'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PersonRes'
+        "201":
+          description: Created
+          content: {}
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      x-codegen-request-body-name: person
+    post:
+      tags:
+      - person-controller
+      summary: postPerson
+      operationId: postPersonUsingPOST
+      requestBody:
+        description: person
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonReq'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PersonRes'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      x-codegen-request-body-name: person
+  /api/person/{id}:
+    get:
+      tags:
+      - person-controller
+      summary: getPerson
+      operationId: getPersonUsingGET
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PersonRes'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+    delete:
+      tags:
+      - person-controller
+      summary: deletePerson
+      operationId: deletePersonUsingDELETE
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: integer
+                format: int64
+        "204":
+          description: No Content
+          content: {}
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+  /api/persons:
+    get:
+      tags:
+      - person-controller
+      summary: getPersons
+      operationId: getPersonsUsingGET
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PersonRes'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+    put:
+      tags:
+      - person-controller
+      summary: putPerson
+      operationId: putPersonUsingPUT_1
+      requestBody:
+        description: persons
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/PersonReq'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: integer
+                format: int64
+        "201":
+          description: Created
+          content: {}
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      x-codegen-request-body-name: persons
+    post:
+      tags:
+      - person-controller
+      summary: postPersons
+      operationId: postPersonsUsingPOST
+      requestBody:
+        description: persons
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/PersonReq'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PersonRes'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      x-codegen-request-body-name: persons
+    delete:
+      tags:
+      - person-controller
+      summary: deletePersons
+      operationId: deletePersonsUsingDELETE
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: integer
+                format: int64
+        "204":
+          description: No Content
+          content: {}
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+  /api/persons/averageAge:
+    get:
+      tags:
+      - person-controller
+      summary: averageAge
+      operationId: averageAgeUsingGET
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: number
+                format: double
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+  /api/persons/count:
+    get:
+      tags:
+      - person-controller
+      summary: getCount
+      operationId: getCountUsingGET
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: integer
+                format: int64
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+  /api/persons/{ids}:
+    get:
+      tags:
+      - person-controller
+      summary: getPersons
+      operationId: getPersonsUsingGET_1
+      parameters:
+      - name: ids
+        in: path
+        description: ids
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PersonRes'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+    delete:
+      tags:
+      - person-controller
+      summary: deletePersons
+      operationId: deletePersonsUsingDELETE_1
+      parameters:
+      - name: ids
+        in: path
+        description: ids
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: integer
+                format: int64
+        "204":
+          description: No Content
+          content: {}
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+components:
+  schemas:
+    Address:
+      title: Address
+      type: object
+      properties:
+        city:
+          type: string
+        country:
+          type: string
+        number:
+          type: integer
+          format: int32
+        postcode:
+          type: string
+        street:
+          type: string
+    Car:
+      title: Car
+      type: object
+      properties:
+        brand:
+          type: string
+        maxSpeedKmH:
+          type: number
+          format: float
+        model:
+          type: string
+    ObjectIdReq:
+      title: ObjectIdReq
+      type: object
+      properties:
+        timestamp:
+          type: integer
+          format: int32
+    ObjectIdRes:
+      title: ObjectIdRes
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        timestamp:
+          type: integer
+          format: int32
+    PersonReq:
+      title: PersonReq
+      type: object
+      properties:
+        address:
+          $ref: '#/components/schemas/Address'
+        age:
+          type: integer
+          format: int32
+        cars:
+          type: array
+          items:
+            $ref: '#/components/schemas/Car'
+        createdAt:
+          type: string
+          format: date-time
+        firstName:
+          type: string
+        id:
+          $ref: '#/components/schemas/ObjectIdReq'
+        insurance:
+          type: boolean
+        lastName:
+          type: string
+    PersonRes:
+      title: PersonRes
+      type: object
+      properties:
+        address:
+          $ref: '#/components/schemas/Address'
+        age:
+          type: integer
+          format: int32
+        cars:
+          type: array
+          items:
+            $ref: '#/components/schemas/Car'
+        createdAt:
+          type: string
+          format: date-time
+        firstName:
+          type: string
+        id:
+          $ref: '#/components/schemas/ObjectIdRes'
+        insurance:
+          type: boolean
+        lastName:
+          type: string
+x-original-swagger-version: "2.0"

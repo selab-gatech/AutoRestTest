@@ -1,0 +1,692 @@
+openapi: 3.0.1
+info:
+  title: Api Documentation
+  description: Api Documentation
+  termsOfService: urn:tos
+  contact: {}
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0
+  version: "1.0"
+servers:
+- url: http://localhost:30117/
+tags:
+- name: cart-rest-controller
+  description: Cart Rest Controller
+- name: contacts-rest-controller
+  description: Contacts Rest Controller
+- name: customer-rest-controller
+  description: Customer Rest Controller
+- name: orders-rest-controller
+  description: Orders Rest Controller
+- name: products-rest-controller
+  description: Products Rest Controller
+paths:
+  /customer:
+    get:
+      tags:
+      - customer-rest-controller
+      summary: getCustomer
+      operationId: getCustomerUsingGET
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserDTORes'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+  /customer/cart:
+    get:
+      tags:
+      - cart-rest-controller
+      summary: getCart
+      operationId: getCartUsingGET
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CartDTO'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+    put:
+      tags:
+      - cart-rest-controller
+      summary: addItem
+      operationId: addItemUsingPUT
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+      requestBody:
+        description: item
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartItemDTOReq'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CartDTO'
+        "201":
+          description: Created
+          content: {}
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      x-codegen-request-body-name: item
+    delete:
+      tags:
+      - cart-rest-controller
+      summary: clearCart
+      operationId: clearCartUsingDELETE
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CartDTO'
+        "204":
+          description: No Content
+          content: {}
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+  /customer/cart/delivery:
+    put:
+      tags:
+      - cart-rest-controller
+      summary: setDelivery
+      operationId: setDeliveryUsingPUT
+      parameters:
+      - name: included
+        in: query
+        description: included
+        required: true
+        schema:
+          type: boolean
+      - name: name
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CartDTO'
+        "201":
+          description: Created
+          content: {}
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+  /customer/cart/pay:
+    post:
+      tags:
+      - cart-rest-controller
+      summary: payByCard
+      operationId: payByCardUsingPOST
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+      requestBody:
+        description: card
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditCardDTO'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/OrderDTO'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      x-codegen-request-body-name: card
+  /customer/contacts:
+    get:
+      tags:
+      - contacts-rest-controller
+      summary: getContacts
+      operationId: getContactsUsingGET
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ContactsDTORes'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+    put:
+      tags:
+      - contacts-rest-controller
+      summary: updateContacts
+      operationId: updateContactsUsingPUT
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+      requestBody:
+        description: contactsDto
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactsDTOReq'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ContactsDTORes'
+        "201":
+          description: Created
+          content: {}
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      x-codegen-request-body-name: contactsDto
+  /customer/orders:
+    get:
+      tags:
+      - orders-rest-controller
+      summary: getOrders
+      operationId: getOrdersUsingGET
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderDTO'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+  /customer/orders/{orderId}:
+    get:
+      tags:
+      - orders-rest-controller
+      summary: getOrder
+      operationId: getOrderUsingGET
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+      - name: orderId
+        in: path
+        description: orderId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/OrderDTO'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+  /products:
+    get:
+      tags:
+      - products-rest-controller
+      summary: getProducts
+      operationId: getProductsUsingGET
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductDTO'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+  /products/{productId}:
+    get:
+      tags:
+      - products-rest-controller
+      summary: getProduct
+      operationId: getProductUsingGET
+      parameters:
+      - name: productId
+        in: path
+        description: productId
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ProductDTO'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+  /register:
+    post:
+      tags:
+      - customer-rest-controller
+      summary: createCustomer
+      operationId: createCustomerUsingPOST
+      requestBody:
+        description: user
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserDTOReq'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserDTORes'
+        "401":
+          description: Unauthorized
+          content: {}
+        "403":
+          description: Forbidden
+          content: {}
+        "404":
+          description: Not Found
+          content: {}
+      x-codegen-request-body-name: user
+components:
+  schemas:
+    CartDTO:
+      title: CartDTO
+      type: object
+      properties:
+        _links:
+          $ref: '#/components/schemas/Links'
+        cartItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItemDTORes'
+        deliveryCost:
+          type: integer
+          format: int32
+        deliveryIncluded:
+          type: boolean
+        empty:
+          type: boolean
+        productsCost:
+          type: number
+          format: double
+        totalCost:
+          type: number
+          format: double
+        totalItems:
+          type: integer
+          format: int32
+        user:
+          type: string
+    CartItemDTOReq:
+      title: CartItemDTOReq
+      type: object
+      properties:
+        _links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+        productId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+    CartItemDTORes:
+      title: CartItemDTORes
+      type: object
+      properties:
+        _links:
+          $ref: '#/components/schemas/Links'
+        productId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+    ContactsDTOReq:
+      title: ContactsDTOReq
+      type: object
+      properties:
+        _links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+        address:
+          maxLength: 100
+          minLength: 0
+          pattern: "^[^#$%^*()']*$"
+          type: string
+        phone:
+          maxLength: 20
+          minLength: 0
+          pattern: "^\\+[1-9][0-9]?[\\s]*\\(?\\d{3}\\)?[-\\s]?\\d{3}[-\\s]?\\d{2}[-\\\
+            s]?\\d{2}$"
+          type: string
+    ContactsDTORes:
+      title: ContactsDTORes
+      type: object
+      properties:
+        _links:
+          $ref: '#/components/schemas/Links'
+        address:
+          maxLength: 100
+          minLength: 0
+          pattern: "^[^#$%^*()']*$"
+          type: string
+        phone:
+          maxLength: 20
+          minLength: 0
+          pattern: "^\\+[1-9][0-9]?[\\s]*\\(?\\d{3}\\)?[-\\s]?\\d{3}[-\\s]?\\d{2}[-\\\
+            s]?\\d{2}$"
+          type: string
+    CreditCardDTO:
+      title: CreditCardDTO
+      type: object
+      properties:
+        ccNumber:
+          pattern: "\\b(?:\\d[ -]*?){13,16}\\b"
+          type: string
+    Link:
+      title: Link
+      type: object
+      properties:
+        deprecation:
+          type: string
+        href:
+          type: string
+        hreflang:
+          type: string
+        media:
+          type: string
+        name:
+          type: string
+        profile:
+          type: string
+        rel:
+          $ref: '#/components/schemas/LinkRelation'
+        title:
+          type: string
+        type:
+          type: string
+    LinkRelation:
+      title: LinkRelation
+      type: object
+    Links:
+      title: Links
+      type: object
+      properties:
+        empty:
+          type: boolean
+    OrderDTO:
+      title: OrderDTO
+      type: object
+      properties:
+        _links:
+          $ref: '#/components/schemas/Links'
+        billNumber:
+          type: integer
+          format: int32
+        dateCreated:
+          type: string
+          format: date-time
+        deliveryCost:
+          type: integer
+          format: int32
+        deliveryIncluded:
+          type: boolean
+        executed:
+          type: boolean
+        id:
+          type: integer
+          format: int64
+        payed:
+          type: boolean
+        productsCost:
+          type: number
+          format: double
+        totalCost:
+          type: number
+          format: double
+        userAccount:
+          type: string
+    ProductDTO:
+      title: ProductDTO
+      required:
+      - alcohol
+      - price
+      - volume
+      type: object
+      properties:
+        _links:
+          $ref: '#/components/schemas/Links'
+        age:
+          maximum: 2000
+          exclusiveMaximum: false
+          type: integer
+          format: int32
+        alcohol:
+          maximum: 96
+          exclusiveMaximum: false
+          minimum: 1
+          exclusiveMinimum: false
+          type: number
+          format: float
+        available:
+          type: boolean
+        description:
+          type: string
+        distillery:
+          type: string
+        name:
+          pattern: "^[^#$%^&*()']*$"
+          type: string
+        price:
+          type: number
+          format: double
+        productId:
+          type: integer
+          format: int64
+        volume:
+          type: integer
+          format: int32
+    UserDTOReq:
+      title: UserDTOReq
+      type: object
+      properties:
+        _links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+        address:
+          maxLength: 100
+          minLength: 0
+          pattern: "^[^#$%^*()']*$"
+          type: string
+        email:
+          maxLength: 50
+          minLength: 0
+          pattern: "^[\\w-]+(\\.[\\w-]+)*@([\\w-]+\\.)+[a-zA-Z]+$"
+          type: string
+        name:
+          maxLength: 50
+          minLength: 0
+          pattern: "^[\\pL '-]+$"
+          type: string
+        password:
+          maxLength: 50
+          minLength: 6
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        phone:
+          maxLength: 20
+          minLength: 0
+          pattern: "^\\+[1-9][0-9]?[\\s]*\\(?\\d{3}\\)?[-\\s]?\\d{3}[-\\s]?\\d{2}[-\\\
+            s]?\\d{2}$"
+          type: string
+    UserDTORes:
+      title: UserDTORes
+      type: object
+      properties:
+        _links:
+          $ref: '#/components/schemas/Links'
+        address:
+          maxLength: 100
+          minLength: 0
+          pattern: "^[^#$%^*()']*$"
+          type: string
+        email:
+          maxLength: 50
+          minLength: 0
+          pattern: "^[\\w-]+(\\.[\\w-]+)*@([\\w-]+\\.)+[a-zA-Z]+$"
+          type: string
+        name:
+          maxLength: 50
+          minLength: 0
+          pattern: "^[\\pL '-]+$"
+          type: string
+        password:
+          maxLength: 50
+          minLength: 6
+          pattern: "^[a-zA-Z0-9]+$"
+          type: string
+        phone:
+          maxLength: 20
+          minLength: 0
+          pattern: "^\\+[1-9][0-9]?[\\s]*\\(?\\d{3}\\)?[-\\s]?\\d{3}[-\\s]?\\d{2}[-\\\
+            s]?\\d{2}$"
+          type: string
+x-original-swagger-version: "2.0"

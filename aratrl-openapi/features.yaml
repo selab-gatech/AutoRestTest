@@ -1,0 +1,408 @@
+openapi: 3.0.1
+info:
+  title: Features service
+  version: "1.0"
+servers:
+- url: http://localhost:30100/
+paths:
+  /products/{productName}/features:
+    get:
+      operationId: getFeaturesForProduct
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                uniqueItems: true
+                type: array
+                items:
+                  $ref: '#/components/schemas/Feature'
+  /products/{productName}/features/{featureName}:
+    put:
+      operationId: updateFeatureOfProduct
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: featureName
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feature'
+    post:
+      operationId: addFeatureToProduct
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: featureName
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+      responses:
+        default:
+          description: successful operation
+          content: {}
+    delete:
+      operationId: deleteFeatureOfProduct
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: featureName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: successful operation
+          content: {}
+  /products:
+    get:
+      operationId: getAllProducts
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /products/{productName}:
+    get:
+      operationId: getProductByName
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+    post:
+      operationId: addProduct
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: successful operation
+          content: {}
+    delete:
+      operationId: deleteProductByName
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: successful operation
+          content: {}
+  /products/{productName}/configurations/{configurationName}:
+    get:
+      operationId: getConfigurationWithNameForProduct
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: configurationName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductConfiguration'
+    post:
+      operationId: addConfiguration
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: configurationName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: successful operation
+          content: {}
+    delete:
+      operationId: deleteConfiguration
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: configurationName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: successful operation
+          content: {}
+  /products/{productName}/configurations:
+    get:
+      operationId: getConfigurationsForProduct
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /products/{productName}/configurations/{configurationName}/features/{featureName}:
+    post:
+      operationId: addFeatureToConfiguration
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: configurationName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: featureName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: successful operation
+          content: {}
+    delete:
+      operationId: deleteFeature
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: configurationName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: featureName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: successful operation
+          content: {}
+  /products/{productName}/configurations/{configurationName}/features:
+    get:
+      operationId: getConfigurationActivedFeatures
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: configurationName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /products/{productName}/constraints/{constraintId}:
+    delete:
+      operationId: deleteConstraint
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: constraintId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        default:
+          description: successful operation
+          content: {}
+  /products/{productName}/constraints/requires:
+    post:
+      operationId: addRequiresConstraintToProduct
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                sourceFeature:
+                  type: string
+                requiredFeature:
+                  type: string
+      responses:
+        default:
+          description: successful operation
+          content: {}
+  /products/{productName}/constraints/excludes:
+    post:
+      operationId: addExcludesConstraintToProduct
+      parameters:
+      - name: productName
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                sourceFeature:
+                  type: string
+                excludedFeature:
+                  type: string
+      responses:
+        default:
+          description: successful operation
+          content: {}
+components:
+  schemas:
+    Feature:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+    FeatureConstraint:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        type:
+          type: string
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        features:
+          uniqueItems: true
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/Feature'
+        constraints:
+          uniqueItems: true
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/FeatureConstraint'
+    ProductConfiguration:
+      type: object
+      properties:
+        name:
+          type: string
+        valid:
+          type: boolean
+        activedFeatures:
+          uniqueItems: true
+          type: array
+          items:
+            $ref: '#/components/schemas/Feature'
+x-original-swagger-version: "2.0"
