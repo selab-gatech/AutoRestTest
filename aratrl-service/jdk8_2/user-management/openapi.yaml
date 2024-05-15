@@ -1,0 +1,1020 @@
+openapi: 3.0.1
+info:
+  title: Api Documentation
+  description: Api Documentation
+  termsOfService: urn:tos
+  contact: {}
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0
+  version: "1.0"
+servers:
+- url: http://localhost:8090/
+tags:
+- name: basic-error-controller
+  description: Basic Error Controller
+- name: login-rest-controller
+  description: Login Rest Controller
+- name: rbac-rest-controller
+  description: RBAC Rest Controller
+- name: register-rest-controller
+  description: Register Rest Controller
+- name: user-rest-controller
+  description: User Rest Controller
+paths:
+  /error:
+    get:
+      tags:
+      - basic-error-controller
+      summary: error
+      operationId: errorUsingGET
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    put:
+      tags:
+      - basic-error-controller
+      summary: error
+      operationId: errorUsingPUT
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties: {}
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    post:
+      tags:
+      - basic-error-controller
+      summary: error
+      operationId: errorUsingPOST
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties: {}
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    delete:
+      tags:
+      - basic-error-controller
+      summary: error
+      operationId: errorUsingDELETE
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties: {}
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+    options:
+      tags:
+      - basic-error-controller
+      summary: error
+      operationId: errorUsingOPTIONS
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties: {}
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+    head:
+      tags:
+      - basic-error-controller
+      summary: error
+      operationId: errorUsingHEAD
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties: {}
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+    patch:
+      tags:
+      - basic-error-controller
+      summary: error
+      operationId: errorUsingPATCH
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties: {}
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /login:
+    post:
+      tags:
+      - login-rest-controller
+      summary: login
+      operationId: loginUsingPOST
+      requestBody:
+        description: loginRequestDTO
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestDTO'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: loginRequestDTO
+  /users:
+    get:
+      tags:
+      - user-rest-controller
+      summary: getUserPresentationList
+      operationId: getUserPresentationListUsingGET
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserListDTO'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    post:
+      tags:
+      - user-rest-controller
+      summary: createUser
+      operationId: createUserUsingPOST
+      requestBody:
+        description: createOrUpdateUserDTO
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrUpdateUserDTO'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: createOrUpdateUserDTO
+  /users/rbac/permissions:
+    get:
+      tags:
+      - rbac-rest-controller
+      summary: getPermissionPresentationList
+      operationId: getPermissionPresentationListUsingGET
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PermissionDTO'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /users/rbac/roles:
+    get:
+      tags:
+      - rbac-rest-controller
+      summary: getRolePresentationList
+      operationId: getRolePresentationListUsingGET
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleDTO'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    post:
+      tags:
+      - rbac-rest-controller
+      summary: createRole
+      operationId: createRoleUsingPOST
+      requestBody:
+        description: role
+        content:
+          application/json:
+            schema:
+              type: string
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RoleDTO'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: role
+  /users/rbac/roles/{roleId}:
+    get:
+      tags:
+      - rbac-rest-controller
+      summary: getRoleById
+      operationId: getRoleByIdUsingGET
+      parameters:
+      - name: roleId
+        in: path
+        description: roleId
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 123
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RoleDTO'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    delete:
+      tags:
+      - rbac-rest-controller
+      summary: deleteRoleById
+      operationId: deleteRoleByIdUsingDELETE
+      parameters:
+      - name: roleId
+        in: path
+        description: roleId
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 123
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /users/rbac/roles/{roleId}/permissions/{permissionKey}:
+    post:
+      tags:
+      - rbac-rest-controller
+      summary: addPermissionOnRole
+      operationId: addPermissionOnRoleUsingPOST
+      parameters:
+      - name: permissionKey
+        in: path
+        description: permissionKey
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: roleId
+        in: path
+        description: roleId
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 123
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RoleDTO'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    delete:
+      tags:
+      - rbac-rest-controller
+      summary: removePermissionOnRole
+      operationId: removePermissionOnRoleUsingDELETE
+      parameters:
+      - name: permissionKey
+        in: path
+        description: permissionKey
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: roleId
+        in: path
+        description: roleId
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 123
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RoleDTO'
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /users/register:
+    post:
+      tags:
+      - register-rest-controller
+      summary: registerNewUserAccount
+      operationId: registerNewUserAccountUsingPOST
+      requestBody:
+        description: registerUserAccountDTO
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserAccountDTO'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: registerUserAccountDTO
+  /users/{id}:
+    get:
+      tags:
+      - user-rest-controller
+      summary: getUserById
+      operationId: getUserByIdUsingGET
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 123
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    put:
+      tags:
+      - user-rest-controller
+      summary: updateUser
+      operationId: updateUserUsingPUT
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 123
+      requestBody:
+        description: updateUserDTO
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrUpdateUserDTO'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: updateUserDTO
+    delete:
+      tags:
+      - user-rest-controller
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 123
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /users/{id}/roles/{roleId}:
+    post:
+      tags:
+      - user-rest-controller
+      summary: addRole
+      operationId: addRoleUsingPOST
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 123
+      - name: roleId
+        in: path
+        description: roleId
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 123
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    delete:
+      tags:
+      - user-rest-controller
+      summary: removeRole
+      operationId: removeRoleUsingDELETE
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 123
+      - name: roleId
+        in: path
+        description: roleId
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 123
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+components:
+  schemas:
+    AddressDTO:
+      title: AddressDTO
+      type: object
+      properties:
+        address:
+          type: string
+        address2:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        zipCode:
+          type: string
+    ContactDTO:
+      title: ContactDTO
+      type: object
+      properties:
+        contactNote:
+          type: string
+        email:
+          type: string
+        facebook:
+          type: string
+        linkedin:
+          type: string
+        phone:
+          type: string
+        skype:
+          type: string
+        website:
+          type: string
+    CreateOrUpdateUserDTO:
+      title: CreateOrUpdateUserDTO
+      type: object
+      properties:
+        address:
+          type: string
+        address2:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        city:
+          type: string
+        contactNote:
+          type: string
+        country:
+          type: string
+        email:
+          type: string
+        enabled:
+          type: boolean
+        facebook:
+          type: string
+        gender:
+          type: string
+        linkedin:
+          type: string
+        mobile:
+          type: string
+        name:
+          type: string
+        note:
+          type: string
+        password:
+          type: string
+        secured:
+          type: boolean
+        skype:
+          type: string
+        surname:
+          type: string
+        username:
+          type: string
+        website:
+          type: string
+        zipCode:
+          type: string
+    LoginRequestDTO:
+      title: LoginRequestDTO
+      type: object
+      properties:
+        password:
+          type: string
+        username:
+          type: string
+    ModelAndView:
+      title: ModelAndView
+      type: object
+      properties:
+        empty:
+          type: boolean
+        model:
+          type: object
+          properties: {}
+        modelMap:
+          type: object
+          additionalProperties:
+            type: object
+            properties: {}
+        reference:
+          type: boolean
+        status:
+          type: string
+          enum:
+          - 100 CONTINUE
+          - 101 SWITCHING_PROTOCOLS
+          - 102 PROCESSING
+          - 103 CHECKPOINT
+          - 200 OK
+          - 201 CREATED
+          - 202 ACCEPTED
+          - 203 NON_AUTHORITATIVE_INFORMATION
+          - 204 NO_CONTENT
+          - 205 RESET_CONTENT
+          - 206 PARTIAL_CONTENT
+          - 207 MULTI_STATUS
+          - 208 ALREADY_REPORTED
+          - 226 IM_USED
+          - 300 MULTIPLE_CHOICES
+          - 301 MOVED_PERMANENTLY
+          - 302 FOUND
+          - 302 MOVED_TEMPORARILY
+          - 303 SEE_OTHER
+          - 304 NOT_MODIFIED
+          - 305 USE_PROXY
+          - 307 TEMPORARY_REDIRECT
+          - 308 PERMANENT_REDIRECT
+          - 400 BAD_REQUEST
+          - 401 UNAUTHORIZED
+          - 402 PAYMENT_REQUIRED
+          - 403 FORBIDDEN
+          - 404 NOT_FOUND
+          - 405 METHOD_NOT_ALLOWED
+          - 406 NOT_ACCEPTABLE
+          - 407 PROXY_AUTHENTICATION_REQUIRED
+          - 408 REQUEST_TIMEOUT
+          - 409 CONFLICT
+          - 410 GONE
+          - 411 LENGTH_REQUIRED
+          - 412 PRECONDITION_FAILED
+          - 413 PAYLOAD_TOO_LARGE
+          - 413 REQUEST_ENTITY_TOO_LARGE
+          - 414 URI_TOO_LONG
+          - 414 REQUEST_URI_TOO_LONG
+          - 415 UNSUPPORTED_MEDIA_TYPE
+          - 416 REQUESTED_RANGE_NOT_SATISFIABLE
+          - 417 EXPECTATION_FAILED
+          - 418 I_AM_A_TEAPOT
+          - 419 INSUFFICIENT_SPACE_ON_RESOURCE
+          - 420 METHOD_FAILURE
+          - 421 DESTINATION_LOCKED
+          - 422 UNPROCESSABLE_ENTITY
+          - 423 LOCKED
+          - 424 FAILED_DEPENDENCY
+          - 425 TOO_EARLY
+          - 426 UPGRADE_REQUIRED
+          - 428 PRECONDITION_REQUIRED
+          - 429 TOO_MANY_REQUESTS
+          - 431 REQUEST_HEADER_FIELDS_TOO_LARGE
+          - 451 UNAVAILABLE_FOR_LEGAL_REASONS
+          - 500 INTERNAL_SERVER_ERROR
+          - 501 NOT_IMPLEMENTED
+          - 502 BAD_GATEWAY
+          - 503 SERVICE_UNAVAILABLE
+          - 504 GATEWAY_TIMEOUT
+          - 505 HTTP_VERSION_NOT_SUPPORTED
+          - 506 VARIANT_ALSO_NEGOTIATES
+          - 507 INSUFFICIENT_STORAGE
+          - 508 LOOP_DETECTED
+          - 509 BANDWIDTH_LIMIT_EXCEEDED
+          - 510 NOT_EXTENDED
+          - 511 NETWORK_AUTHENTICATION_REQUIRED
+        view:
+          $ref: '#/components/schemas/View'
+        viewName:
+          type: string
+    PermissionDTO:
+      title: PermissionDTO
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        permission:
+          type: string
+    RegisterUserAccountDTO:
+      title: RegisterUserAccountDTO
+      type: object
+      properties:
+        email:
+          type: string
+        gender:
+          type: string
+        name:
+          type: string
+        password:
+          type: string
+        surname:
+          type: string
+        username:
+          type: string
+    RoleDTO:
+      title: RoleDTO
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PermissionDTO'
+        role:
+          type: string
+    UserDTO:
+      title: UserDTO
+      type: object
+      properties:
+        addressDTO:
+          $ref: '#/components/schemas/AddressDTO'
+        birthDate:
+          type: string
+          format: date
+        contactDTO:
+          $ref: '#/components/schemas/ContactDTO'
+        creationDt:
+          type: string
+          format: date-time
+        enabled:
+          type: boolean
+        gender:
+          type: string
+        id:
+          type: integer
+          format: int64
+        loginDt:
+          type: string
+          format: date-time
+        name:
+          type: string
+        note:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        roles:
+          type: array
+          items:
+            type: string
+        secured:
+          type: boolean
+        surname:
+          type: string
+        updatedDt:
+          type: string
+          format: date-time
+        username:
+          type: string
+    UserListDTO:
+      title: UserListDTO
+      type: object
+      properties:
+        userList:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserDTO'
+    View:
+      title: View
+      type: object
+      properties:
+        contentType:
+          type: string

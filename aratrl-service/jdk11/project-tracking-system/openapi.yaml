@@ -1,0 +1,2189 @@
+openapi: 3.0.1
+info:
+  title: Project-Tracker-System
+  description: "Manage and track commits transactions by Employees and their Managers\
+    \ on a specific project.\n- Employees can be assigned to projects created and\
+    \ managed by their managers, can add a new commits to a specific project so manager\
+    \ can track its progression\n- Managers can create, edit & delete projects, also\
+    \ assign them to their employees and track them efficiently & easily\n- Admin\
+    \ manages all Employees as well as their credentials & departments\nFor more,\
+    \ you can check more on our GitHub repositories : \n- Selim Horri : https://github.com/SelimHorri?tab=repositories\
+    \ \n- Imen Toukebri : https://github.com/imen1012?tab=repositories \n- Bader Idoudi\
+    \ : https://github.com/Bader1996?tab=repositories \n"
+  termsOfService: Terms of service
+  contact:
+    name: Selim Horri, Imen Touk, Badr Idoudi
+    url: https://github.com/SelimHorri/Project-Tracking-System
+    email: springabcxyz@gmail.com
+  license:
+    name: Apache Licence version 2.0
+    url: https://apache.org/license.html
+  version: "1.0"
+servers:
+- url: http://localhost:8080/
+tags:
+- name: assignment-resource
+  description: Assignment Resource
+- name: authentication-resource
+  description: Authentication Resource
+- name: credential-resource
+  description: Credential Resource
+- name: department-resource
+  description: Department Resource
+- name: employee-resource
+  description: Employee Resource
+- name: location-resource
+  description: Location Resource
+- name: project-resource
+  description: Project Resource
+paths:
+  /app/api/assignments:
+    get:
+      tags:
+      - assignment-resource
+      summary: findAll
+      operationId: findAllUsingGET
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionAssignment'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    put:
+      tags:
+      - assignment-resource
+      summary: update
+      operationId: updateUsingPUT
+      requestBody:
+        description: assignment
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Assignment'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: assignment
+    post:
+      tags:
+      - assignment-resource
+      summary: save
+      operationId: saveUsingPOST
+      requestBody:
+        description: assignment
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Assignment'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: assignment
+  /app/api/assignments/data/project-commit/{employeeId}/{projectId}:
+    get:
+      tags:
+      - assignment-resource
+      summary: findByEmployeeIdAndProjectId
+      operationId: findByEmployeeIdAndProjectIdUsingGET
+      parameters:
+      - name: employeeId
+        in: path
+        description: employeeId
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: projectId
+        in: path
+        description: projectId
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionProjectCommit'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /app/api/assignments/data/project-commit/{employeeId}/{projectId}/{commitDate}:
+    get:
+      tags:
+      - assignment-resource
+      summary: findByEmployeeIdAndProjectIdAndCommitDate
+      operationId: findByEmployeeIdAndProjectIdAndCommitDateUsingGET
+      parameters:
+      - name: commitDate
+        in: path
+        description: commitDate
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: employeeId
+        in: path
+        description: employeeId
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: projectId
+        in: path
+        description: projectId
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ProjectCommit'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /app/api/assignments/data/project-commit/{projectId}:
+    get:
+      tags:
+      - assignment-resource
+      summary: findByProjectId
+      operationId: findByProjectIdUsingGET
+      parameters:
+      - name: projectId
+        in: path
+        description: projectId
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionProjectCommit'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /app/api/assignments/delete/{employeeId}/{projectId}/{commitDate}:
+    delete:
+      tags:
+      - assignment-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE
+      parameters:
+      - name: commitDate
+        in: path
+        description: commitDate
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: employeeId
+        in: path
+        description: employeeId
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: projectId
+        in: path
+        description: projectId
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/assignments/save:
+    post:
+      tags:
+      - assignment-resource
+      summary: save
+      operationId: saveUsingPOST_1
+      requestBody:
+        description: assignment
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Assignment'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: assignment
+  /app/api/assignments/update:
+    put:
+      tags:
+      - assignment-resource
+      summary: update
+      operationId: updateUsingPUT_1
+      requestBody:
+        description: assignment
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Assignment'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: assignment
+  /app/api/assignments/{employeeId}/{projectId}:
+    get:
+      tags:
+      - assignment-resource
+      summary: findAllByEmployeeIdAndManagerId
+      operationId: findAllByEmployeeIdAndManagerIdUsingGET
+      parameters:
+      - name: employeeId
+        in: path
+        description: employeeId
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: projectId
+        in: path
+        description: projectId
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionAssignment'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /app/api/assignments/{employeeId}/{projectId}/{commitDate}:
+    get:
+      tags:
+      - assignment-resource
+      summary: findById
+      operationId: findByIdUsingGET
+      parameters:
+      - name: commitDate
+        in: path
+        description: commitDate
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: employeeId
+        in: path
+        description: employeeId
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: projectId
+        in: path
+        description: projectId
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Assignment'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    delete:
+      tags:
+      - assignment-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE_1
+      parameters:
+      - name: commitDate
+        in: path
+        description: commitDate
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: employeeId
+        in: path
+        description: employeeId
+        required: true
+        schema:
+          type: string
+        example: abc
+      - name: projectId
+        in: path
+        description: projectId
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/authenticate:
+    post:
+      tags:
+      - authentication-resource
+      summary: authenticate
+      operationId: authenticateUsingPOST
+      requestBody:
+        description: authenticationRequest
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthenticationRequest'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/AuthenticationResponse'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: authenticationRequest
+  /app/api/credentials:
+    get:
+      tags:
+      - credential-resource
+      summary: findAll
+      operationId: findAllUsingGET_2
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionCredential'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    put:
+      tags:
+      - credential-resource
+      summary: update
+      operationId: updateUsingPUT_2
+      requestBody:
+        description: credential
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credential'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Credential'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: credential
+    post:
+      tags:
+      - credential-resource
+      summary: save
+      operationId: saveUsingPOST_2
+      requestBody:
+        description: credential
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credential'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Credential'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: credential
+    delete:
+      tags:
+      - credential-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE_2
+      parameters:
+      - name: credentialId
+        in: query
+        description: credentialId
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: boolean
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/credentials/delete:
+    delete:
+      tags:
+      - credential-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE_3
+      parameters:
+      - name: credentialId
+        in: query
+        description: credentialId
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: boolean
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/credentials/save:
+    post:
+      tags:
+      - credential-resource
+      summary: save
+      operationId: saveUsingPOST_3
+      requestBody:
+        description: credential
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credential'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Credential'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: credential
+  /app/api/credentials/update:
+    put:
+      tags:
+      - credential-resource
+      summary: update
+      operationId: updateUsingPUT_3
+      requestBody:
+        description: credential
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credential'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Credential'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: credential
+  /app/api/credentials/username/{username}:
+    get:
+      tags:
+      - credential-resource
+      summary: findByUsername
+      operationId: findByUsernameUsingGET
+      parameters:
+      - name: username
+        in: path
+        description: username
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Credential'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    delete:
+      tags:
+      - credential-resource
+      summary: deleteByUsername
+      operationId: deleteByUsernameUsingDELETE
+      parameters:
+      - name: username
+        in: path
+        description: username
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: boolean
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/credentials/{id}:
+    get:
+      tags:
+      - credential-resource
+      summary: findById
+      operationId: findByIdUsingGET_1
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Credential'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /app/api/departments:
+    get:
+      tags:
+      - department-resource
+      summary: findAll
+      operationId: findAllUsingGET_4
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionDepartment'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    put:
+      tags:
+      - department-resource
+      summary: update
+      operationId: updateUsingPUT_4
+      requestBody:
+        description: department
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Department'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Department'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: department
+    post:
+      tags:
+      - department-resource
+      summary: save
+      operationId: saveUsingPOST_4
+      requestBody:
+        description: department
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Department'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Department'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: department
+    delete:
+      tags:
+      - department-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE_4
+      parameters:
+      - name: departmentId
+        in: query
+        description: departmentId
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: boolean
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/departments/delete:
+    delete:
+      tags:
+      - department-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE_5
+      parameters:
+      - name: departmentId
+        in: query
+        description: departmentId
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: boolean
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/departments/save:
+    post:
+      tags:
+      - department-resource
+      summary: save
+      operationId: saveUsingPOST_5
+      requestBody:
+        description: department
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Department'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Department'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: department
+  /app/api/departments/update:
+    put:
+      tags:
+      - department-resource
+      summary: update
+      operationId: updateUsingPUT_5
+      requestBody:
+        description: department
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Department'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Department'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: department
+  /app/api/departments/{id}:
+    get:
+      tags:
+      - department-resource
+      summary: findById
+      operationId: findByIdUsingGET_2
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Department'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /app/api/employees:
+    get:
+      tags:
+      - employee-resource
+      summary: findAll
+      operationId: findAllUsingGET_6
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionEmployee'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    put:
+      tags:
+      - employee-resource
+      summary: update
+      operationId: updateUsingPUT_6
+      requestBody:
+        description: employee
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Employee'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Employee'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: employee
+    post:
+      tags:
+      - employee-resource
+      summary: save
+      operationId: saveUsingPOST_6
+      requestBody:
+        description: employee
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Employee'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Employee'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: employee
+    delete:
+      tags:
+      - employee-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE_6
+      parameters:
+      - name: employeeId
+        in: query
+        description: employeeId
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: boolean
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/employees/data/department/{departmentId}:
+    get:
+      tags:
+      - employee-resource
+      summary: findByDepartmentId
+      operationId: findByDepartmentIdUsingGET
+      parameters:
+      - name: departmentId
+        in: path
+        description: departmentId
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionEmployee'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /app/api/employees/data/employee-project-data/{employeeId}:
+    get:
+      tags:
+      - employee-resource
+      summary: findByEmployeeProjectDataEmployeeId
+      operationId: findByEmployeeProjectDataEmployeeIdUsingGET
+      parameters:
+      - name: employeeId
+        in: path
+        description: employeeId
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionEmployeeProjectData'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /app/api/employees/data/manager-project-data/{employeeId}:
+    get:
+      tags:
+      - employee-resource
+      summary: findManagerProjectDataByEmployeeId
+      operationId: findManagerProjectDataByEmployeeIdUsingGET
+      parameters:
+      - name: employeeId
+        in: path
+        description: employeeId
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionManagerProjectData'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /app/api/employees/delete:
+    delete:
+      tags:
+      - employee-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE_7
+      parameters:
+      - name: employeeId
+        in: query
+        description: employeeId
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: boolean
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/employees/save:
+    post:
+      tags:
+      - employee-resource
+      summary: save
+      operationId: saveUsingPOST_7
+      requestBody:
+        description: employee
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Employee'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Employee'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: employee
+  /app/api/employees/update:
+    put:
+      tags:
+      - employee-resource
+      summary: update
+      operationId: updateUsingPUT_7
+      requestBody:
+        description: employee
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Employee'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Employee'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: employee
+  /app/api/employees/username/{username}:
+    get:
+      tags:
+      - employee-resource
+      summary: findByUsername
+      operationId: findByUsernameUsingGET_1
+      parameters:
+      - name: username
+        in: path
+        description: username
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Employee'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    delete:
+      tags:
+      - employee-resource
+      summary: deleteByUsername
+      operationId: deleteByUsernameUsingDELETE_1
+      parameters:
+      - name: username
+        in: path
+        description: username
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: boolean
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/employees/{id}:
+    get:
+      tags:
+      - employee-resource
+      summary: findById
+      operationId: findByIdUsingGET_3
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Employee'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /app/api/locations:
+    get:
+      tags:
+      - location-resource
+      summary: findAll
+      operationId: findAllUsingGET_8
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionLocation'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    put:
+      tags:
+      - location-resource
+      summary: update
+      operationId: updateUsingPUT_8
+      requestBody:
+        description: location
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Location'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Location'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: location
+    post:
+      tags:
+      - location-resource
+      summary: save
+      operationId: saveUsingPOST_8
+      requestBody:
+        description: location
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Location'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Location'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: location
+    delete:
+      tags:
+      - location-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE_8
+      parameters:
+      - name: locationId
+        in: query
+        description: locationId
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content: {}
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/locations/delete:
+    delete:
+      tags:
+      - location-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE_9
+      parameters:
+      - name: locationId
+        in: query
+        description: locationId
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content: {}
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/locations/save:
+    post:
+      tags:
+      - location-resource
+      summary: save
+      operationId: saveUsingPOST_9
+      requestBody:
+        description: location
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Location'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Location'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: location
+  /app/api/locations/update:
+    put:
+      tags:
+      - location-resource
+      summary: update
+      operationId: updateUsingPUT_9
+      requestBody:
+        description: location
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Location'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Location'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: location
+  /app/api/locations/{id}:
+    get:
+      tags:
+      - location-resource
+      summary: findById
+      operationId: findByIdUsingGET_4
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Location'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+  /app/api/projects:
+    get:
+      tags:
+      - project-resource
+      summary: findAll
+      operationId: findAllUsingGET_10
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/DtoCollectionProject'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+    put:
+      tags:
+      - project-resource
+      summary: update
+      operationId: updateUsingPUT_10
+      requestBody:
+        description: project
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Project'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: project
+    post:
+      tags:
+      - project-resource
+      summary: save
+      operationId: saveUsingPOST_10
+      requestBody:
+        description: project
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Project'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: project
+    delete:
+      tags:
+      - project-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE_10
+      parameters:
+      - name: projectId
+        in: query
+        description: projectId
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content: {}
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/projects/delete:
+    delete:
+      tags:
+      - project-resource
+      summary: deleteById
+      operationId: deleteByIdUsingDELETE_11
+      parameters:
+      - name: projectId
+        in: query
+        description: projectId
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content: {}
+        204:
+          description: No Content
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+      deprecated: false
+  /app/api/projects/save:
+    post:
+      tags:
+      - project-resource
+      summary: save
+      operationId: saveUsingPOST_11
+      requestBody:
+        description: project
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Project'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: project
+  /app/api/projects/update:
+    put:
+      tags:
+      - project-resource
+      summary: update
+      operationId: updateUsingPUT_11
+      requestBody:
+        description: project
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Project'
+        201:
+          description: Created
+          content: {}
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+      x-codegen-request-body-name: project
+  /app/api/projects/{id}:
+    get:
+      tags:
+      - project-resource
+      summary: findById
+      operationId: findByIdUsingGET_5
+      parameters:
+      - name: id
+        in: path
+        description: id
+        required: true
+        schema:
+          type: string
+        example: abc
+      responses:
+        200:
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Project'
+        401:
+          description: Unauthorized
+          content: {}
+        403:
+          description: Forbidden
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      deprecated: false
+components:
+  schemas:
+    Assignment:
+      title: Assignment
+      type: object
+      properties:
+        commitDate:
+          type: string
+          example: dd-MM-yyyyHH:mm:ss
+        commitEmpDesc:
+          type: string
+        commitMgrDesc:
+          type: string
+        employee:
+          $ref: '#/components/schemas/Employee'
+        employeeId:
+          type: integer
+          format: int32
+        project:
+          $ref: '#/components/schemas/Project'
+        projectId:
+          type: integer
+          format: int32
+    AuthenticationRequest:
+      title: AuthenticationRequest
+      type: object
+      properties:
+        password:
+          type: string
+        username:
+          type: string
+    AuthenticationResponse:
+      title: AuthenticationResponse
+      type: object
+      properties:
+        isEligible:
+          type: boolean
+        username:
+          type: string
+    Credential:
+      title: Credential
+      type: object
+      properties:
+        credentialId:
+          type: integer
+          format: int32
+        enabled:
+          type: boolean
+        password:
+          type: string
+        role:
+          type: string
+        username:
+          type: string
+    Department:
+      title: Department
+      type: object
+      properties:
+        departmentId:
+          type: integer
+          format: int32
+        departmentName:
+          type: string
+        location:
+          $ref: '#/components/schemas/Location'
+    DtoCollectionAssignment:
+      title: DtoCollectionAssignment
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assignment'
+    DtoCollectionCredential:
+      title: DtoCollectionCredential
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: '#/components/schemas/Credential'
+    DtoCollectionDepartment:
+      title: DtoCollectionDepartment
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: '#/components/schemas/Department'
+    DtoCollectionEmployeeProjectData:
+      title: DtoCollectionEmployeeProjectData
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmployeeProjectData'
+    DtoCollectionEmployee:
+      title: DtoCollectionEmployee
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: '#/components/schemas/Employee'
+    DtoCollectionLocation:
+      title: DtoCollectionLocation
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+    DtoCollectionManagerProjectData:
+      title: DtoCollectionManagerProjectData
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: '#/components/schemas/ManagerProjectData'
+    DtoCollectionProjectCommit:
+      title: DtoCollectionProjectCommit
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectCommit'
+    DtoCollectionProject:
+      title: DtoCollectionProject
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+    Employee:
+      title: Employee
+      type: object
+      properties:
+        credential:
+          $ref: '#/components/schemas/Credential'
+        department:
+          $ref: '#/components/schemas/Department'
+        email:
+          type: string
+        employeeId:
+          type: integer
+          format: int32
+        firstName:
+          type: string
+        hiredate:
+          type: string
+          example: dd-MM-yyyy
+        job:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        salary:
+          type: number
+          format: double
+    EmployeeProjectData:
+      title: EmployeeProjectData
+      type: object
+      properties:
+        endDate:
+          type: string
+        projectId:
+          type: integer
+          format: int32
+        startDate:
+          type: string
+        status:
+          type: string
+        title:
+          type: string
+    Location:
+      title: Location
+      type: object
+      properties:
+        adr:
+          type: string
+        city:
+          type: string
+        locationId:
+          type: integer
+          format: int32
+        postalCode:
+          type: string
+    ManagerProjectData:
+      title: ManagerProjectData
+      type: object
+      properties:
+        endDate:
+          type: string
+        projectId:
+          type: integer
+          format: int32
+        startDate:
+          type: string
+        status:
+          type: string
+        title:
+          type: string
+    Project:
+      title: Project
+      type: object
+      properties:
+        endDate:
+          type: string
+          example: dd-MM-yyyy
+        projectId:
+          type: integer
+          format: int32
+        startDate:
+          type: string
+          example: dd-MM-yyyy
+        status:
+          type: string
+        title:
+          type: string
+    ProjectCommit:
+      title: ProjectCommit
+      type: object
+      properties:
+        commitDate:
+          type: string
+          format: date-time
+        commitEmpDesc:
+          type: string
+        commitMgrDesc:
+          type: string
+        employeeId:
+          type: integer
+          format: int32
+        firstName:
+          type: string
+        lastName:
+          type: string
+        projectId:
+          type: integer
+          format: int32

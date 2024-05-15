@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.cbioportal.genome_nexus</groupId>
+    <artifactId>genome-nexus</artifactId>
+    <version>0-unknown-version-SNAPSHOT</version>
+  </parent>
+  <artifactId>persistence</artifactId>
+  <version>0-unknown-version-SNAPSHOT</version>
+  <name>Genome Nexus Persistence</name>
+  <description>Genome Nexus Persistence Module</description>
+  <dependencies>
+    <dependency>
+      <groupId>org.cbioportal.genome_nexus</groupId>
+      <artifactId>model</artifactId>
+      <version>0-unknown-version-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-cache</artifactId>
+    </dependency>
+  </dependencies>
+</project>
