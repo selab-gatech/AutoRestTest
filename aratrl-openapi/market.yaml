@@ -1,4 +1,4 @@
-openapi: 3.0.1
+openapi: 3.0.3
 info:
   title: Api Documentation
   description: Api Documentation
@@ -7,420 +7,2090 @@ info:
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0
-  version: "1.0"
+  version: '1.0'
 servers:
-- url: http://localhost:30117/
+  - url: http://localhost:8080
+    description: Inferred Url
 tags:
-- name: cart-rest-controller
-  description: Cart Rest Controller
-- name: contacts-rest-controller
-  description: Contacts Rest Controller
-- name: customer-rest-controller
-  description: Customer Rest Controller
-- name: orders-rest-controller
-  description: Orders Rest Controller
-- name: products-rest-controller
-  description: Products Rest Controller
+  - name: backend-controller
+    description: Backend Controller
+  - name: basic-error-controller
+    description: Basic Error Controller
+  - name: cart-controller
+    description: Cart Controller
+  - name: checkout-controller
+    description: Checkout Controller
+  - name: customer-controller
+    description: Customer Controller
+  - name: distillery-controller
+    description: Distillery Controller
+  - name: frontend-controller
+    description: Frontend Controller
+  - name: orders-controller
+    description: Orders Controller
+  - name: product-controller
+    description: Product Controller
+  - name: region-controller
+    description: Region Controller
+  - name: showcase-controller
+    description: Showcase Controller
+  - name: storage-controller
+    description: Storage Controller
 paths:
-  /customer:
+  /admin:
     get:
       tags:
-      - customer-rest-controller
-      summary: getCustomer
-      operationId: getCustomerUsingGET
-      parameters:
-      - name: name
-        in: query
-        schema:
-          type: string
+        - backend-controller
+      summary: index
+      operationId: indexUsingGET
       responses:
-        "200":
+        '200':
           description: OK
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/UserDTORes'
-        "401":
+                type: string
+        '401':
           description: Unauthorized
-          content: {}
-        "403":
+        '403':
           description: Forbidden
-          content: {}
-        "404":
+        '404':
           description: Not Found
-          content: {}
-  /customer/cart:
+  /admin/:
     get:
       tags:
-      - cart-rest-controller
+        - backend-controller
+      summary: index
+      operationId: indexUsingGET_1
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/index:
+    get:
+      tags:
+        - backend-controller
+      summary: index
+      operationId: indexUsingGET_2
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /error:
+    get:
+      tags:
+        - basic-error-controller
+      summary: error
+      operationId: errorUsingGET
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    put:
+      tags:
+        - basic-error-controller
+      summary: error
+      operationId: errorUsingPUT
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    post:
+      tags:
+        - basic-error-controller
+      summary: error
+      operationId: errorUsingPOST
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    delete:
+      tags:
+        - basic-error-controller
+      summary: error
+      operationId: errorUsingDELETE
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    options:
+      tags:
+        - basic-error-controller
+      summary: error
+      operationId: errorUsingOPTIONS
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    head:
+      tags:
+        - basic-error-controller
+      summary: error
+      operationId: errorUsingHEAD
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    patch:
+      tags:
+        - basic-error-controller
+      summary: error
+      operationId: errorUsingPATCH
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    trace:
+      tags:
+        - basic-error-controller
+      summary: error
+      operationId: errorUsingTRACE
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /cart:
+    get:
+      tags:
+        - cart-controller
       summary: getCart
       operationId: getCartUsingGET
       parameters:
-      - name: name
-        in: query
-        schema:
-          type: string
+        - name: cartItems[0].productId
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: cartItems[0].quantity
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryIncluded
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: productsCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: totalCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: totalItems
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: user
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/CartDTO'
-        "401":
+                type: string
+        '401':
           description: Unauthorized
-          content: {}
-        "403":
+        '403':
           description: Forbidden
-          content: {}
-        "404":
+        '404':
           description: Not Found
-          content: {}
     put:
       tags:
-      - cart-rest-controller
-      summary: addItem
-      operationId: addItemUsingPUT
+        - cart-controller
+      summary: updateCartByAjax
+      operationId: updateCartByAjaxUsingPUT
       parameters:
-      - name: name
-        in: query
-        schema:
-          type: string
+        - name: cartItems[0].productId
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: cartItems[0].quantity
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryIncluded
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: productsCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: totalCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: totalItems
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: user
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
       requestBody:
-        description: item
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/CartItemDTOReq'
-        required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/CartDTO'
-        "201":
+        '201':
           description: Created
-          content: {}
-        "401":
+        '401':
           description: Unauthorized
-          content: {}
-        "403":
+        '403':
           description: Forbidden
-          content: {}
-        "404":
+        '404':
           description: Not Found
-          content: {}
-      x-codegen-request-body-name: item
-    delete:
+    post:
       tags:
-      - cart-rest-controller
-      summary: clearCart
-      operationId: clearCartUsingDELETE
+        - cart-controller
+      summary: updateCartByForm
+      operationId: updateCartByFormUsingPOST
       parameters:
-      - name: name
-        in: query
-        schema:
-          type: string
+        - name: cartItems[0].productId
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: cartItems[0].quantity
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryIncluded
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: productId
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: productsCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: quantity
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: totalCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: totalItems
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: user
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/CartDTO'
-        "204":
-          description: No Content
-          content: {}
-        "401":
+                type: string
+        '201':
+          description: Created
+        '401':
           description: Unauthorized
-          content: {}
-        "403":
+        '403':
           description: Forbidden
-          content: {}
-  /customer/cart/delivery:
+        '404':
+          description: Not Found
+  /cart/clear:
+    post:
+      tags:
+        - cart-controller
+      summary: clearCart
+      operationId: clearCartUsingPOST
+      parameters:
+        - name: cartItems[0].productId
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: cartItems[0].quantity
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryIncluded
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: productsCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: totalCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: totalItems
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: user
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /cart/delivery/{delivery}:
     put:
       tags:
-      - cart-rest-controller
+        - cart-controller
       summary: setDelivery
       operationId: setDeliveryUsingPUT
       parameters:
-      - name: included
-        in: query
-        description: included
-        required: true
-        schema:
-          type: boolean
-      - name: name
-        in: query
-        schema:
-          type: string
+        - name: cartItems[0].productId
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: cartItems[0].quantity
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryIncluded
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: productsCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: totalCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: totalItems
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: user
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: delivery
+          in: path
+          description: delivery
+          required: true
+          style: simple
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/CartDTO'
-        "201":
+        '201':
           description: Created
-          content: {}
-        "401":
+        '401':
           description: Unauthorized
-          content: {}
-        "403":
+        '403':
           description: Forbidden
-          content: {}
-        "404":
+        '404':
           description: Not Found
-          content: {}
-  /customer/cart/pay:
-    post:
-      tags:
-      - cart-rest-controller
-      summary: payByCard
-      operationId: payByCardUsingPOST
-      parameters:
-      - name: name
-        in: query
-        schema:
-          type: string
-      requestBody:
-        description: card
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreditCardDTO'
-        required: true
-      responses:
-        "201":
-          description: Created
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/OrderDTO'
-        "401":
-          description: Unauthorized
-          content: {}
-        "403":
-          description: Forbidden
-          content: {}
-        "404":
-          description: Not Found
-          content: {}
-      x-codegen-request-body-name: card
-  /customer/contacts:
+  /checkout/confirmation:
     get:
       tags:
-      - contacts-rest-controller
-      summary: getContacts
-      operationId: getContactsUsingGET
+        - checkout-controller
+      summary: getGratitude
+      operationId: getGratitudeUsingGET
       parameters:
-      - name: name
-        in: query
-        schema:
-          type: string
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/ContactsDTORes'
-        "401":
+                type: string
+        '401':
           description: Unauthorized
-          content: {}
-        "403":
+        '403':
           description: Forbidden
-          content: {}
-        "404":
+        '404':
           description: Not Found
-          content: {}
-    put:
+  /checkout/details:
+    get:
       tags:
-      - contacts-rest-controller
-      summary: updateContacts
-      operationId: updateContactsUsingPUT
+        - checkout-controller
+      summary: details
+      operationId: detailsUsingGET
       parameters:
-      - name: name
-        in: query
-        schema:
-          type: string
-      requestBody:
-        description: contactsDto
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ContactsDTOReq'
-        required: true
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/ContactsDTORes'
-        "201":
-          description: Created
-          content: {}
-        "401":
+                type: string
+        '401':
           description: Unauthorized
-          content: {}
-        "403":
+        '403':
           description: Forbidden
-          content: {}
-        "404":
+        '404':
           description: Not Found
-          content: {}
-      x-codegen-request-body-name: contactsDto
+    post:
+      tags:
+        - checkout-controller
+      summary: changeContacts
+      operationId: changeContactsUsingPOST
+      parameters:
+        - name: address
+          in: query
+          required: false
+          style: form
+          schema:
+            maximum: 100
+            minimum: 0
+            maxLength: 100
+            minLength: 0
+            pattern: ^[^#$%^*()']*$
+            type: string
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: phone
+          in: query
+          required: false
+          style: form
+          schema:
+            maximum: 20
+            minimum: 0
+            maxLength: 20
+            minLength: 0
+            pattern: ^\+[1-9][0-9]?[\s]*\(?\d{3}\)?[-\s]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$
+            type: string
+        - name: changeContacts
+          in: query
+          description: changeContacts
+          required: true
+          style: form
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /checkout/payment:
+    get:
+      tags:
+        - checkout-controller
+      summary: getPayment
+      operationId: getPaymentUsingGET
+      parameters:
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    post:
+      tags:
+        - checkout-controller
+      summary: postPayment
+      operationId: postPaymentUsingPOST
+      parameters:
+        - name: ccNumber
+          in: query
+          required: false
+          style: form
+          schema:
+            pattern: \b(?:\d[ -]*?){13,16}\b
+            type: string
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /customer/new:
+    get:
+      tags:
+        - customer-controller
+      summary: getRegistrationPage
+      operationId: getRegistrationPageUsingGET
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    post:
+      tags:
+        - customer-controller
+      summary: postRegistrationForm
+      operationId: postRegistrationFormUsingPOST
+      parameters:
+        - name: address
+          in: query
+          required: false
+          style: form
+          schema:
+            maximum: 100
+            minimum: 0
+            maxLength: 100
+            minLength: 0
+            pattern: ^[^#$%^*()']*$
+            type: string
+        - name: cartItems[0].productId
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: cartItems[0].quantity
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: deliveryIncluded
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: email
+          in: query
+          required: false
+          style: form
+          schema:
+            maximum: 50
+            minimum: 0
+            maxLength: 50
+            minLength: 0
+            pattern: ^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]+$
+            type: string
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            maximum: 50
+            minimum: 0
+            maxLength: 50
+            minLength: 0
+            pattern: ^[\pL '-]+$
+            type: string
+        - name: password
+          in: query
+          required: false
+          style: form
+          schema:
+            maximum: 50
+            minimum: 6
+            maxLength: 50
+            minLength: 6
+            pattern: ^[a-zA-Z0-9]+$
+            type: string
+        - name: phone
+          in: query
+          required: false
+          style: form
+          schema:
+            maximum: 20
+            minimum: 0
+            maxLength: 20
+            minLength: 0
+            pattern: ^\+[1-9][0-9]?[\s]*\(?\d{3}\)?[-\s]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$
+            type: string
+        - name: productsCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: totalCost
+          in: query
+          required: false
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: totalItems
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: user
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
   /customer/orders:
     get:
       tags:
-      - orders-rest-controller
+        - customer-controller
+      summary: orders
+      operationId: ordersUsingGET
+      parameters:
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/distilleries:
+    get:
+      tags:
+        - distillery-controller
+      summary: allDistilleries
+      operationId: allDistilleriesUsingGET
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/distilleries/new:
+    get:
+      tags:
+        - distillery-controller
+      summary: newDistillery
+      operationId: newDistilleryUsingGET
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    post:
+      tags:
+        - distillery-controller
+      summary: postDistillery
+      operationId: postDistilleryUsingPOST
+      parameters:
+        - name: description
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: id
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: region
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: title
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/distilleries/{distilleryId}/delete:
+    post:
+      tags:
+        - distillery-controller
+      summary: deleteDistillery
+      operationId: deleteDistilleryUsingPOST
+      parameters:
+        - name: distilleryId
+          in: path
+          description: distilleryId
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/distilleries/{distilleryId}/edit:
+    get:
+      tags:
+        - distillery-controller
+      summary: editDistillery
+      operationId: editDistilleryUsingGET
+      parameters:
+        - name: distilleryId
+          in: path
+          description: distilleryId
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    post:
+      tags:
+        - distillery-controller
+      summary: putDistillery
+      operationId: putDistilleryUsingPOST
+      parameters:
+        - name: description
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: distilleryId
+          in: path
+          description: distilleryId
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+        - name: id
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: region
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: title
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /:
+    get:
+      tags:
+        - frontend-controller
+      summary: index
+      operationId: indexUsingGET_3
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /index:
+    get:
+      tags:
+        - frontend-controller
+      summary: index
+      operationId: indexUsingGET_4
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /inside:
+    get:
+      tags:
+        - frontend-controller
+      summary: whatsInside
+      operationId: whatsInsideUsingGET
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /login:
+    get:
+      tags:
+        - frontend-controller
+      summary: login
+      operationId: loginUsingGET
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /rest-api:
+    get:
+      tags:
+        - frontend-controller
+      summary: restApi
+      operationId: restApiUsingGET
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/orders:
+    get:
+      tags:
+        - orders-controller
       summary: getOrders
       operationId: getOrdersUsingGET
       parameters:
-      - name: name
-        in: query
-        schema:
-          type: string
+        - name: direct
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: size
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: sort
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: executed
+          in: query
+          description: executed
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: created
+          in: query
+          description: created
+          required: false
+          style: form
+          schema:
+            type: string
       responses:
-        "200":
+        '200':
           description: OK
           content:
             '*/*':
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/OrderDTO'
-        "401":
+                type: string
+        '401':
           description: Unauthorized
-          content: {}
-        "403":
+        '403':
           description: Forbidden
-          content: {}
-        "404":
+        '404':
           description: Not Found
-          content: {}
-  /customer/orders/{orderId}:
-    get:
-      tags:
-      - orders-rest-controller
-      summary: getOrder
-      operationId: getOrderUsingGET
-      parameters:
-      - name: name
-        in: query
-        schema:
-          type: string
-      - name: orderId
-        in: path
-        description: orderId
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/OrderDTO'
-        "401":
-          description: Unauthorized
-          content: {}
-        "403":
-          description: Forbidden
-          content: {}
-        "404":
-          description: Not Found
-          content: {}
-  /products:
-    get:
-      tags:
-      - products-rest-controller
-      summary: getProducts
-      operationId: getProductsUsingGET
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ProductDTO'
-        "401":
-          description: Unauthorized
-          content: {}
-        "403":
-          description: Forbidden
-          content: {}
-        "404":
-          description: Not Found
-          content: {}
-  /products/{productId}:
-    get:
-      tags:
-      - products-rest-controller
-      summary: getProduct
-      operationId: getProductUsingGET
-      parameters:
-      - name: productId
-        in: path
-        description: productId
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ProductDTO'
-        "401":
-          description: Unauthorized
-          content: {}
-        "403":
-          description: Forbidden
-          content: {}
-        "404":
-          description: Not Found
-          content: {}
-  /register:
+  /admin/orders/{orderId}:
     post:
       tags:
-      - customer-rest-controller
-      summary: createCustomer
-      operationId: createCustomerUsingPOST
-      requestBody:
-        description: user
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserDTOReq'
-        required: true
+        - orders-controller
+      summary: setExecutionStatus
+      operationId: setExecutionStatusUsingPOST
+      parameters:
+        - name: orderId
+          in: path
+          description: orderId
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+        - name: executed
+          in: query
+          description: executed
+          required: true
+          style: form
+          schema:
+            type: boolean
       responses:
-        "201":
-          description: Created
+        '200':
+          description: OK
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/UserDTORes'
-        "401":
+                type: string
+        '201':
+          description: Created
+        '401':
           description: Unauthorized
-          content: {}
-        "403":
+        '403':
           description: Forbidden
-          content: {}
-        "404":
+        '404':
           description: Not Found
-          content: {}
-      x-codegen-request-body-name: user
+  /admin/products:
+    get:
+      tags:
+        - product-controller
+      summary: getProducts
+      operationId: getProductsUsingGET
+      parameters:
+        - name: direct
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: size
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: sort
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: dist
+          in: query
+          description: dist
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/products/new:
+    get:
+      tags:
+        - product-controller
+      summary: newProduct
+      operationId: newProductUsingGET
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    post:
+      tags:
+        - product-controller
+      summary: postProduct
+      operationId: postProductUsingPOST
+      parameters:
+        - name: age
+          in: query
+          required: false
+          style: form
+          schema:
+            maximum: 2000
+            exclusiveMaximum: false
+            type: integer
+            format: int32
+        - name: alcohol
+          in: query
+          required: true
+          style: form
+          schema:
+            maximum: 96
+            exclusiveMaximum: false
+            minimum: 1
+            exclusiveMinimum: false
+            type: number
+            format: float
+        - name: available
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: description
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: distillery
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            pattern: ^[^#$%^&*()']*$
+            type: string
+        - name: price
+          in: query
+          required: true
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: productId
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: volume
+          in: query
+          required: true
+          style: form
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/products/{productId}/delete:
+    post:
+      tags:
+        - product-controller
+      summary: deleteProduct
+      operationId: deleteProductUsingPOST
+      parameters:
+        - name: productId
+          in: path
+          description: productId
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/products/{productId}/edit:
+    get:
+      tags:
+        - product-controller
+      summary: editProduct
+      operationId: editProductUsingGET
+      parameters:
+        - name: productId
+          in: path
+          description: productId
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    post:
+      tags:
+        - product-controller
+      summary: putProduct
+      operationId: putProductUsingPOST
+      parameters:
+        - name: age
+          in: query
+          required: false
+          style: form
+          schema:
+            maximum: 2000
+            exclusiveMaximum: false
+            type: integer
+            format: int32
+        - name: alcohol
+          in: query
+          required: true
+          style: form
+          schema:
+            maximum: 96
+            exclusiveMaximum: false
+            minimum: 1
+            exclusiveMinimum: false
+            type: number
+            format: float
+        - name: available
+          in: query
+          required: false
+          style: form
+          schema:
+            type: boolean
+        - name: description
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: distillery
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            pattern: ^[^#$%^&*()']*$
+            type: string
+        - name: price
+          in: query
+          required: true
+          style: form
+          schema:
+            type: number
+            format: double
+        - name: productId
+          in: query
+          description: productId
+          required: true
+          style: form
+          allowReserved: true
+          schema:
+            type: integer
+            format: int64
+        - name: volume
+          in: query
+          required: true
+          style: form
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/regions:
+    get:
+      tags:
+        - region-controller
+      summary: allRegions
+      operationId: allRegionsUsingGET
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/regions/new:
+    get:
+      tags:
+        - region-controller
+      summary: newRegion
+      operationId: newRegionUsingGET
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    post:
+      tags:
+        - region-controller
+      summary: postRegion
+      operationId: postRegionUsingPOST
+      parameters:
+        - name: color
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: description
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: id
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: subtitle
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/regions/{regionId}/delete:
+    post:
+      tags:
+        - region-controller
+      summary: deleteRegion
+      operationId: deleteRegionUsingPOST
+      parameters:
+        - name: regionId
+          in: path
+          description: regionId
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/regions/{regionId}/edit:
+    get:
+      tags:
+        - region-controller
+      summary: editRegion
+      operationId: editRegionUsingGET
+      parameters:
+        - name: regionId
+          in: path
+          description: regionId
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    post:
+      tags:
+        - region-controller
+      summary: putRegion
+      operationId: putRegionUsingPOST
+      parameters:
+        - name: color
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: description
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: id
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+        - name: name
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: regionId
+          in: path
+          description: regionId
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+        - name: subtitle
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /regions/{regionId}:
+    get:
+      tags:
+        - showcase-controller
+      summary: getRegionProducts
+      operationId: getRegionProductsUsingGET
+      parameters:
+        - name: direct
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: regionId
+          in: path
+          description: regionId
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+        - name: size
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: sort
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: dist
+          in: query
+          description: dist
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /admin/storage:
+    get:
+      tags:
+        - storage-controller
+      summary: getStorageUnits
+      operationId: getStorageUnitsUsingGET
+      parameters:
+        - name: direct
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: size
+          in: query
+          required: false
+          style: form
+          schema:
+            type: integer
+            format: int32
+        - name: sort
+          in: query
+          required: false
+          style: form
+          schema:
+            type: string
+        - name: available
+          in: query
+          description: available
+          required: false
+          style: form
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    post:
+      tags:
+        - storage-controller
+      summary: postStorage
+      operationId: postStorageUsingPOST
+      parameters:
+        - name: productsIds
+          in: query
+          description: productsIds
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            format: int64
+        - name: availableProductsIds
+          in: query
+          description: availableProductsIds
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: string
+        '201':
+          description: Created
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
 components:
   schemas:
     CartDTO:
@@ -477,49 +2147,6 @@ components:
         quantity:
           type: integer
           format: int32
-    ContactsDTOReq:
-      title: ContactsDTOReq
-      type: object
-      properties:
-        _links:
-          type: array
-          items:
-            $ref: '#/components/schemas/Link'
-        address:
-          maxLength: 100
-          minLength: 0
-          pattern: "^[^#$%^*()']*$"
-          type: string
-        phone:
-          maxLength: 20
-          minLength: 0
-          pattern: "^\\+[1-9][0-9]?[\\s]*\\(?\\d{3}\\)?[-\\s]?\\d{3}[-\\s]?\\d{2}[-\\\
-            s]?\\d{2}$"
-          type: string
-    ContactsDTORes:
-      title: ContactsDTORes
-      type: object
-      properties:
-        _links:
-          $ref: '#/components/schemas/Links'
-        address:
-          maxLength: 100
-          minLength: 0
-          pattern: "^[^#$%^*()']*$"
-          type: string
-        phone:
-          maxLength: 20
-          minLength: 0
-          pattern: "^\\+[1-9][0-9]?[\\s]*\\(?\\d{3}\\)?[-\\s]?\\d{3}[-\\s]?\\d{2}[-\\\
-            s]?\\d{2}$"
-          type: string
-    CreditCardDTO:
-      title: CreditCardDTO
-      type: object
-      properties:
-        ccNumber:
-          pattern: "\\b(?:\\d[ -]*?){13,16}\\b"
-          type: string
     Link:
       title: Link
       type: object
@@ -551,142 +2178,98 @@ components:
       properties:
         empty:
           type: boolean
-    OrderDTO:
-      title: OrderDTO
+    ModelAndView:
+      title: ModelAndView
       type: object
       properties:
-        _links:
-          $ref: '#/components/schemas/Links'
-        billNumber:
-          type: integer
-          format: int32
-        dateCreated:
+        empty:
+          type: boolean
+        model:
+          type: object
+        modelMap:
+          type: object
+          additionalProperties:
+            type: object
+        reference:
+          type: boolean
+        status:
           type: string
-          format: date-time
-        deliveryCost:
-          type: integer
-          format: int32
-        deliveryIncluded:
-          type: boolean
-        executed:
-          type: boolean
-        id:
-          type: integer
-          format: int64
-        payed:
-          type: boolean
-        productsCost:
-          type: number
-          format: double
-        totalCost:
-          type: number
-          format: double
-        userAccount:
+          enum:
+            - ACCEPTED
+            - ALREADY_REPORTED
+            - BAD_GATEWAY
+            - BAD_REQUEST
+            - BANDWIDTH_LIMIT_EXCEEDED
+            - CHECKPOINT
+            - CONFLICT
+            - CONTINUE
+            - CREATED
+            - DESTINATION_LOCKED
+            - EXPECTATION_FAILED
+            - FAILED_DEPENDENCY
+            - FORBIDDEN
+            - FOUND
+            - GATEWAY_TIMEOUT
+            - GONE
+            - HTTP_VERSION_NOT_SUPPORTED
+            - IM_USED
+            - INSUFFICIENT_SPACE_ON_RESOURCE
+            - INSUFFICIENT_STORAGE
+            - INTERNAL_SERVER_ERROR
+            - I_AM_A_TEAPOT
+            - LENGTH_REQUIRED
+            - LOCKED
+            - LOOP_DETECTED
+            - METHOD_FAILURE
+            - METHOD_NOT_ALLOWED
+            - MOVED_PERMANENTLY
+            - MOVED_TEMPORARILY
+            - MULTIPLE_CHOICES
+            - MULTI_STATUS
+            - NETWORK_AUTHENTICATION_REQUIRED
+            - NON_AUTHORITATIVE_INFORMATION
+            - NOT_ACCEPTABLE
+            - NOT_EXTENDED
+            - NOT_FOUND
+            - NOT_IMPLEMENTED
+            - NOT_MODIFIED
+            - NO_CONTENT
+            - OK
+            - PARTIAL_CONTENT
+            - PAYLOAD_TOO_LARGE
+            - PAYMENT_REQUIRED
+            - PERMANENT_REDIRECT
+            - PRECONDITION_FAILED
+            - PRECONDITION_REQUIRED
+            - PROCESSING
+            - PROXY_AUTHENTICATION_REQUIRED
+            - REQUESTED_RANGE_NOT_SATISFIABLE
+            - REQUEST_ENTITY_TOO_LARGE
+            - REQUEST_HEADER_FIELDS_TOO_LARGE
+            - REQUEST_TIMEOUT
+            - REQUEST_URI_TOO_LONG
+            - RESET_CONTENT
+            - SEE_OTHER
+            - SERVICE_UNAVAILABLE
+            - SWITCHING_PROTOCOLS
+            - TEMPORARY_REDIRECT
+            - TOO_EARLY
+            - TOO_MANY_REQUESTS
+            - UNAUTHORIZED
+            - UNAVAILABLE_FOR_LEGAL_REASONS
+            - UNPROCESSABLE_ENTITY
+            - UNSUPPORTED_MEDIA_TYPE
+            - UPGRADE_REQUIRED
+            - URI_TOO_LONG
+            - USE_PROXY
+            - VARIANT_ALSO_NEGOTIATES
+        view:
+          $ref: '#/components/schemas/View'
+        viewName:
           type: string
-    ProductDTO:
-      title: ProductDTO
-      required:
-      - alcohol
-      - price
-      - volume
+    View:
+      title: View
       type: object
       properties:
-        _links:
-          $ref: '#/components/schemas/Links'
-        age:
-          maximum: 2000
-          exclusiveMaximum: false
-          type: integer
-          format: int32
-        alcohol:
-          maximum: 96
-          exclusiveMaximum: false
-          minimum: 1
-          exclusiveMinimum: false
-          type: number
-          format: float
-        available:
-          type: boolean
-        description:
+        contentType:
           type: string
-        distillery:
-          type: string
-        name:
-          pattern: "^[^#$%^&*()']*$"
-          type: string
-        price:
-          type: number
-          format: double
-        productId:
-          type: integer
-          format: int64
-        volume:
-          type: integer
-          format: int32
-    UserDTOReq:
-      title: UserDTOReq
-      type: object
-      properties:
-        _links:
-          type: array
-          items:
-            $ref: '#/components/schemas/Link'
-        address:
-          maxLength: 100
-          minLength: 0
-          pattern: "^[^#$%^*()']*$"
-          type: string
-        email:
-          maxLength: 50
-          minLength: 0
-          pattern: "^[\\w-]+(\\.[\\w-]+)*@([\\w-]+\\.)+[a-zA-Z]+$"
-          type: string
-        name:
-          maxLength: 50
-          minLength: 0
-          pattern: "^[\\pL '-]+$"
-          type: string
-        password:
-          maxLength: 50
-          minLength: 6
-          pattern: "^[a-zA-Z0-9]+$"
-          type: string
-        phone:
-          maxLength: 20
-          minLength: 0
-          pattern: "^\\+[1-9][0-9]?[\\s]*\\(?\\d{3}\\)?[-\\s]?\\d{3}[-\\s]?\\d{2}[-\\\
-            s]?\\d{2}$"
-          type: string
-    UserDTORes:
-      title: UserDTORes
-      type: object
-      properties:
-        _links:
-          $ref: '#/components/schemas/Links'
-        address:
-          maxLength: 100
-          minLength: 0
-          pattern: "^[^#$%^*()']*$"
-          type: string
-        email:
-          maxLength: 50
-          minLength: 0
-          pattern: "^[\\w-]+(\\.[\\w-]+)*@([\\w-]+\\.)+[a-zA-Z]+$"
-          type: string
-        name:
-          maxLength: 50
-          minLength: 0
-          pattern: "^[\\pL '-]+$"
-          type: string
-        password:
-          maxLength: 50
-          minLength: 6
-          pattern: "^[a-zA-Z0-9]+$"
-          type: string
-        phone:
-          maxLength: 20
-          minLength: 0
-          pattern: "^\\+[1-9][0-9]?[\\s]*\\(?\\d{3}\\)?[-\\s]?\\d{3}[-\\s]?\\d{2}[-\\\
-            s]?\\d{2}$"
-          type: string
-x-original-swagger-version: "2.0"
