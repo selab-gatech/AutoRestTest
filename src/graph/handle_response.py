@@ -12,8 +12,8 @@ from dotenv import load_dotenv
 from src.prompts.classification_prompts import PARAMETER_CONSTRAINT_IDENTIFICATION_PREFIX, EXAMPLE_GENERATION_PROMPT, \
     MESSAGE_HEADER, PARAMETERS_HEADER, CONSTRAINT_EXTRACTION_PREFIX, FEW_SHOT_CLASSIFICATON_PREFIX, \
     CLASSIFICATION_SUFFIX, EXTRACT_PARAMETER_DEPENDENCIES
-from .utils import OpenAILanguageModel
-from .specification_parser import SchemaProperties, ParameterProperties
+from src.utils import OpenAILanguageModel
+from src.graph.specification_parser import SchemaProperties, ParameterProperties
 
 def configure_response_logging():
     logging_dir = os.path.join(os.getcwd(), "logs")
@@ -32,7 +32,7 @@ load_dotenv() # load environmental vars for OpenAI API key
 configure_response_logging()
 
 if TYPE_CHECKING:
-    from .generate_graph import OperationNode, OperationEdge
+    from src.generate_graph import OperationNode, OperationEdge
     from src.request_generator import RequestGenerator, RequestData, RequestResponse
 
 class ResponseHandler:
@@ -58,17 +58,6 @@ class ResponseHandler:
         if failed_response.status_code // 100 == 2:
             return True
         return False
-
-    def _test_tentative_edge(self, request_generator: 'RequestGenerator', failed_operation_node: 'OperationNode', tentative_edge: 'OperationEdge'):
-        tentative_operation_node = tentative_edge.destination
-        print(f"Testing tentative edge from {failed_operation_node.operation_id} to {tentative_operation_node.operation_id}")
-        tentative_response: 'RequestResponse' = request_generator.create_and_send_request(tentative_operation_node)
-        print(f"Tentative response status code: {tentative_response.response.status_code}")
-        failed_response: 'RequestResponse' = request_generator.create_and_send_request(failed_operation_node)
-        print(f"Failed response status code: {failed_response.response.status_code}")
-        if tentative_response is not None and failed_response is not None and self._is_valid_dependency(failed_response, tentative_response):
-            return True
-        return False
     
     def handle_operation_dependency_error(self, request_generator: 'RequestGenerator', failed_operation_node: 'OperationNode'):
         '''
@@ -77,6 +66,7 @@ class ResponseHandler:
         if not failed_operation_node.tentative_edges:
             return
         sorted_edges = sorted(failed_operation_node.tentative_edges, key=lambda x: list(x.similar_parameters.values())[0].similarity, reverse=True) # sort tentative edges by their one parameter similarity value
+        print(f"Handling operation dependency error for operation {failed_operation_node.operation_properties.operation_id}")
         for tentative_edge in sorted_edges:
             if request_generator.handle_tentative_dependency(tentative_edge=tentative_edge, failed_operation_node=failed_operation_node):
                 return

@@ -1,15 +1,12 @@
-import os
 from typing import List, Dict, Tuple
 
 from dataclasses import dataclass
 
-from gensim.models import KeyedVectors
 from gensim.downloader import load
-from gensim.scripts.glove2word2vec import glove2word2vec
 
 from scipy.spatial.distance import cosine
 
-from .specification_parser import OperationProperties, SchemaProperties
+from src.graph.specification_parser import OperationProperties, SchemaProperties
 
 @dataclass
 class SimilarityValue:

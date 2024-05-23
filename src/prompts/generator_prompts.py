@@ -2,16 +2,16 @@ import json
 from typing import Dict
 
 REQUEST_BODY_GEN_PROMPT = """
-Given a summary of an operation its request body schema, generate a valid context-aware request body for the operation. Return the answer as a JSON object with the following structure:
+Given a summary of an operation its request body schema from its OpenAPI Specification, generate a valid context-aware request body for the operation. Return the answer as a JSON object with the following structure:
 {
     "request_body": [correct request body]
 }
-In the case where the request body is an object, use an object with keys to represent the object field names and values to represent their respective field values for the request body value. Attempt to generate values for all required fields for object request bodies. Attempt to generate as much as possible.
+In the case where the request body is an object, use an object with keys to represent the object field names and values to represent their respective field values for the request body value. Attempt to generate as much as possible.
 In the case where the request body is an array, use a list as the request_body value.
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 PARAMETERS_GEN_PROMPT = """
-Given a summary of an operation and its parameters schema, generate valid context-aware values for the parameters of the operation. Attempt to generate values for all required parameters. Return the answer as a JSON object with the following structure:
+Given a summary of an operation and its parameters schema from its OpenAPI Specification, generate valid context-aware values for the parameters of the operation. Return the answer as a JSON object with the following structure:
 {
     "parameters": {
         "[parameter1]": [value1],
@@ -22,6 +22,39 @@ Given a summary of an operation and its parameters schema, generate valid contex
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value. 
 In the case where a given parameter is an array, use a list as the parameter value.
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
+
+VALUE_AGENT_BODY_PROMPT = """
+Given a summary of an operation its request body schema from its OpenAPI Specification, generate [insert number] different valid context-aware request bodies for the operation. Return the answer as a JSON object with the following structure:
+{
+    "request_body": {
+        "request_body1": [correct request body 1],
+        ...
+    }
+}
+In the case where the request body is an object, use an object with keys to represent the object field names and values to represent their respective field values for the request body value. It is important to generate values for each object property.
+In the case where the request body is an array, use a list as the request body value.
+Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy.
+When generating the [insert number] different request bodies, MAKE CERTAIN include a variety of incorrect and correct values to test the robustness of the system."""
+
+VALUE_AGENT_PARAMETERS_PROMPT = """
+Given a summary of an operation and its parameters schema from its OpenAPI Specification, generate [insert number] different valid context-aware values for the parameters of the operation. Return the answer as a JSON object with the following structure:
+{
+    "parameters": {
+        "[parameter1]": {
+            "value1": [value1],
+            ...
+        },
+        "[parameter2]": {
+            "value1": [value1],
+            ...
+        },
+        ...
+    }
+}
+In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value.
+In the case where a given parameter is an array, use a list as the parameter value.
+Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy.
+When generating the [insert number] different values for each parameter, MAKE CERTAIN to include a variety of incorrect and correct values to test the robustness of the system."""
 
 #FEWSHOT_REQUEST_BODY_GEN_PROMPT = """
 #SUMMARY:
@@ -35,11 +68,15 @@ Do not solely rely on the given constraint values, and ensure you read the assoc
 #"""
 
 PARAMETER_REQUIREMENTS_PROMPT = """
-Attempt to generate values for the following parameters (attempt the most possible). It is extremely important to ensure the values are compatible with eachother:
+Attempt to generate values for the following parameters (attempt the most possible). It is very important to ensure the values are compatible with eachother:
+"""
+
+PARAMETER_NECESSITY_PROMPT = """
+You MUST generate values for the following parameters using their respective specifications. Ensure that all parameters receive a value without exception:
 """
 
 RETRY_PARAMETER_REQUIREMENTS_PROMPT = """
-Attempt to generate values for the following parameters, unless otherwise specified in the failed response. Ensure the values are compatible with eachother:
+Attempt to generate values for the following parameters, unless otherwise specified in the failed response. It is very imoprtant to ensure that the values are compatible with eachother:
 """
 
 FAILED_PARAMETER_MATCHINGS_PROMPT = """
@@ -54,9 +91,54 @@ FEWSHOT_REQUEST_BODY_GEN_PROMPT = """"""
 
 FEWSHOT_PARAMETER_GEN_PROMPT = """"""
 
+#IDENTIFY_AUTHENTICATION_GEN_PROMPT = """
+#Given a summary of an operation and its full specification from the OpenAPI Specification, determine if it consists of any authentication information sent as parameters in either the query or the request body.
+#When referring to request body parameters, identify object properties that might be used for authentication.
+#Authentication information consists of usernames, passwords, tokens, or any other information that can be made into Bearer tokens, Basic tokens, or API keys.
+#If the operation does contain authentication parameters in either the query or request body, indicate the parameters in the following format:
+#{
+#    "authentication_parameters": {
+#        "query_parameters": [list of query parameters],
+#        "request_body_parameters": [list of request body parameters]
+#    }
+#}
+#Indicate None for the values of the query_parameters or request_body_parameters if the operation does not contain any authentication parameters.
+#"""
+
+IDENTIFY_AUTHENTICATION_GEN_PROMPT = """
+Given a summary of an operation and its full specification from the OpenAPI Specification, determine if it consists of any authentication information sent as parameters in either the query or the request body. 
+When referring to request body parameters, identify object properties that might be used for authentication.
+Authentication information consists specifically of items related to usernames or passwords which can be used to create Basic tokens.
+If the operation does contain authentication parameters in either the query or request body, indicate the parameters in the following format:
+{
+    "authentication_parameters": {
+        "query_parameters": {
+            "username": [parameter name]
+            "password": [parameter name]
+        }
+        "body_parameters": {
+            "username": [parameter name]
+            "password": [parameter name]
+        }
+    }
+}
+Indicate None for the username and password values of the query_parameters or body_parameters if the operation does not contain any authentication parameters related to usernames or passwords accordingly.
+"""
+
+FIX_JSON_OBJ = """
+There is an issue with the JSON object you generated. When using json.loads() on the JSON string you returned, there is an error.
+Here is the incorrect JSON string you returned. Fix the JSON object and return the valid string:
+"""
+
 def template_gen_prompt(summary: str, schema: Dict) -> str:
     try:
         schema = json.dumps(schema, indent=2)
     except:
         schema = str(schema)
-    return f"SUMMARY: {summary}\nSCHEMA: {schema}\n"
+    return f"SUMMARY: {summary}\nSPECIFICATION: {schema}\n"
+
+def get_value_agent_body_prompt(num: int) -> str:
+    return VALUE_AGENT_BODY_PROMPT.replace("[insert number]", str(num))
+
+def get_value_agent_params_prompt(num: int) -> str:
+    return VALUE_AGENT_PARAMETERS_PROMPT.replace("[insert number]", str(num))

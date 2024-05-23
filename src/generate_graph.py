@@ -2,9 +2,8 @@ import heapq
 from typing import List, Dict, Tuple, Optional
 
 from src.request_generator import RequestGenerator
-from .specification_parser import OperationProperties, SpecificationParser
-from .similarity_comparator import OperationDependencyComparator, SimilarityValue
-
+from src.graph.specification_parser import OperationProperties, SpecificationParser
+from src.graph.similarity_comparator import OperationDependencyComparator, SimilarityValue
 
 class OperationNode:
     def __init__(self, operation_properties: OperationProperties):
@@ -31,6 +30,17 @@ class OperationGraph:
         self.operation_edges: List[OperationEdge] = []
         self.next_most_similar_count = 3
 
+    def print_graph(self):
+        for operation_id, operation_node in self.operation_nodes.items():
+            print("=====================================")
+            print(f"Operation: {operation_id}")
+            for edge in operation_node.outgoing_edges:
+                print(f"Edge: {edge.source.operation_id} -> {edge.destination.operation_id} with parameters: {edge.similar_parameters}")
+            for tentative_edge in operation_node.tentative_edges:
+                print(f"Tentative Edge: {tentative_edge.source.operation_id} -> {tentative_edge.destination.operation_id} with parameters: {tentative_edge.similar_parameters}")
+            print()
+            print()
+
     def add_operation_node(self, operation_properties: OperationProperties):
         self.operation_nodes[operation_properties.operation_id] = OperationNode(operation_properties)
 
@@ -45,7 +55,7 @@ class OperationGraph:
         edge = OperationEdge(source=source_node, destination=destination_node, similar_parameters=parameters)
         self.operation_edges.append(edge)
         source_node.outgoing_edges.append(edge)
-        print(f"Added edge from {operation_id} to {dependent_operation_id} with parameters: {parameters}")
+        #print(f"Added edge from {operation_id} to {dependent_operation_id} with parameters: {parameters}")
 
     def add_tentative_edge(self, operation_id: str, dependent_operation_id: str, next_closest_similarities: List[Tuple[str, SimilarityValue]]):
         if operation_id not in self.operation_nodes:
@@ -105,12 +115,13 @@ class OperationGraph:
             raise ValueError("Request generator not assigned to the operation graph")
         self.request_generator.perform_all_requests()
 
-    def create_graph(self):
+    def create_graph(self, auto_validate=True):
         operations: Dict[str, OperationProperties] = self.spec_parser.parse_specification()
         for operation_id, operation_properties in operations.items():
             self.add_operation_node(operation_properties)
         self.determine_dependencies(operations)
-        self.validate_graph()
+        if auto_validate:
+            self.validate_graph()
 
 if __name__ == "__main__":
     operation_graph = OperationGraph(spec_path="specs/original/oas/genome-nexus.yaml", spec_name="genome-nexus", initialize_graph=False)

@@ -1,20 +1,19 @@
-import json
+from collections import defaultdict
 from dataclasses import dataclass, asdict, field
+from json import JSONDecodeError
 from typing import Dict, Set, Any, List, Optional, TYPE_CHECKING
-
-from requests import Response
 
 import itertools
 
-from src.handle_response import ResponseHandler
-from src.utils import remove_nulls
+from src.graph.handle_response import ResponseHandler
+from src.utils import remove_nulls, OpenAILanguageModel, get_params, get_request_body_params, get_nested_obj_mappings
 
-from .specification_parser import OperationProperties, ParameterProperties, SchemaProperties
+from src.graph.specification_parser import OperationProperties, ParameterProperties, SchemaProperties
 import requests
 import pickle
 import os
 
-from .value_generator import NaiveValueGenerator, identify_generator, SmartValueGenerator
+from .value_generator import NaiveValueGenerator, SmartValueGenerator
 
 if TYPE_CHECKING:
     from .generate_graph import OperationGraph, OperationNode, OperationEdge
@@ -24,7 +23,7 @@ class RequestData:
     endpoint_path: str
     http_method: str
     parameters: Dict[str, Any] # dict of parameter name to value
-    request_body: Dict[str, Any]
+    request_body: Dict[str, Any] # dict of mime type to request body
     operation_properties: OperationProperties
     requirements: 'RequestRequirements' = None
 
@@ -96,7 +95,7 @@ class RequestGenerator:
         self.successful_query_data = [] # List to store successful query data
         self.response_handler = ResponseHandler()
         self.is_naive = is_naive
-        self.responses: Dict[str, RequestResponse] = {}
+        self.responses: Dict[str, RequestResponse] = {} # Dictionary to store responses for each operation_id
         self.allowed_retries = 1
 
     @staticmethod
@@ -105,7 +104,7 @@ class RequestGenerator:
         return value_generator.generate_parameters() if parameters else None, value_generator.generate_request_body() if request_body else None
 
     @staticmethod
-    def generate_smart_values(operation_properties: Dict, requirements: RequestRequirements = None):
+    def generate_smart_values(operation_properties: OperationProperties, requirements: RequestRequirements = None):
         """
         Generate smart values for parameters and request body using LLMs
         :param operation_properties: Dictionary mapping of operation properties
@@ -139,7 +138,7 @@ class RequestGenerator:
         else:  # For non-2xx responses
             self.response_handler.handle_error(response, operation_node, request_data, self)
         
-        print(f"Request {request_data.operation_properties.operation_id} completed with response text {response.text} and status code {response.status_code}")
+        #print(f"Request {request_data.operation_properties.operation_id} completed with response text {response.text} and status code {response.status_code}")
 
     def make_request_data(self, operation_properties: OperationProperties, requirements: RequestRequirements = None) -> RequestData:
         '''
@@ -148,31 +147,21 @@ class RequestGenerator:
         endpoint_path = operation_properties.endpoint_path
         http_method = operation_properties.http_method.lower()
 
-        print("=====================================")
-        print(f"Processing operation {operation_properties.operation_id} with method {http_method} and path {endpoint_path}")
-
-        # Generate values for parameters and request body
         if self.is_naive:
             parameters, request_body = self.generate_naive_values(
                 operation_properties.parameters, operation_properties.request_body
             )
         else:
-            parsed_operation = remove_nulls(asdict(operation_properties))
             parameters, request_body = self.generate_smart_values(
-                operation_properties=parsed_operation,
+                operation_properties=operation_properties,
                 requirements=requirements
             )
 
-        print(f"Parameters: {parameters}")
-        print(f"Request Body: {request_body}")
-
-        # Replace path parameters in the endpoint path
         for parameter_name, parameter_properties in operation_properties.parameters.items():
             if parameter_properties.in_value == "path":
                 path_value = parameters[parameter_name]
                 endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
 
-        # Create RequestData object
         return RequestData(
             endpoint_path=endpoint_path,
             http_method=http_method,
@@ -186,9 +175,8 @@ class RequestGenerator:
         if self.is_naive:
             return request_data
         else:
-            parsed_operation = remove_nulls(asdict(request_data.operation_properties))
             requirements = request_data.requirements
-            value_generator = SmartValueGenerator(operation_properties=parsed_operation, requirements=requirements, engine="gpt-4o")
+            value_generator = SmartValueGenerator(operation_properties=request_data.operation_properties, requirements=requirements, engine="gpt-4o")
             parameters, request_body = value_generator.generate_retry_parameters(request_data, response), value_generator.generate_retry_request_body(request_data, response)
             return RequestData(
                 endpoint_path=request_data.endpoint_path,
@@ -204,11 +192,52 @@ class RequestGenerator:
         response = self.send_operation_request(retry_data, retry_nums=curr_retry + 1)
         return response
 
-    def send_operation_request(self, request_data: RequestData, retry_nums: int = 0) -> Optional[RequestResponse]:
+    def _determine_auth_mappings(self, request_val: Any, auth_parameters: Dict, auth_mappings):
+        if type(request_val) == dict:
+            for item, properties in request_val.items():
+                if auth_parameters.get("username") == item:
+                    auth_mappings["username"] = item
+                elif auth_parameters.get("password") == item:
+                    auth_mappings["password"] = item
+                else:
+                    self._determine_auth_mappings(properties, auth_parameters, auth_mappings)
+        elif type(request_val) == list:
+            for item in request_val:
+                self._determine_auth_mappings(item, auth_parameters, auth_mappings)
+
+    def get_auth_info(self, operation_node: 'OperationNode', auth_attempts: int = 3):
+        operation_properties = operation_node.operation_properties
+        value_generator = SmartValueGenerator(operation_properties=operation_properties, engine="gpt-4o")
+
+        auth_parameters = value_generator.determine_auth_params()
+        if not auth_parameters:
+            return []
+        query_param_auth = auth_parameters.get("query_parameters")
+        body_param_auth = auth_parameters.get("username")
+
+        token_info = []
+        if query_param_auth and query_param_auth.get("username") and query_param_auth.get("password"):
+            for i in range(auth_attempts):
+                self.find_query_auth_mappings(operation_node, query_param_auth, token_info)
+        if body_param_auth and body_param_auth.get("username") and body_param_auth.get("password"):
+            for i in range(auth_attempts):
+                self.find_query_auth_mappings(operation_node, body_param_auth, token_info)
+
+        return token_info
+
+    def find_query_auth_mappings(self, operation_node, query_param_auth, token_info):
+        response = self.create_and_send_request(operation_node, allow_retry=True)
+        if response and response.response.ok:
+            auth_mappings = {}
+            self._determine_auth_mappings(response.request.parameters, query_param_auth, auth_mappings)
+            if len(auth_mappings) == 2: token_info.append(auth_mappings) # check for both username and password
+
+    def send_operation_request(self, request_data: RequestData, retry_nums: int = 0, allow_retry: bool=False) -> Optional[RequestResponse]:
         """
         Send the operation request to the API
         :param request_data:
-        :param is_retry:
+        :param retry_nums:
+        :param allow_retry:
         :return:
         """
         endpoint_path = request_data.endpoint_path
@@ -218,12 +247,14 @@ class RequestGenerator:
         try:
             select_method = getattr(requests, http_method) # selects correct http method
             full_url = f"{self.api_url}{endpoint_path}"
+            # TODO: Determine if should do a request_body conditional check instead of http_method hardcoded
             if http_method in {"put", "post", "patch"}:
                 response = self._send_mime_type(select_method, full_url, parameters, request_body)
             else:
                 response = select_method(full_url, params=parameters)
             if response is not None:
-                if not response.ok and retry_nums < self.allowed_retries:
+                if not response.ok and retry_nums < self.allowed_retries and allow_retry:
+                    print("Attempting retry due to failed response...")
                     return self._handle_retry(request_data, response, retry_nums)
                 else:
                     return RequestResponse(
@@ -239,7 +270,6 @@ class RequestGenerator:
             return None
         except Exception as err:
             print(f"Unexpected error due to: {err}")
-            print(f"Error type: {type(err)}")
             print(f"Endpoint Path: {endpoint_path}")
             print(f"Params: {parameters}")
             return None
@@ -248,35 +278,21 @@ class RequestGenerator:
         params = parameters if parameters else {}
         if "application/json" in request_body:
             req_body = request_body["application/json"]
-            print(
-                f"Sending request JSON to {full_url} with parameters {parameters} and request body {req_body}")
             response = select_method(full_url, params=params, json=req_body)
         elif "application/x-www-form-urlencoded" in request_body:
             req_body = request_body["application/x-www-form-urlencoded"]
-            print(
-                f"Sending request ENCODED to {full_url} with parameters {parameters} and request body {req_body}")
             response = select_method(full_url, params=params, data=req_body)
+        elif "multipart/form-data" in request_body:
+            req_body = request_body["multipart/form-data"]
+            response = select_method(full_url, params=params, files=req_body)
+        elif "text/plain" in request_body:
+            req_body = request_body["text/plain"]
+            headers = {"Content-Type": "text/plain"}
+            response = select_method(full_url, params=params, headers=headers, data=req_body)
         else:
             # should not reach here
-            print(f"Sending request to {full_url} with parameters {parameters}")
-            response = select_method(full_url, params=params)
+            raise ValueError("Request body mime type not supported")
         return response
-
-    def get_response_mappings(self, response: Any) -> Optional[Dict[str, Any]]:
-        """
-        Get the response mappings for the given response
-        :param response: The requests response object
-        :return:
-        """
-        if not response:
-            return None
-        mappings = {}
-        if type(response) == dict:
-            for key, value in response.items():
-                mappings[key] = value
-        elif type(response) == list and len(response) > 0:
-            mappings = self.get_response_mappings(response[0])
-        return mappings
 
     def determine_requirement(self, dependent_response: RequestResponse, edge: 'OperationEdge') -> Optional[RequestRequirements]:
         """
@@ -288,8 +304,8 @@ class RequestGenerator:
         if dependent_response is None or not dependent_response.response.ok or dependent_response.response is None:
             return None
         try:
-            response_mappings = self.get_response_mappings(dependent_response.response.json())
-        except:
+            response_mappings = get_nested_obj_mappings(dependent_response.response.json())
+        except JSONDecodeError as err:
             print("FAILED TO PARSE JSON RESPONSE ", dependent_response.response.text)
             response_mappings = {}
 
@@ -330,40 +346,129 @@ class RequestGenerator:
         """
         visited.add(curr_node.operation_id)
         dependent_responses: Dict['OperationEdge', RequestResponse] = {}
+        print("Building dependencies for operation: ", curr_node.operation_id)
         for edge in curr_node.outgoing_edges:
             if edge.destination.operation_id not in visited:
                 self.depth_traversal(edge.destination, visited)
             dependent_response = self.responses[edge.destination.operation_id]
             if dependent_response is not None and dependent_response.response.ok:
                 dependent_responses[edge] = dependent_response
-        best_response = self.handle_request_and_dependencies(curr_node, dependent_responses)
+        respones = self.handle_request_and_dependencies(curr_node, dependent_responses)
+        best_response = self._determine_best_response(respones)
         self.responses[curr_node.operation_id] = best_response
+        print("Completed building dependencies for operation: ", curr_node.operation_id)
 
-    def handle_request_and_dependencies(self, curr_node: 'OperationNode', dependent_responses: Dict['OperationEdge', RequestResponse] = None) -> Optional[RequestResponse]:
+    def _validate_value_mappings(self, curr_node: 'OperationNode', parameter_mappings: Dict, req_param_mappings: Dict[str, List[Any]], req_body_mappings: Dict[str, List[Any]], occurrences: Dict):
+        operation_id = curr_node.operation_id
+        if operation_id not in parameter_mappings:
+            parameter_mappings[operation_id] = {'params': {}, 'body': {}}
+
+        operation_params = get_params(curr_node.operation_properties.parameters)
+        #operation_body_params = get_request_body_params(curr_node.operation_properties.request_body)
+
+        # take the reverse of mappings since API outputs least likely values first
+        req_param_mappings = {k: v for k, v in reversed(list(req_param_mappings.items()))} if req_param_mappings else {}
+        req_body_mappings = {k: v for k, v in reversed(list(req_body_mappings.items()))} if req_body_mappings else {}
+
+        if req_param_mappings:
+            for parameter, values in req_param_mappings.items():
+                for value in values:
+                    if parameter not in parameter_mappings[operation_id]['params']:
+                        parameter_mappings[operation_id]['params'][parameter] = []
+                    if parameter in operation_params and len(parameter_mappings[operation_id]['params'][parameter]) < 10:
+                        parameter_mappings[operation_id]['params'][parameter].append([value, 0])
+                        occurrences[parameter] = occurrences.get(parameter, 0) + 1
+
+        if req_body_mappings:
+            for mime, mime_params in req_body_mappings.items():
+                if mime not in parameter_mappings[operation_id]['body']:
+                    parameter_mappings[operation_id]['body'][mime] = []
+                for mime_param in mime_params:
+                    num_bodies = len(parameter_mappings[operation_id]['body'][mime])
+                    if num_bodies < 10:
+                        parameter_mappings[operation_id]['body'][mime].append([mime_param, 0])
+                        occurrences[mime] = occurrences.get(mime, 0) + 1
+                #body_params = get_nested_obj_mappings(mime_params) # handler works for getting first obj values same as get_request_body_params
+                #for body_param, value in body_params.items():
+                #    if body_param not in parameter_mappings[operation_id]['body'][mime]:
+                #        parameter_mappings[operation_id]['body'][mime][body_param] = {}
+                #    if body_param in operation_body_params[mime] and len(parameter_mappings[operation_id]['body'][mime][body_param]) < 10:
+                #        parameter_mappings[operation_id]['body'][mime][body_param][value] = 0
+                #        occurrences[body_param] = occurrences.get(body_param, 0) + 1
+
+    def value_depth_traversal(self, curr_node: 'OperationNode', parameter_mappings: Dict, responses: Dict[str, List], visited: Set):
+        visited.add(curr_node.operation_id)
+        dependent_responses: Dict['OperationEdge', List[RequestResponse]] = defaultdict(list)
+
+        for edge in curr_node.outgoing_edges:
+            if edge.destination.operation_id not in visited:
+                self.value_depth_traversal(edge.destination, parameter_mappings, responses, visited)
+            possible_dependent_responses = responses[edge.destination.operation_id]
+            counter = 3
+            for dependent_response in possible_dependent_responses:
+                if counter == 0:
+                    break
+                if dependent_response and dependent_response.response and dependent_response.response.ok:
+                    dependent_responses[edge].append(dependent_response)
+                    counter -= 1
+
+        occurrences = {}
+        self.handle_dependent_values(curr_node, dependent_responses, occurrences, parameter_mappings, responses)
+
+        desired_size = 10
+        lowest_occurrences = min(occurrences.values()) if occurrences else 0
+        if lowest_occurrences < desired_size:
+            value_generator = SmartValueGenerator(operation_properties=curr_node.operation_properties, temperature=0.7)
+            parameters, request_body = value_generator.generate_value_agent_params(num_values=desired_size - lowest_occurrences), value_generator.generate_value_agent_body(num_values=desired_size - lowest_occurrences)
+            self._validate_value_mappings(curr_node, parameter_mappings, parameters, request_body, occurrences)
+
+        if not responses[curr_node.operation_id]:
+            for i in range(3):
+                response = self.create_and_send_request(curr_node)
+                if response and response.response and response.response.ok:
+                    responses[curr_node.operation_id].append(response)
+
+    def _embed_obj_val_list(self, obj: Optional[Dict[Any, List]]):
+        if not obj:
+            return {}
+        for key, value in obj.items():
+            obj[key] = [value]
+        return obj
+
+    def handle_dependent_values(self, curr_node, dependent_responses, occurrences, parameter_mappings, responses):
         if not dependent_responses:
-            return self._send_req_handle_respo(curr_node)
+            return
+        for edge, response_returns in dependent_responses.items():
+            for dependent_response in response_returns:
+                if occurrences and max(occurrences.values()) == 7:  # limit number of dependency created values
+                    break
+                requirements = self.determine_requirement(dependent_response, edge)
+                response = self.create_and_send_request(curr_node, requirements)
+                self._validate_value_mappings(curr_node, parameter_mappings, self._embed_obj_val_list(response.request.parameters),
+                                              self._embed_obj_val_list(response.request.request_body), occurrences)
+                if response and response.response and response.response.ok:
+                    responses[curr_node.operation_id].append(response)
+
+    def handle_request_and_dependencies(self, curr_node: 'OperationNode', dependent_responses: Dict['OperationEdge', RequestResponse] = None) -> Optional[List[RequestResponse]]:
+        if not dependent_responses:
+            return [self._send_req_handle_respo(curr_node)]
         else:
             responses: List[RequestResponse] = []
             for edge, dependent_response in dependent_responses.items():
-                self.handle_dependency(curr_node, dependent_response, edge, responses)
-            return self._determine_best_response(responses)
-
-    def handle_dependency(self, curr_node, dependent_response, edge, responses):
-        requirement: RequestRequirements = self.determine_requirement(dependent_response, edge)
-        req_combos: List[RequestRequirements] = requirement.generate_combinations()
-
-        for requirement in req_combos:
-            response = self._send_req_handle_respo(curr_node, requirement)
-            if response and response.response and response.response.ok:
-                responses.append(response)
-                self.handle_edge_adjustment(edge, requirement)
-                return
-
-        self.handle_edge_adjustment(edge)
-        responses.append(None)
+                requirement: RequestRequirements = self.determine_requirement(dependent_response, edge)
+                req_combos: List[RequestRequirements] = requirement.generate_combinations() if requirement else []
+                for requirement in req_combos:
+                    response = self._send_req_handle_respo(curr_node, requirement)
+                    if response and response.response and response.response.ok:
+                        responses.append(response)
+                        self.handle_edge_adjustment(edge, requirement)
+                        return
+                self.handle_edge_adjustment(edge)
+            return responses
 
     def _send_req_handle_respo(self, curr_node, requirement=None) -> RequestResponse:
-        response = self.create_and_send_request(curr_node, requirement)
+        # currently only used during initial depth traversal
+        response = self.create_and_send_request(curr_node, requirement, allow_retry=True)
         if response is not None:
             self.process_response(response, curr_node)
         return response
@@ -384,7 +489,7 @@ class RequestGenerator:
             self.operation_graph.remove_edge(edge.source.operation_id, edge.destination.operation_id)
 
     def handle_tentative_dependency(self, tentative_edge, failed_operation_node) -> bool:
-        dependent_response = self.create_and_send_request(tentative_edge.distination)
+        dependent_response = self.create_and_send_request(tentative_edge.destination, allow_retry=True)
         if dependent_response and dependent_response.response and dependent_response.response.ok:
             requirement = self.determine_requirement(dependent_response, tentative_edge)
             response = self.create_and_send_request(failed_operation_node, requirement)
@@ -396,9 +501,9 @@ class RequestGenerator:
                 self.operation_graph.remove_tentative_edge(tentative_edge.source.operation_id, tentative_edge.destination.operation_id)
         return False
 
-    def create_and_send_request(self, curr_node: 'OperationNode', requirement: RequestRequirements=None) -> RequestResponse:
+    def create_and_send_request(self, curr_node: 'OperationNode', requirement: RequestRequirements=None, allow_retry:bool=False) -> RequestResponse:
         request_data: RequestData = self.make_request_data(curr_node.operation_properties, requirement)
-        response: RequestResponse = self.send_operation_request(request_data)
+        response: RequestResponse = self.send_operation_request(request_data, allow_retry=allow_retry)
         return response
 
     def perform_all_requests(self):
@@ -410,41 +515,5 @@ class RequestGenerator:
             if operation_id not in visited:
                 self.depth_traversal(operation_node, visited)
 
-#I am guessing this is only used for testing, and that we will do it in a more organized way in the future
-def setup_request_generation(api_url, spec_path, spec_name, cached_graph=False):
-    # Create and populate the operation graph -- useful for development
-    if cached_graph:
-        if os.path.exists("operation_graph_" + spec_name + ".pkl"):
-            with open("operation_graph_" + spec_name + ".pkl", "rb") as f:
-                operation_graph = pickle.load(f)
-        else:
-            operation_graph = OperationGraph(spec_path, spec_name=spec_name, initialize_graph=False)
-            operation_graph.create_graph()  # Generate the graph
-            if cached_graph:
-                with open("operation_graph_" + spec_name + ".pkl", "wb") as f:
-                    pickle.dump(operation_graph, f)
-    else:
-        operation_graph = OperationGraph(spec_path, spec_name=spec_name, initialize_graph=False)
-        operation_graph.create_graph()
-
-    for operation_id, operation_node in operation_graph.operation_nodes.items():
-        print("=====================================")
-        print(f"Operation: {operation_id}")
-        for edge in operation_node.outgoing_edges:
-            print(f"Edge: {edge.source.operation_id} -> {edge.destination.operation_id} with parameters: {edge.similar_parameters}")
-        for tentative_edge in operation_node.tentative_edges:
-            print(f"Tentative Edge: {tentative_edge.source.operation_id} -> {tentative_edge.destination.operation_id} with parameters: {tentative_edge.similar_parameters}")
-        print()
-        print()
-
-    # Create the request generator with the populated graph
-    request_generator = RequestGenerator(operation_graph, api_url)
-    return request_generator
-
 if __name__ == "__main__":
-    api_url = "http://0.0.0.0:9003"  # API URL for genome-nexus
-    spec_path = "specs/original/oas/language-tool.yaml"  # Specification path
-    spec_name = "language-tool"  # Specification name
-    cache_graph = True #set to false when you are actively changing the graph, however caching is useful for fast development when testing API side things
-    generator = setup_request_generation(api_url, spec_path, spec_name, cached_graph=cache_graph)
-    generator.perform_all_requests()
+    pass
