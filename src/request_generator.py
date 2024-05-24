@@ -450,11 +450,11 @@ class RequestGenerator:
                 if occurrences and max(occurrences.values()) == 7:  # limit number of dependency created values
                     break
                 requirements = self.determine_requirement(dependent_response, edge)
-                response = self.create_and_send_request(curr_node, requirements, allow_retry=True)
-                self._validate_value_mappings(curr_node, parameter_mappings, self._embed_obj_val_list(response.request.parameters),
-                                              self._embed_obj_val_list(response.request.request_body), occurrences)
-                if response and response.response and response.response.ok:
-                    responses[curr_node.operation_id].append(response)
+                #response = self.create_and_send_request(curr_node, requirements, allow_retry=True)
+                self._validate_value_mappings(curr_node, parameter_mappings, self._embed_obj_val_list(requirements.parameter_requirements),
+                                              self._embed_obj_val_list(requirements.request_body_requirements), occurrences)
+                #if response and response.response and response.response.ok:
+                #    responses[curr_node.operation_id].append(response)
 
     def handle_request_and_dependencies(self, curr_node: 'OperationNode', dependent_responses: Dict['OperationEdge', RequestResponse] = None) -> Optional[List[RequestResponse]]:
         if not dependent_responses:

@@ -155,6 +155,7 @@ class OpenAILanguageModel:
         OpenAILanguageModel.cache[cache_key] = result
         return result
 
-
-
-
+def _construct_db_dir():
+    db_path = os.path.join(os.path.dirname(__file__), "data/")
+    if not os.path.exists(db_path):
+        os.makedirs(db_path)

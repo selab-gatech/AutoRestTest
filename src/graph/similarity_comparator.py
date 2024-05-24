@@ -79,7 +79,6 @@ class OperationDependencyComparator:
             for response in operation2_responses:
                 if parameter in self.model and response in self.model:
                     similarity = 1 - cosine(self.model[parameter], self.model[response])
-                    print(similarity, parameter, response)
                     parameter_similarity[parameter] = SimilarityValue(
                         response_val=response,
                         in_value=in_value,
