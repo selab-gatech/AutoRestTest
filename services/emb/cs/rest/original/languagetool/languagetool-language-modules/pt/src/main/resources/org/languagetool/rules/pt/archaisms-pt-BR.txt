@@ -1,2 +1,3 @@
-# archaisms-pt-BR.txt
-#
+version https://git-lfs.github.com/spec/v1
+oid sha256:7f6e5372b3a29de7a8ecdfc2b25fc0f7e958fc07958d5d2e50cf570233e4b3e0
+size 24

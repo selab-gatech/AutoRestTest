@@ -10,8 +10,11 @@ dependencies:
   - scikit-learn
   - pathlib
   - numpy~=1.25.0
-  - scipy
+  - scipy==1.10.1 # triu is deprecated past 1.13
   - gensim
+  - openai
+  - bs4
+  - python-dotenv
   - pip:
       - prance
       - openapi-spec-validator

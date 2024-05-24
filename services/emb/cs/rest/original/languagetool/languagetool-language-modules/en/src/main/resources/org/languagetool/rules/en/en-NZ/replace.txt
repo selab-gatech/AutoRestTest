@@ -1,5 +1,3 @@
-#Incorrect New Zealand words
-#(c) 2012 Marcin Milkowski
-#Licensed under LGPL
-#http://en.wikipedia.org/wiki/Sidewalk
-sidewalk=footpath
+version https://git-lfs.github.com/spec/v1
+oid sha256:a6b5bf265333b4ed4042c92181062fa1f3da0889610ecdac2c973a6c90745f34
+size 133

@@ -1,8 +1,3 @@
-# A part-of-speech dictionary that's used additionally to the binary dictionary (*.dict).
-# This does not add words to the spell checker, see hunspell/spelling.txt for that.
-# File Encoding: UTF-8
-# Format: three tab-separated fields: fullform baseform postags
-attrattività	attrattività	NOUN-F:s
-attrattività	attrattività	NOUN-F:p
-efficientamento	efficientamento	NOUN-M:s
-efficientamenti	efficientamento	NOUN-M:p
+version https://git-lfs.github.com/spec/v1
+oid sha256:27e9cc914bde0a6b3e11e22bb37b9897e441ac46b666e3a948ec9793fcb437c7
+size 416

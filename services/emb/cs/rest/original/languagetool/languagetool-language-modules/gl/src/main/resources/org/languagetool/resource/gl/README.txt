@@ -1,3 +1,3 @@
-The Galician data for part-of-speech tagging were created by Susana Sotelo
-Docio based on Freeling and Apertium dictionaries. Both are licensed under GPL.
- 
+version https://git-lfs.github.com/spec/v1
+oid sha256:06ee0fabb31aa399fcd906ad413dd8aa236c5aa6c18026f4d7e5225684bfbabd
+size 156

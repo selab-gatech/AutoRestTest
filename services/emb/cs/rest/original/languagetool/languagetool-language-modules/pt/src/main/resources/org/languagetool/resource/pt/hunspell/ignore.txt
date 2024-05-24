@@ -1,22 +1,3 @@
-# words to be ignored by spellcheckers of all variants
-# If a words has to be ignored in only one variant, post 
-# it on the forum or contact base dictionary maintainer
-#
-# ultra-secreto
-# fim-de-semana
-# pêlo
-# meio-ambiente
-# pára
-# à-vontade
-# ultra-secreta
-andorinhãos
-câmarinhas
-fo-la
-fo-las
-fo-lo
-fo-los
-pedrogão
-zimbabweana
-zimbabweanas
-zimbabweano
-zimbabweanos
+version https://git-lfs.github.com/spec/v1
+oid sha256:b19703f828c4019eb3d17af0893adb89b638a1699f0053ce449a2a1580663c6b
+size 375

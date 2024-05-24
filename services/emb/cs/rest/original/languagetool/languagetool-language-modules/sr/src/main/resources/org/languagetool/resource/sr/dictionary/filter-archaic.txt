@@ -1,4 +1,3 @@
-# list of words to be excluded
-# from the synthesis dictionary
-#
-#archaic
+version https://git-lfs.github.com/spec/v1
+oid sha256:2a69ada30f199f90f6f7e2a8053640b5c8407609b19a65d88ce0a5c439037410
+size 74

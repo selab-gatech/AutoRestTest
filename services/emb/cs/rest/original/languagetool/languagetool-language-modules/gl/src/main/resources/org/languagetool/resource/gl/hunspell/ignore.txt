@@ -1,5 +1,3 @@
-# words to be ignored by the spellchecker (auto-generated)
-garavata
-pregravado
-parabenizar
-esguello
+version https://git-lfs.github.com/spec/v1
+oid sha256:759a847d70217f2221885a29752d8116e05bcd0977b2abcda675552ca2f9ac25
+size 100

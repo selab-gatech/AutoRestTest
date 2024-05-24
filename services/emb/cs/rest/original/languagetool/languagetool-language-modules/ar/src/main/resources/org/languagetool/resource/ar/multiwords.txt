@@ -1,1 +1,3 @@
-#Arabic multiwords file used for ArabicHybridDisambiguator
+version https://git-lfs.github.com/spec/v1
+oid sha256:f297fc6fd20ebd085d60235f93d460e04e08f15fd1089db45a3679020d376848
+size 59

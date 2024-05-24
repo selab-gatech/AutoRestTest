@@ -1,2 +1,3 @@
-# Words that extend the spell checker. See ignore.txt for words that should be
-# completely ignored (i.e. not used to create suggestions).
+version https://git-lfs.github.com/spec/v1
+oid sha256:36c0c333040a7f9238f6be3e4d3280b01eb4b6b63c84abf97551eab7c737a263
+size 139

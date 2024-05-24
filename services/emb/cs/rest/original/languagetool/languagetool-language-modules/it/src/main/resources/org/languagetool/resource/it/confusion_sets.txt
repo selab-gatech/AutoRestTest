@@ -1,1 +1,3 @@
-# See the English 'confusion_sets.txt' for a description of file format
+version https://git-lfs.github.com/spec/v1
+oid sha256:820f6e815760f400e348224105cbddbad5feae4c3b57c429f44dad05126d1617
+size 72

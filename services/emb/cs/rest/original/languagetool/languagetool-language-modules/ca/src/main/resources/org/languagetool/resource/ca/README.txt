@@ -1,3 +1,3 @@
-The Catalan part-of-speech dictionary was created by Jaume Ortolà
-based on Softcatalà dictionaries, released under a dual license LGPL v2.1 
-and GPL v2. See: https://github.com/Softcatala/catalan-dict-tools
+version https://git-lfs.github.com/spec/v1
+oid sha256:1ae61674fe4cfa17d9582deef4e7d721b91106db853c00efbd951028cdaeffb7
+size 209

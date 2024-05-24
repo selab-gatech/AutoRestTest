@@ -1,0 +1,617 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Quick start project using Java, Spring boot and MongoDB",
+    "version": "1.0.0",
+    "title": "Quick start project",
+    "contact": {
+      "name": "Maxime Beugnet",
+      "url": "https://github.com/MaBeuLux88",
+      "email": "maxime.beugnet@gmail.com"
+    },
+    "license": {
+      "name": "Apache License Version 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0"
+    }
+  },
+  "schemes": [
+    "http"
+  ],
+  "host": "localhost:8080",
+  "basePath": "/",
+  "tags": [
+    {
+      "name": "person-controller",
+      "description": "Person Controller"
+    }
+  ],
+  "paths": {
+    "/api/person": {
+      "post": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "postPerson",
+        "operationId": "postPersonUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "person",
+            "description": "person",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PersonReq"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/PersonRes"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "putPerson",
+        "operationId": "putPersonUsingPUT",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "person",
+            "description": "person",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PersonReq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PersonRes"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/person/{id}": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "getPerson",
+        "operationId": "getPersonUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "id",
+            "required": true,
+            "type": "string",
+            "x-example": "abc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/PersonRes"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "deletePerson",
+        "operationId": "deletePersonUsingDELETE",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "id",
+            "required": true,
+            "type": "string",
+            "x-example": "abc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/persons": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "getPersons",
+        "operationId": "getPersonsUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PersonRes"
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "postPersons",
+        "operationId": "postPersonsUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "persons",
+            "description": "persons",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PersonRes"
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "putPerson",
+        "operationId": "putPersonUsingPUT_1",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "persons",
+            "description": "persons",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "deletePersons",
+        "operationId": "deletePersonsUsingDELETE",
+        "produces": [
+          "*/*"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/persons/averageAge": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "averageAge",
+        "operationId": "averageAgeUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/persons/count": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "getCount",
+        "operationId": "getCountUsingGET",
+        "produces": [
+          "*/*"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/persons/{ids}": {
+      "get": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "getPersons",
+        "operationId": "getPersonsUsingGET_1",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "path",
+            "description": "ids",
+            "required": true,
+            "type": "string",
+            "x-example": "abc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PersonRes"
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "person-controller"
+        ],
+        "summary": "deletePersons",
+        "operationId": "deletePersonsUsingDELETE_1",
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "path",
+            "description": "ids",
+            "required": true,
+            "type": "string",
+            "x-example": "abc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Address": {
+      "type": "object",
+      "properties": {
+        "city": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "number": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "postcode": {
+          "type": "string"
+        },
+        "street": {
+          "type": "string"
+        }
+      },
+      "title": "Address"
+    },
+    "Car": {
+      "type": "object",
+      "properties": {
+        "brand": {
+          "type": "string"
+        },
+        "maxSpeedKmH": {
+          "type": "number",
+          "format": "float"
+        },
+        "model": {
+          "type": "string"
+        }
+      },
+      "title": "Car"
+    },
+    "ObjectIdReq": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "ObjectIdReq"
+    },
+    "ObjectIdRes": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "timestamp": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "ObjectIdRes"
+    },
+    "PersonReq": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "age": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "cars": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Car"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "id": {
+          "$ref": "#/definitions/ObjectIdReq"
+        },
+        "insurance": {
+          "type": "boolean"
+        },
+        "lastName": {
+          "type": "string"
+        }
+      },
+      "title": "PersonReq"
+    },
+    "PersonRes": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "age": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "cars": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Car"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "id": {
+          "$ref": "#/definitions/ObjectIdRes"
+        },
+        "insurance": {
+          "type": "boolean"
+        },
+        "lastName": {
+          "type": "string"
+        }
+      },
+      "title": "PersonRes"
+    }
+  }
+}

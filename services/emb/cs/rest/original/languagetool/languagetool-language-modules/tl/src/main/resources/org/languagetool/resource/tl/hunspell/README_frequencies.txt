@@ -1,5 +1,3 @@
-
-tl_PH.dict contains frequency information. This is licensed as follows:
-
-SpellOnIt word frequency lists by SpellOnIt.com is licensed under a Creative Commons Attribution 4.0 International License.
-Based on a work at http://www.spellonit.com/downloads.
+version https://git-lfs.github.com/spec/v1
+oid sha256:9ea8c704baac181f1c49e8f85c92f0af20df56a277fbf0669711f72e0ffaf264
+size 253

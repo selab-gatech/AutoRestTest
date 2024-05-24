@@ -1,3 +1,3 @@
-The Dutch POS data (dutch.dict, dutch_synth.dict) are 
-licensed under either Creative Commons Attribution 3.0 Unported
-or BSD, at your choice. 
+version https://git-lfs.github.com/spec/v1
+oid sha256:54c5b6782fa0ebeab918fc8a5e09337e4940aae743f9fa314ed862209ebfd5e5
+size 144

@@ -1,7 +1,14 @@
-scikit-learn
-pathlib
-numpy~=1.25.0
-scipy
-gensim
-prance
-openapi-spec-validator
+version https://git-lfs.github.com/spec/v1
+oid sha256:a96a11943b049d651ae4edb1a2513f35255a5ac17de6e03e27133c60e8e3ce9d
+size 77
+
+requests~=2.31.0
+bs4~=4.12.3
+beautifulsoup4~=4.12.3
+openai~=1.17.1
+python-dotenv~=1.0.1
+pathlib~=1.0.1
+prance~=23.6.21.0
+gensim~=4.3.2
+scipy~=1.10.1
+numpy~=1.25.2

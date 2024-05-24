@@ -1,1 +1,3 @@
-The contents of this file are now at https://dev.languagetool.org/error-collections
+version https://git-lfs.github.com/spec/v1
+oid sha256:888940edb3cc0743e777152f5d88fbcd67c7f26ffce36199e3ff083dbdeeecf4
+size 84

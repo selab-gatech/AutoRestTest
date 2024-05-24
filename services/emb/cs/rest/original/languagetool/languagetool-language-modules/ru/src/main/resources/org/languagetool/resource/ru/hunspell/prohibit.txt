@@ -1,29 +1,3 @@
-# Words to be marked as spelling errors even if the spell checker
-# accepts them. Useful to improve the spell checker without touching
-# its files (which are usually not from LT).
-# For the opposite (accept words), see ignore.txt.
-неуверено
-неуверена
-неуверены
-ингридиент
-ингридиента
-ингридиенту
-ингридиентом
-ингридиенте
-ингридиенты
-ингридиентов
-ингридиентам
-ингридиентами
-ингридиентах
-девчёнка
-девчёнки
-девчёнке
-девчёнку
-девчёнкой
-девчёнке
-девчёнок
-девчёнкам
-девчёнками
-девчёнках
-учавствовал
-учавствовать
+version https://git-lfs.github.com/spec/v1
+oid sha256:da0d0e09fd49595276604603df2baae95a3d96b7ef35b908ae022f7048afc73f
+size 756

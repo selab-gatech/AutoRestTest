@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+
+<html xmlns:th = "http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<title></title>
+	<div th:replace = "layouts :: stylish"></div>
+</head>
+
+<body>
+	
+	<div th:replace = "layouts :: adminNavbar"></div>
+	<br><br><br><br><br>
+		
+	<div class='container container-fluid'>
+		
+		<h4><a th:href="@{/app/admins/employees/admin-employees-add}">Add a new employee</a></h4>
+		<br>
+		
+		<div th:switch="${employees}">
+	    	<h2 th:case="null">No Records yet!</h2>
+	        <div th:case="*">
+ 	            <!--<h2 th:text = '${size}' ></h2>  <br> -->
+	            <table class="table table-striped table-hover ">
+	                <thead>
+	                    <tr>
+	                    	<th>Full Name</th>
+	                    	<th>Email</th>
+	                    	<th>Phone</th>
+	                    	<th>Hiredate</th>
+	                    	<th>Job</th>
+	                    	<th>Salary</th>
+ 	                    	<th>Manager</th>
+ 	                    	<th>Department</th>
+ 	                    	<th class='text-info'><i>Credentials</i></th>
+ 	                    	<th class='text-success'><i>Edit employee</i></th>
+ 	                    	<th class='text-warning'><i>isActive?</i></th>
+	                        <th class='text-danger' ><i>Delete employee</i></th>
+	                    </tr>
+	                </thead>
+					<tbody>
+		                <tr th:each = "e : ${employees}">
+							<td th:text="${e.firstName + ' ' + e.lastName}"></td>
+							<td th:text="${e.email}"></td>
+							<td th:text="${e.phone}"></td>
+							<td th:text="${e.hiredate}"></td>
+							<td th:text="${e.job}"></td>
+							<td th:text="${e.salary}"></td>
+ 							<td th:text="${e.manager != null} ? ${e.manager.firstName + ' ' + e.manager.lastName} : '-'"></td>
+ 							<td th:text="${e.department != null} ? ${e.department.departmentName} : '-'"></td>
+ 							<td><a class='btn btn-outline-info ' th:href="@{/app/admins/employees/admin-employee-credentials(userId=${e.credential.credentialId})}" >Credentials</a></td>
+							<td><a class='btn btn-outline-success' th:href="@{/app/admins/employees/admin-employees-edit(employeeId=${e.employeeId})}">Edit</a></td>
+							<td><a class='btn btn-outline-warning ' th:href="@{/app/admins/employees/admin-employees-isactive(employeeId=${e.employeeId})}" onClick="if (!(confirm('Do you confirm you want enable/disable this employee ?'))) return false" >Enable/Disable</a></td>
+							<td><a class='btn btn-outline-danger' th:href="@{/app/admins/employees/admin-employees-delete(employeeId=${e.employeeId})}" onClick="if (!(confirm('Do you confirm you want DELETE this employee ?'))) return false" >Delete</a></td>
+		                </tr>
+	            	</tbody>
+	        	</table>
+	    	</div>
+		</div>
+		
+	</div>
+	
+	<br><br><br><br><br>
+	
+	<div th:replace = "layouts :: javascript"></div>
+	
+</body>
+</html>
+
+
+
+
+
+
+

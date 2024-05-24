@@ -1,3 +1,3 @@
-# data for AbstractSimpleReplaceRule2Test
-a propos=à propos
-Pokemon=Pokémon
+version https://git-lfs.github.com/spec/v1
+oid sha256:f875d915e4851d310bc1e36f1c88b5bf38960b0832ad230ed5e45ba02c9e4160
+size 78

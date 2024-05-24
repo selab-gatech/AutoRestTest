@@ -1,4 +1,3 @@
-# archaisms-pt-PT.txt
-#
-câmera=câmara
-câmeras=câmaras
+version https://git-lfs.github.com/spec/v1
+oid sha256:0b4922afd3fda9b936a282d16d0c0579deace4731827e825e11b68d73e88bec7
+size 58
