@@ -1700,11 +1700,10 @@ paths:
             type: number
             format: double
         - name: productId
-          in: query
+          in: path
           description: productId
           required: true
-          style: form
-          allowReserved: true
+          style: simple
           schema:
             type: integer
             format: int64
