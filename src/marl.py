@@ -1,13 +1,15 @@
+import os
 import random
 import time
 from collections import defaultdict
 
 import requests
+import shelve
 
 from src.graph.specification_parser import OperationProperties
 from src.reinforcement.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction
+from src.utils import _construct_db_dir
 from src.value_generator import identify_generator
-
 
 class QLearning:
     def __init__(self, operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=300, mutation_rate=0.3):
@@ -57,7 +59,7 @@ class QLearning:
             avail_methods.remove(operation_properties.http_method.lower())
             specific_method = random.choice(avail_methods)
 
-        if operation_properties.parameters:
+        if operation_properties.parameters and parameters:
             for parameter_name, parameter_properties in operation_properties.parameters.items():
                 if parameter_name in parameters:
                     if parameter_properties.schema and random.random() < individual_mutation_rate:
@@ -66,7 +68,7 @@ class QLearning:
                     if parameters[parameter_name] is None:
                         parameters.pop(parameter_name, None)
 
-        if operation_properties.request_body:
+        if operation_properties.request_body and body:
             for mime, body_properties in operation_properties.request_body.items():
                 if mime in body and random.random() < individual_mutation_rate:
                     body[mime] = self.get_mutated_value(body_properties.type)
@@ -165,6 +167,5 @@ class QLearning:
             print(f"Responses: {self.responses}")
 
     def run(self):
-        self.initialize_agents()
         self.execute_operations()
         print("COLLECTED RESPONSES: ", self.responses)

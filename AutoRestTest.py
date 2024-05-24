@@ -1,5 +1,6 @@
 import argparse
 import os
+import shelve
 
 from src.generate_graph import OperationGraph
 from src.marl import QLearning
@@ -8,7 +9,7 @@ from src.request_generator import RequestGenerator
 from dotenv import load_dotenv
 
 from src.graph.specification_parser import SpecificationParser
-from src.utils import OpenAILanguageModel
+from src.utils import OpenAILanguageModel, _construct_db_dir
 
 load_dotenv()
 
@@ -33,6 +34,9 @@ class AutoRestTest:
         self.spec_dir = spec_dir
         self.local_test = local_test
         self.is_naive = is_naive
+        _construct_db_dir()
+        self.db_q_table = os.path.join(os.path.dirname(__file__), "src/data/q_table")
+        self.db_graph = os.path.join(os.path.dirname(__file__), "src/data/graph")
 
     def init_graph(self, spec_name: str, spec_path) -> OperationGraph:
         spec_parser = SpecificationParser(spec_path=spec_path, spec_name=spec_name)
@@ -45,15 +49,47 @@ class AutoRestTest:
     def generate_graph(self, spec_name: str):
         spec_path = f"{self.spec_dir}/{spec_name}.yaml"
         print("CREATING GRAPH...")
-        operation_graph = self.init_graph(spec_name, spec_path)
-        operation_graph.create_graph()
+        with shelve.open(self.db_graph) as db:
+            if spec_name in db:
+                operation_graph = self.init_graph(spec_name, spec_path)
+                graph_properties = db[spec_name]
+                operation_graph.operation_edges = graph_properties["edges"]
+                operation_graph.operation_nodes = graph_properties["nodes"]
+                print(f"Loaded graph for {spec_name} from shelve.")
+            else:
+                operation_graph = self.init_graph(spec_name, spec_path)
+                operation_graph.create_graph()
+                graph_properties = {
+                    "edges": operation_graph.operation_edges,
+                    "nodes": operation_graph.operation_nodes
+                }
+                db[spec_name] = graph_properties
+                print(f"Initialized new graph for {spec_name}.")
         print("GRAPH CREATED!!!")
         #operation_graph.print_graph()
         return operation_graph
 
-    def perform_q_learning(self, operation_graph: OperationGraph):
+    def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("BEGINNING Q-LEARNING...")
         q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.2)
+        with shelve.open(self.db_q_table) as db:
+            if spec_name in db:
+                compiled_q_table = db[spec_name]
+                q_learning.operation_agent.q_table = compiled_q_table["operation"]
+                q_learning.header_agent.q_table = compiled_q_table["header"]
+                q_learning.parameter_agent.q_table = compiled_q_table["parameter"]
+                q_learning.value_agent.q_table = compiled_q_table["value"]
+                print(f"Loaded Q-table for {spec_name} from shelve.")
+            else:
+                q_learning.initialize_agents()
+                compiled_q_table = {
+                    "operation": q_learning.operation_agent.q_table,
+                    "header": q_learning.header_agent.q_table,
+                    "parameter": q_learning.parameter_agent.q_table,
+                    "value": q_learning.value_agent.q_table
+                }
+                db[spec_name] = compiled_q_table
+                print(f"Initialized new Q-tables for {spec_name}.")
         q_learning.run()
         print("Q-LEARNING COMPLETED!!!")
 
@@ -69,7 +105,7 @@ class AutoRestTest:
     def run_single(self, spec_name: str):
         print("BEGINNING AUTO-REST-TEST...")
         operation_graph = self.generate_graph(spec_name)
-        self.perform_q_learning(operation_graph)
+        self.perform_q_learning(operation_graph, spec_name)
         self.print_performance()
         print("AUTO-REST-TEST COMPLETED!!!")
 

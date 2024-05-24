@@ -116,12 +116,14 @@ class OperationGraph:
         self.request_generator.perform_all_requests()
 
     def create_graph(self, auto_validate=True):
+
         operations: Dict[str, OperationProperties] = self.spec_parser.parse_specification()
         for operation_id, operation_properties in operations.items():
             self.add_operation_node(operation_properties)
         self.determine_dependencies(operations)
         if auto_validate:
             self.validate_graph()
+
 
 if __name__ == "__main__":
     operation_graph = OperationGraph(spec_path="specs/original/oas/genome-nexus.yaml", spec_name="genome-nexus", initialize_graph=False)
