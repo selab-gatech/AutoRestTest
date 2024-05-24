@@ -2,11 +2,13 @@ import argparse
 import os
 
 from src.generate_graph import OperationGraph
+from src.marl import QLearning
 from src.request_generator import RequestGenerator
 
 from dotenv import load_dotenv
 
-from src.specification_parser import SpecificationParser
+from src.graph.specification_parser import SpecificationParser
+from src.utils import OpenAILanguageModel
 
 load_dotenv()
 
@@ -42,9 +44,21 @@ class AutoRestTest:
 
     def generate_graph(self, spec_name: str):
         spec_path = f"{self.spec_dir}/{spec_name}.yaml"
+        print("CREATING GRAPH...")
         operation_graph = self.init_graph(spec_name, spec_path)
         operation_graph.create_graph()
+        print("GRAPH CREATED!!!")
+        #operation_graph.print_graph()
         return operation_graph
+
+    def perform_q_learning(self, operation_graph: OperationGraph):
+        print("BEGINNING Q-LEARNING...")
+        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.2)
+        q_learning.run()
+        print("Q-LEARNING COMPLETED!!!")
+
+    def print_performance(self):
+        print("Total cost of the tool: $", OpenAILanguageModel.get_cumulative_cost())
 
     def run_all(self):
         for spec in os.listdir(self.spec_dir):
@@ -53,11 +67,16 @@ class AutoRestTest:
             self.run_single(spec_name)
 
     def run_single(self, spec_name: str):
+        print("BEGINNING AUTO-REST-TEST...")
         operation_graph = self.generate_graph(spec_name)
+        self.perform_q_learning(operation_graph)
+        self.print_performance()
+        print("AUTO-REST-TEST COMPLETED!!!")
 
 if __name__ == "__main__":
     # example of running: python3 AutoRestTest.py one true -s genome-nexus
     spec_dir = "specs/original/oas"
+    # spec_dir = "aratrl-openapi/"
     args = parse_args()
     auto_rest_test = AutoRestTest(spec_dir=spec_dir, local_test=args.local_test, is_naive=False)
     if args.num_specs == "one":
