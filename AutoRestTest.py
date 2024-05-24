@@ -48,7 +48,7 @@ class AutoRestTest:
         operation_graph = self.init_graph(spec_name, spec_path)
         operation_graph.create_graph()
         print("GRAPH CREATED!!!")
-        operation_graph.print_graph()
+        #operation_graph.print_graph()
         return operation_graph
 
     def perform_q_learning(self, operation_graph: OperationGraph):
@@ -76,6 +76,7 @@ class AutoRestTest:
 if __name__ == "__main__":
     # example of running: python3 AutoRestTest.py one true -s genome-nexus
     spec_dir = "specs/original/oas"
+    # spec_dir = "aratrl-openapi/"
     args = parse_args()
     auto_rest_test = AutoRestTest(spec_dir=spec_dir, local_test=args.local_test, is_naive=False)
     if args.num_specs == "one":

@@ -388,7 +388,6 @@ class SmartValueGenerator:
             generated_parameters = json.loads(generated_parameters)
         except json.JSONDecodeError:
             generated_parameters = attempt_fix_json(generated_parameters)
-            print("Error decoding JSON")
         parameter_matchings = self._validate_value_params(generated_parameters.get("parameters"))
         return parameter_matchings
 
@@ -415,7 +414,6 @@ class SmartValueGenerator:
                 generated_request_body = json.loads(generated_request_body)
             except json.JSONDecodeError:
                 generated_request_body = attempt_fix_json(generated_request_body)
-                print("Error decoding JSON")
             validated_request_body = self._validate_value_body(generated_request_body.get("request_body"))
             request_body[mime_type] = validated_request_body
         return request_body

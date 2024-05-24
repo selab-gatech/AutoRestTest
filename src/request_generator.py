@@ -189,7 +189,7 @@ class RequestGenerator:
 
     def _handle_retry(self, request_data: RequestData, response: requests.Response, curr_retry: int) -> Optional[RequestResponse]:
         retry_data = self.make_request_retry_data(request_data, response)
-        response = self.send_operation_request(retry_data, retry_nums=curr_retry + 1)
+        response = self.send_operation_request(retry_data, retry_nums=curr_retry + 1, allow_retry=False)
         return response
 
     def _determine_auth_mappings(self, request_val: Any, auth_parameters: Dict, auth_mappings):
@@ -205,21 +205,28 @@ class RequestGenerator:
             for item in request_val:
                 self._determine_auth_mappings(item, auth_parameters, auth_mappings)
 
+    def _determine_if_valid_auth(self, param_auth):
+        if not param_auth or type(param_auth) != dict:
+            return False
+        return param_auth.get("username") and param_auth.get("username") != "None" and param_auth.get("password") and param_auth.get("password") != "None"
+
     def get_auth_info(self, operation_node: 'OperationNode', auth_attempts: int = 3):
         operation_properties = operation_node.operation_properties
-        value_generator = SmartValueGenerator(operation_properties=operation_properties, engine="gpt-4o")
+        value_generator = SmartValueGenerator(operation_properties=operation_properties, engine="gpt-3.5-turbo-0125")
 
         auth_parameters = value_generator.determine_auth_params()
         if not auth_parameters:
             return []
         query_param_auth = auth_parameters.get("query_parameters")
-        body_param_auth = auth_parameters.get("username")
+        body_param_auth = auth_parameters.get("body_parameters")
 
         token_info = []
-        if query_param_auth and query_param_auth.get("username") and query_param_auth.get("password"):
+        if query_param_auth and self._determine_if_valid_auth(query_param_auth):
+            print("Query Param Auth: ", query_param_auth)
             for i in range(auth_attempts):
                 self.find_query_auth_mappings(operation_node, query_param_auth, token_info)
-        if body_param_auth and body_param_auth.get("username") and body_param_auth.get("password"):
+        if body_param_auth and self._determine_if_valid_auth(body_param_auth):
+            print("Body Param Auth: ", body_param_auth)
             for i in range(auth_attempts):
                 self.find_query_auth_mappings(operation_node, body_param_auth, token_info)
 
@@ -248,7 +255,7 @@ class RequestGenerator:
             select_method = getattr(requests, http_method) # selects correct http method
             full_url = f"{self.api_url}{endpoint_path}"
             # TODO: Determine if should do a request_body conditional check instead of http_method hardcoded
-            if http_method in {"put", "post", "patch"}:
+            if request_body:
                 response = self._send_mime_type(select_method, full_url, parameters, request_body)
             else:
                 response = select_method(full_url, params=parameters)
@@ -267,12 +274,14 @@ class RequestGenerator:
             print(f"Request exception due to error: {err}")
             print(f"Endpoint Path: {endpoint_path}")
             print(f"Params: {parameters}")
+            print(f"Request Body: {request_body}")
             return None
-        except Exception as err:
-            print(f"Unexpected error due to: {err}")
-            print(f"Endpoint Path: {endpoint_path}")
-            print(f"Params: {parameters}")
-            return None
+        #except Exception as err:
+        #    print(f"Unexpected error due to: {err}")
+        #    print(f"Endpoint Path: {endpoint_path}")
+        #    print(f"Params: {parameters}")
+        #    print(f"Request Body: {request_body}")
+        #    return None
 
     def _send_mime_type(self, select_method, full_url, parameters, request_body):
         params = parameters if parameters else {}
@@ -350,7 +359,7 @@ class RequestGenerator:
         for edge in curr_node.outgoing_edges:
             if edge.destination.operation_id not in visited:
                 self.depth_traversal(edge.destination, visited)
-            dependent_response = self.responses[edge.destination.operation_id]
+            dependent_response = self.responses[edge.destination.operation_id] if edge.destination.operation_id in self.responses else None
             if dependent_response is not None and dependent_response.response.ok:
                 dependent_responses[edge] = dependent_response
         respones = self.handle_request_and_dependencies(curr_node, dependent_responses)
@@ -364,6 +373,7 @@ class RequestGenerator:
             parameter_mappings[operation_id] = {'params': {}, 'body': {}}
 
         operation_params = get_params(curr_node.operation_properties.parameters)
+
         #operation_body_params = get_request_body_params(curr_node.operation_properties.request_body)
 
         # take the reverse of mappings since API outputs least likely values first
@@ -404,13 +414,9 @@ class RequestGenerator:
             if edge.destination.operation_id not in visited:
                 self.value_depth_traversal(edge.destination, parameter_mappings, responses, visited)
             possible_dependent_responses = responses[edge.destination.operation_id]
-            counter = 3
             for dependent_response in possible_dependent_responses:
-                if counter == 0:
-                    break
                 if dependent_response and dependent_response.response and dependent_response.response.ok:
                     dependent_responses[edge].append(dependent_response)
-                    counter -= 1
 
         occurrences = {}
         self.handle_dependent_values(curr_node, dependent_responses, occurrences, parameter_mappings, responses)
@@ -423,10 +429,11 @@ class RequestGenerator:
             self._validate_value_mappings(curr_node, parameter_mappings, parameters, request_body, occurrences)
 
         if not responses[curr_node.operation_id]:
-            for i in range(3):
-                response = self.create_and_send_request(curr_node)
-                if response and response.response and response.response.ok:
-                    responses[curr_node.operation_id].append(response)
+            response = self.create_and_send_request(curr_node, allow_retry=True)
+            if response and response.response and response.response.ok:
+                responses[curr_node.operation_id].append(response)
+
+        print("Completed value table generation for operation: ", curr_node.operation_id)
 
     def _embed_obj_val_list(self, obj: Optional[Dict[Any, List]]):
         if not obj:
@@ -443,7 +450,7 @@ class RequestGenerator:
                 if occurrences and max(occurrences.values()) == 7:  # limit number of dependency created values
                     break
                 requirements = self.determine_requirement(dependent_response, edge)
-                response = self.create_and_send_request(curr_node, requirements)
+                response = self.create_and_send_request(curr_node, requirements, allow_retry=True)
                 self._validate_value_mappings(curr_node, parameter_mappings, self._embed_obj_val_list(response.request.parameters),
                                               self._embed_obj_val_list(response.request.request_body), occurrences)
                 if response and response.response and response.response.ok:

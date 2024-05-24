@@ -15,8 +15,8 @@ Given a summary of an operation and its parameters schema from its OpenAPI Speci
 {
     "parameters": {
         "[parameter1]": [value1],
-        "[parameter2]": [value2],
         ...
+        "[parameterN]": [valueN]
     }
 }
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value. 
@@ -29,6 +29,7 @@ Given a summary of an operation its request body schema from its OpenAPI Specifi
     "request_body": {
         "request_body1": [correct request body 1],
         ...
+        "request_body10": [correct request body 10]
     }
 }
 In the case where the request body is an object, use an object with keys to represent the object field names and values to represent their respective field values for the request body value. It is important to generate values for each object property.
@@ -43,12 +44,19 @@ Given a summary of an operation and its parameters schema from its OpenAPI Speci
         "[parameter1]": {
             "value1": [value1],
             ...
+            "value10": [value10]
         },
         "[parameter2]": {
             "value1": [value1],
             ...
+            "value10": [value10]
         },
         ...
+        "[parameterN]": {
+            "value1": [value1],
+            ...
+            "value10": [value10]
+        }
     }
 }
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value.
@@ -122,7 +130,8 @@ If the operation does contain authentication parameters in either the query or r
         }
     }
 }
-Indicate None for the username and password values of the query_parameters or body_parameters if the operation does not contain any authentication parameters related to usernames or passwords accordingly.
+Indicate 'None' for the username or password values of the query_parameters or body_parameters if the operation does not contain any authentication parameters related to usernames or passwords.
+It is important that you label exactly 'None' if there are no authentication parameters in the query or request body, and not any substitute.
 """
 
 FIX_JSON_OBJ = """

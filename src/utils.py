@@ -81,6 +81,8 @@ def attempt_fix_json(invalid_json_str: str):
         return fixed_json
     except json.JSONDecodeError:
         print("Attempt to fix JSON string failed.")
+        print(f"Original JSON string: {invalid_json_str}")
+        print(f"Fixed JSON string: {fixed_json}")
         return {}
 
 # OpenAI available engines = ["gpt-3.5-turbo-0125", "gpt-4o"]
@@ -98,7 +100,7 @@ class OpenAILanguageModel:
     def get_cumulative_cost():
         return OpenAILanguageModel.cumulative_cost
 
-    def __init__(self, engine = "gpt-3.5-turbo-0125", temperature = 0.8, max_tokens = 1000):
+    def __init__(self, engine = "gpt-3.5-turbo-0125", temperature = 0.8, max_tokens = 4000):
         self.api_key = os.getenv("OPENAI_API_KEY")
         if self.api_key is None or self.api_key.strip() == "":
             raise ValueError("OPENAI API key is required for OpenAI language model, found None or empty string.")
