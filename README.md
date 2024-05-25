@@ -78,11 +78,11 @@ Specification after generation. This is done to reduce the cost of execution and
 trials. The user can determine whether they want to use the cached graphs and tables by changing the **use_cache_graph**
 and **use_cache_table** variables in the `AutoRestTest.py` file. By default, both variables are set to **True**.
 
-> [!IMPORTANT]
+> [!CAUTION]
 > When the **Header Agent** initializes its learned values table, it attempts to use any registration operations available
 > to then construct valid token headers. If the user attempts to use a cached table on a service running locally, the 
-> account registration may have reset, in which case the reforcement learning tables should be repeated. The graph construction
-> is not affected by this.
+> account registration may have reset, in which case the reforcement learning tables should be repeated. Otherwise, 
+> the Header agent will have redundant values. The graph construction is not affected by this.
 
 ## Execution
 
