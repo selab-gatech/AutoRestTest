@@ -8,8 +8,9 @@ import shelve
 
 from src.graph.specification_parser import OperationProperties
 from src.reinforcement.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction
-from src.utils import _construct_db_dir
-from src.value_generator import identify_generator
+from src.utils import _construct_db_dir, construct_basic_token
+from src.value_generator import identify_generator, randomize_string
+
 
 class QLearning:
     def __init__(self, operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=600, mutation_rate=0.3):
@@ -61,11 +62,16 @@ class QLearning:
 
         individual_mutation_rate = 0.4
         method_mutate_rate = 0.1
+        media_mutate_rate = 0.1
 
         specific_method = None
         if operation_properties.http_method and random.random() < method_mutate_rate and operation_properties.http_method.lower() in avail_methods:
             avail_methods.remove(operation_properties.http_method.lower())
             specific_method = random.choice(avail_methods)
+
+        if random.random() < individual_mutation_rate:
+            random_token_params = {"username": randomize_string(), "password": randomize_string()}
+            header = {"Authorization": "Basic " + construct_basic_token(random_token_params)}
 
         if operation_properties.parameters and parameters:
             for parameter_name, parameter_properties in operation_properties.parameters.items():
@@ -82,7 +88,7 @@ class QLearning:
                 if body[mime] is None:
                     body.pop(mime, None)
 
-        if random.random() < individual_mutation_rate and body:
+        if random.random() < media_mutate_rate and body:
             for media in body.keys():
                 avail_medias.remove(media)
             if avail_medias and random.random() < individual_mutation_rate:
@@ -150,9 +156,9 @@ class QLearning:
         elif response.status_code // 100 == 2:
             return -1
         elif response.status_code // 100 == 4:
-            return self.penalize_repetitive_responses(response)
+            return 1
         elif response.status_code // 100 == 5:
-            return self.penalize_repetitive_responses(response)
+            return 1
         else:
             return -5
 

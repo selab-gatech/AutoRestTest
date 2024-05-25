@@ -1,14 +1,13 @@
-import base64
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict, Any
 
 import numpy as np
 import random
 
 from src.generate_graph import OperationGraph
-from src.utils import get_combinations, get_params, get_request_body_params, get_param_combinations, \
-    get_body_combinations, OpenAILanguageModel
+from src.utils import get_combinations, get_param_combinations, \
+    construct_basic_token
 
 
 class OperationAgent:
@@ -73,7 +72,7 @@ class HeaderAgent:
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
             token_info = request_generator.get_auth_info(operation_node, 2)
             for token in token_info:
-                token_list.append(self.construct_basic_token(token))
+                token_list.append(construct_basic_token(token))
         print("Token list has been constructed with the following number of tokens: ", len(token_list))
         for operation_id in self.operation_graph.operation_nodes.keys():
             if operation_id not in self.q_table:
@@ -83,14 +82,6 @@ class HeaderAgent:
             self.q_table[operation_id].append([None,0])
         print(self.q_table)
         print("Initiated Header Agent Q-Table")
-
-    def construct_basic_token(self, token):
-        username = token.get("username")
-        password = token.get("password")
-        token_str = f"{username}:{password}"
-        encoded_bytes = base64.b64encode(token_str.encode("utf-8"))
-        encoded_str = encoded_bytes.decode("utf-8")
-        return f"Basic {encoded_str}"
 
     def get_action(self, operation_id):
         """

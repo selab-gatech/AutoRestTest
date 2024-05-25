@@ -34,8 +34,7 @@ Given a summary of an operation its request body schema from its OpenAPI Specifi
 }
 In the case where the request body is an object, use an object with keys to represent the object field names and values to represent their respective field values for the request body value. It is important to generate values for each object property.
 In the case where the request body is an array, use a list as the request body value.
-Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy.
-When generating the [insert number] different request bodies, MAKE CERTAIN include a variety of incorrect and correct values to test the robustness of the system. Attempt to generate 50% correct and 50% incorrect request bodies."""
+Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 VALUE_AGENT_PARAMETERS_PROMPT = """
 Given a summary of an operation and its parameters schema from its OpenAPI Specification, generate [insert number] different valid context-aware values for the parameters of the operation. Return the answer as a JSON object with the following structure:
@@ -61,8 +60,7 @@ Given a summary of an operation and its parameters schema from its OpenAPI Speci
 }
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value.
 In the case where a given parameter is an array, use a list as the parameter value.
-Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy.
-When generating the [insert number] different values for each parameter, MAKE CERTAIN to include a variety of incorrect and correct values to test the robustness of the system. Attempt to generate 50% correct and 50% incorrect values for each parameter."""
+Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 #FEWSHOT_REQUEST_BODY_GEN_PROMPT = """
 #SUMMARY:

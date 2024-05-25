@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 from typing import Iterable, Dict, List, Any, Optional, Tuple
@@ -159,3 +160,11 @@ def _construct_db_dir():
     db_path = os.path.join(os.path.dirname(__file__), "data/")
     if not os.path.exists(db_path):
         os.makedirs(db_path)
+
+def construct_basic_token(token):
+    username = token.get("username")
+    password = token.get("password")
+    token_str = f"{username}:{password}"
+    encoded_bytes = base64.b64encode(token_str.encode("utf-8"))
+    encoded_str = encoded_bytes.decode("utf-8")
+    return f"Basic {encoded_str}"

@@ -47,7 +47,7 @@ def randomize_string():
     if random.randint(1, 100) <= 90:
         length = random.randint(4, 16)
     else:
-        length = random.randint(1, 100)
+        length = random.randint(1, 50)
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
 def randomize_array():

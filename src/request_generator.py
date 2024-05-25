@@ -467,10 +467,14 @@ class RequestGenerator:
                 if occurrences and max(occurrences.values()) == 5:  # limit number of dependency created values
                     break
                 requirements = self.determine_requirement(dependent_response, edge)
-                #response = self.create_and_send_request(curr_node, requirements, allow_retry=True)
-                if requirements:
-                    self._validate_value_mappings(curr_node, parameter_mappings, self._embed_obj_val_list(requirements.parameter_requirements),
-                                              self._embed_obj_val_list(requirements.request_body_requirements), occurrences)
+                response = self.create_and_send_request(curr_node, requirements, allow_retry=True, permitted_retries=2)
+                if response and response.response and response.response.ok:
+                    responses[curr_node.operation_id].append(response)
+                    self._validate_value_mappings(curr_node, parameter_mappings, self._embed_obj_val_list(response.request.parameters),
+                                                  self._embed_obj_val_list(response.request.request_body), occurrences)
+                #if requirements:
+                #    self._validate_value_mappings(curr_node, parameter_mappings, self._embed_obj_val_list(requirements.parameter_requirements),
+                #                              self._embed_obj_val_list(requirements.request_body_requirements), occurrences)
                 #if response and response.response and response.response.ok:
                 #    responses[curr_node.operation_id].append(response)
 
@@ -493,7 +497,7 @@ class RequestGenerator:
 
     def _send_req_handle_respo(self, curr_node, requirement=None) -> RequestResponse:
         # currently only used during initial depth traversal
-        response = self.create_and_send_request(curr_node, requirement, allow_retry=True)
+        response = self.create_and_send_request(curr_node, requirement, allow_retry=True, permitted_retries=2)
         if response is not None:
             self.process_response(response, curr_node)
         return response
@@ -526,9 +530,9 @@ class RequestGenerator:
                 self.operation_graph.remove_tentative_edge(tentative_edge.source.operation_id, tentative_edge.destination.operation_id)
         return False
 
-    def create_and_send_request(self, curr_node: 'OperationNode', requirement: RequestRequirements=None, allow_retry:bool=False) -> RequestResponse:
+    def create_and_send_request(self, curr_node: 'OperationNode', requirement: RequestRequirements=None, allow_retry:bool=False, permitted_retries:int=1) -> RequestResponse:
         request_data: RequestData = self.make_request_data(curr_node.operation_properties, requirement)
-        response: RequestResponse = self.send_operation_request(request_data, allow_retry=allow_retry)
+        response: RequestResponse = self.send_operation_request(request_data, allow_retry=allow_retry, permitted_retries=permitted_retries)
         return response
 
     def perform_all_requests(self):
