@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import time
@@ -8,7 +9,7 @@ import shelve
 
 from src.graph.specification_parser import OperationProperties
 from src.reinforcement.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction
-from src.utils import _construct_db_dir, construct_basic_token
+from src.utils import _construct_db_dir, construct_basic_token, get_nested_obj_mappings
 from src.value_generator import identify_generator, randomize_string
 
 
@@ -35,10 +36,10 @@ class QLearning:
         self.value_agent.initialize_q_table()
 
     def print_q_tables(self):
-        #print("OPERATION Q-TABLE: ", self.operation_agent.q_table)
+        print("OPERATION Q-TABLE: ", self.operation_agent.q_table)
         print("HEADER Q-TABLE: ", self.header_agent.q_table)
-        #print("PARAMETER Q-TABLE: ", self.parameter_agent.q_table)
-        #print("VALUE Q-TABLE: ", self.value_agent.q_table)
+        print("PARAMETER Q-TABLE: ", self.parameter_agent.q_table)
+        print("VALUE Q-TABLE: ", self.value_agent.q_table)
 
     def get_mapping(self, select_params, select_values):
         mapping = {}
@@ -120,21 +121,31 @@ class QLearning:
                     response = select_method(full_url, json=body["application/json"], headers=header)
                 elif "application/x-www-form-urlencoded" in body: # mime_type == "application/x-www-form-urlencoded":
                     header["Content-Type"] = "application/x-www-form-urlencoded"
+                    body_data = get_nested_obj_mappings(body["application/x-www-form-urlencoded"])
+                    if not body_data or not isinstance(body_data, dict):
+                        body_data = {"data": body["application/x-www-form-urlencoded"]}
+                    body["application/x-www-form-urlencoded"] = body_data
                     response = select_method(full_url, data=body["application/x-www-form-urlencoded"], headers=header)
                 elif "multipart/form-data" in body:
                     header["Content-Type"] = "multipart/form-data"
+                    file = {"file": ("file.txt", json.dumps(body["multipart/form-data"]).encode('utf-8'), "application/json"),
+                            "metadata": (None, "metadata")}
+
+                    body["multipart/form-data"] = file
                     response = select_method(full_url, files=body["multipart/form-data"], headers=header)
                 else: # mime_type == "text/plain":
                     header["Content-Type"] = "text/plain"
+                    if not isinstance(body["text/plain"], str):
+                        body["text/plain"] = str(body["text/plain"])
                     response = select_method(full_url, data=body["text/plain"], headers=header)
                 return response
             response = select_method(full_url, params=parameters, headers=header)
             return response
         except requests.exceptions.RequestException as err:
-            print(f"Error: {err}")
+            print(f"Error with operation {operation_properties.operation_id}: {err}")
             return None
         except Exception as err:
-            print("Unexpected error: ", err)
+            print(f"Unexpected error with operation {operation_properties.operation_id}: {err}")
             print("Parameters: ", parameters)
             print("Body: ", body)
             return None
@@ -153,8 +164,10 @@ class QLearning:
             return -2
         elif response.status_code == 405:
             return -2
-        elif response.status_code // 100 == 2:
+        elif response.status_code == 406:
             return -1
+        elif response.status_code // 100 == 2:
+            return 1
         elif response.status_code // 100 == 4:
             return 1
         elif response.status_code // 100 == 5:
@@ -165,6 +178,8 @@ class QLearning:
     def execute_operations(self):
         start_time = time.time()
         while time.time() - start_time < self.time_duration:
+            print(f"Responses: {self.responses}")
+            print("TIME REMAINING: ", self.time_duration - (time.time() - start_time))
             mutate_operation = random.random() < self.mutation_rate
             operation_id = self.operation_agent.get_action()
             select_params = self.parameter_agent.get_action(operation_id)
@@ -195,8 +210,6 @@ class QLearning:
                 self.operation_agent.update_q_table(operation_id, reward)
 
             if response is not None: self.responses[response.status_code] += 1
-
-            print(f"Responses: {self.responses}")
 
     def run(self):
         self.execute_operations()

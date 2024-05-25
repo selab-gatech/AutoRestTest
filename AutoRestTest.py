@@ -73,7 +73,7 @@ class AutoRestTest:
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("BEGINNING Q-LEARNING...")
-        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3)
+        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=600)
         with shelve.open(self.db_q_table) as db:
             if spec_name in db and self.use_cached_table:
                 compiled_q_table = db[spec_name]
@@ -92,11 +92,13 @@ class AutoRestTest:
                 }
                 db[spec_name] = compiled_q_table
                 print(f"Initialized new Q-tables for {spec_name}.")
+        #q_learning.print_q_tables()
         q_learning.run()
         print("Q-LEARNING COMPLETED!!!")
+        return q_learning
 
     def override_header_agent_q_table(self, operation_graph: OperationGraph, spec_name: str):
-        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.2)
+        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.2, time_duration=600)
         with shelve.open(self.db_q_table) as db:
             q_learning.header_agent.initialize_q_table()
             db[spec_name]["header"] = q_learning.header_agent.q_table
@@ -113,9 +115,10 @@ class AutoRestTest:
     def run_single(self, spec_name: str):
         print("BEGINNING AUTO-REST-TEST...")
         operation_graph = self.generate_graph(spec_name)
-        self.perform_q_learning(operation_graph, spec_name)
+        q_learning = self.perform_q_learning(operation_graph, spec_name)
         #self.override_header_agent_q_table(operation_graph, spec_name)
         self.print_performance()
+        q_learning.print_q_tables()
         print("AUTO-REST-TEST COMPLETED!!!")
 
 if __name__ == "__main__":

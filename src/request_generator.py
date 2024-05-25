@@ -224,14 +224,22 @@ class RequestGenerator:
         print("Attempting to get auth info for operation: ", operation_node.operation_id)
 
         token_info = []
+        has_success = False
         if query_param_auth and self._determine_if_valid_auth(query_param_auth):
             for i in range(auth_attempts):
                 if self.find_query_auth_mappings(operation_node, query_param_auth, token_info, is_query=True):
-                    break
+                    has_success = True
+            if has_success:
+                for i in range(auth_attempts):
+                    self.find_query_auth_mappings(operation_node, query_param_auth, token_info, is_query=True)
+        has_success = False
         if body_param_auth and self._determine_if_valid_auth(body_param_auth):
             for i in range(auth_attempts):
                 if self.find_query_auth_mappings(operation_node, body_param_auth, token_info, is_query=False):
-                    break
+                    has_success = True
+            if has_success:
+                for i in range(auth_attempts):
+                    self.find_query_auth_mappings(operation_node, body_param_auth, token_info, is_query=False)
         return token_info
 
     def find_query_auth_mappings(self, operation_node, query_param_auth, token_info, is_query):
@@ -245,7 +253,7 @@ class RequestGenerator:
             parameters=parameters,
             request_body=request_body,
             operation_properties=operation_node.operation_properties
-        ), allow_retry=True, permitted_retries=3)
+        ), allow_retry=True, permitted_retries=4)
         if response and response.response.ok:
             auth_mappings = {}
             if is_query:
@@ -497,7 +505,7 @@ class RequestGenerator:
 
     def _send_req_handle_respo(self, curr_node, requirement=None) -> RequestResponse:
         # currently only used during initial depth traversal
-        response = self.create_and_send_request(curr_node, requirement, allow_retry=True, permitted_retries=2)
+        response = self.create_and_send_request(curr_node, requirement, allow_retry=True, permitted_retries=3)
         if response is not None:
             self.process_response(response, curr_node)
         return response
