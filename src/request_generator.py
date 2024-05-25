@@ -176,7 +176,7 @@ class RequestGenerator:
             return request_data
         else:
             requirements = request_data.requirements
-            value_generator = SmartValueGenerator(operation_properties=request_data.operation_properties, requirements=requirements, engine="gpt-4o")
+            value_generator = SmartValueGenerator(operation_properties=request_data.operation_properties, requirements=requirements, engine="gpt-4o", temperature=0.3)
             parameters, request_body = value_generator.generate_retry_parameters(request_data, response), value_generator.generate_retry_request_body(request_data, response)
             return RequestData(
                 endpoint_path=request_data.endpoint_path,
@@ -187,18 +187,18 @@ class RequestGenerator:
                 requirements=requirements
             )
 
-    def _handle_retry(self, request_data: RequestData, response: requests.Response, curr_retry: int) -> Optional[RequestResponse]:
+    def _handle_retry(self, request_data: RequestData, response: requests.Response, curr_retry: int, permitted_retries:int=1) -> Optional[RequestResponse]:
         retry_data = self.make_request_retry_data(request_data, response)
-        response = self.send_operation_request(retry_data, retry_nums=curr_retry + 1, allow_retry=False)
+        response = self.send_operation_request(retry_data, retry_nums=curr_retry + 1, allow_retry=True, permitted_retries=permitted_retries)
         return response
 
     def _determine_auth_mappings(self, request_val: Any, auth_parameters: Dict, auth_mappings):
         if type(request_val) == dict:
             for item, properties in request_val.items():
                 if auth_parameters.get("username") == item:
-                    auth_mappings["username"] = item
+                    auth_mappings["username"] = properties
                 elif auth_parameters.get("password") == item:
-                    auth_mappings["password"] = item
+                    auth_mappings["password"] = properties
                 else:
                     self._determine_auth_mappings(properties, auth_parameters, auth_mappings)
         elif type(request_val) == list:
@@ -215,31 +215,48 @@ class RequestGenerator:
         value_generator = SmartValueGenerator(operation_properties=operation_properties, engine="gpt-3.5-turbo-0125")
 
         auth_parameters = value_generator.determine_auth_params()
-        if not auth_parameters:
+        #print(f"Auth parameters for operation {operation_node.operation_id}: {auth_parameters}")
+        if not auth_parameters or auth_parameters == "None":
             return []
         query_param_auth = auth_parameters.get("query_parameters")
         body_param_auth = auth_parameters.get("body_parameters")
 
+        print("Attempting to get auth info for operation: ", operation_node.operation_id)
+
         token_info = []
         if query_param_auth and self._determine_if_valid_auth(query_param_auth):
-            print("Query Param Auth: ", query_param_auth)
             for i in range(auth_attempts):
-                self.find_query_auth_mappings(operation_node, query_param_auth, token_info)
+                if self.find_query_auth_mappings(operation_node, query_param_auth, token_info, is_query=True):
+                    break
         if body_param_auth and self._determine_if_valid_auth(body_param_auth):
-            print("Body Param Auth: ", body_param_auth)
             for i in range(auth_attempts):
-                self.find_query_auth_mappings(operation_node, body_param_auth, token_info)
-
+                if self.find_query_auth_mappings(operation_node, body_param_auth, token_info, is_query=False):
+                    break
         return token_info
 
-    def find_query_auth_mappings(self, operation_node, query_param_auth, token_info):
-        response = self.create_and_send_request(operation_node, allow_retry=True)
+    def find_query_auth_mappings(self, operation_node, query_param_auth, token_info, is_query):
+        print("Attempting to query for: " + operation_node.operation_id)
+        #response = self.create_and_send_request(operation_node, requirement=requirement, allow_retry=True)
+        value_generator = SmartValueGenerator(operation_properties=operation_node.operation_properties, engine="gpt-4o", temperature=0.7)
+        parameters, request_body = value_generator.generate_parameters(necessary=True), value_generator.generate_request_body(necessary=True)
+        response = self.send_operation_request(RequestData(
+            endpoint_path=operation_node.operation_properties.endpoint_path,
+            http_method=operation_node.operation_properties.http_method,
+            parameters=parameters,
+            request_body=request_body,
+            operation_properties=operation_node.operation_properties
+        ), allow_retry=True, permitted_retries=3)
         if response and response.response.ok:
             auth_mappings = {}
-            self._determine_auth_mappings(response.request.parameters, query_param_auth, auth_mappings)
+            if is_query:
+                self._determine_auth_mappings(response.request.parameters, query_param_auth, auth_mappings)
+            else:
+                self._determine_auth_mappings(response.request.request_body, query_param_auth, auth_mappings)
             if len(auth_mappings) == 2: token_info.append(auth_mappings) # check for both username and password
+            return True
+        return False
 
-    def send_operation_request(self, request_data: RequestData, retry_nums: int = 0, allow_retry: bool=False) -> Optional[RequestResponse]:
+    def send_operation_request(self, request_data: RequestData, retry_nums: int = 0, allow_retry: bool=False, permitted_retries: int = 1) -> Optional[RequestResponse]:
         """
         Send the operation request to the API
         :param request_data:
@@ -251,18 +268,18 @@ class RequestGenerator:
         http_method = request_data.http_method
         parameters = request_data.parameters
         request_body = request_data.request_body
+
         try:
             select_method = getattr(requests, http_method) # selects correct http method
             full_url = f"{self.api_url}{endpoint_path}"
-            # TODO: Determine if should do a request_body conditional check instead of http_method hardcoded
             if request_body:
                 response = self._send_mime_type(select_method, full_url, parameters, request_body)
             else:
                 response = select_method(full_url, params=parameters)
             if response is not None:
-                if not response.ok and retry_nums < self.allowed_retries and allow_retry:
+                if not response.ok and retry_nums < permitted_retries and allow_retry:
                     print("Attempting retry due to failed response...")
-                    return self._handle_retry(request_data, response, retry_nums)
+                    return self._handle_retry(request_data, response, retry_nums, permitted_retries)
                 else:
                     return RequestResponse(
                         request=request_data,
@@ -447,7 +464,7 @@ class RequestGenerator:
             return
         for edge, response_returns in dependent_responses.items():
             for dependent_response in response_returns:
-                if occurrences and max(occurrences.values()) == 7:  # limit number of dependency created values
+                if occurrences and max(occurrences.values()) == 5:  # limit number of dependency created values
                     break
                 requirements = self.determine_requirement(dependent_response, edge)
                 #response = self.create_and_send_request(curr_node, requirements, allow_retry=True)

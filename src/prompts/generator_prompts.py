@@ -35,7 +35,7 @@ Given a summary of an operation its request body schema from its OpenAPI Specifi
 In the case where the request body is an object, use an object with keys to represent the object field names and values to represent their respective field values for the request body value. It is important to generate values for each object property.
 In the case where the request body is an array, use a list as the request body value.
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy.
-When generating the [insert number] different request bodies, MAKE CERTAIN include a variety of incorrect and correct values to test the robustness of the system."""
+When generating the [insert number] different request bodies, MAKE CERTAIN include a variety of incorrect and correct values to test the robustness of the system. Attempt to generate 50% correct and 50% incorrect request bodies."""
 
 VALUE_AGENT_PARAMETERS_PROMPT = """
 Given a summary of an operation and its parameters schema from its OpenAPI Specification, generate [insert number] different valid context-aware values for the parameters of the operation. Return the answer as a JSON object with the following structure:
@@ -62,7 +62,7 @@ Given a summary of an operation and its parameters schema from its OpenAPI Speci
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value.
 In the case where a given parameter is an array, use a list as the parameter value.
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy.
-When generating the [insert number] different values for each parameter, MAKE CERTAIN to include a variety of incorrect and correct values to test the robustness of the system."""
+When generating the [insert number] different values for each parameter, MAKE CERTAIN to include a variety of incorrect and correct values to test the robustness of the system. Attempt to generate 50% correct and 50% incorrect values for each parameter."""
 
 #FEWSHOT_REQUEST_BODY_GEN_PROMPT = """
 #SUMMARY:
@@ -84,7 +84,8 @@ You MUST generate values for the following parameters using their respective spe
 """
 
 RETRY_PARAMETER_REQUIREMENTS_PROMPT = """
-Attempt to generate values for the following parameters, unless otherwise specified in the failed response. It is very imoprtant to ensure that the values are compatible with eachother:
+Attempt to generate values for the following parameters, unless otherwise specified in the failed response. It is very imoprtant to ensure that the values are compatible with eachother.
+Remove any parameters that may have caused the failure due to incompatability or convolution:
 """
 
 FAILED_PARAMETER_MATCHINGS_PROMPT = """
@@ -92,7 +93,7 @@ You generated the following values for the parameters, but the request was not s
 """
 
 FAILED_PARAMETER_RESPONSE_PROMPT = """
-Here is the response indicating the reason for the operation failure. Attempt to generate new values for the parameters based on the response. You can exclude certain parameters if indicated by the response:
+Here is the response indicating the reason for the operation failure. Attempt to generate new values for the parameters based on the response. You can exclude or alter certain parameters:
 """
 
 FEWSHOT_REQUEST_BODY_GEN_PROMPT = """"""
@@ -114,9 +115,9 @@ FEWSHOT_PARAMETER_GEN_PROMPT = """"""
 #"""
 
 IDENTIFY_AUTHENTICATION_GEN_PROMPT = """
-Given a summary of an operation and its full specification from the OpenAPI Specification, determine if it consists of any authentication information sent as parameters in either the query or the request body. 
+Given a summary of an operation and its full specification from the OpenAPI Specification, determine if it consists of any authentication information sent as parameters in either the query or the request body and return your answer in the specified JSON format. 
 When referring to request body parameters, identify object properties that might be used for authentication.
-Authentication information consists specifically of items related to usernames or passwords which can be used to create Basic tokens.
+Authentication information consists specifically of items related to names or passwords which can be used to create Basic tokens.
 If the operation does contain authentication parameters in either the query or request body, indicate the parameters in the following format:
 {
     "authentication_parameters": {
@@ -130,8 +131,10 @@ If the operation does contain authentication parameters in either the query or r
         }
     }
 }
-Indicate 'None' for the username or password values of the query_parameters or body_parameters if the operation does not contain any authentication parameters related to usernames or passwords.
-It is important that you label exactly 'None' if there are no authentication parameters in the query or request body, and not any substitute.
+It is essential that you label exactly 'None' for the [parameter name] if there are no authentication parameters in the query or request body, respectively, and not any substitute.
+Ignore responses. Provide parameters or object properties in the case of request bodies that most closely resemble "account name"/"name"/"username" for "username", and "password" for "password".
+If there are multiple parameters that relate to usernames, pick the closest.
+Ensure you return a valid JSON object.
 """
 
 FIX_JSON_OBJ = """

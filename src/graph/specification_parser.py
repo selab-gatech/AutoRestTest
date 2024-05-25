@@ -270,12 +270,14 @@ class SpecificationParser:
 
         The key of the dictionary is the operationId and the value is an OperationProperties object.
         """
+        supported_methods = {"get", "post", "put", "delete", "head", "options", "patch"}
         operation_collection = {}
         spec_paths = self.resolving_parser.specification.get('paths', {})
         for endpoint_path, endpoint_details in spec_paths.items():
             for http_method, operation_details in endpoint_details.items():
-                operation_properties = self.process_operation_details(http_method, endpoint_path, operation_details)
-                operation_collection.setdefault(operation_properties.operation_id, operation_properties)
+                if http_method in supported_methods:
+                    operation_properties = self.process_operation_details(http_method, endpoint_path, operation_details)
+                    operation_collection.setdefault(operation_properties.operation_id, operation_properties)
         return operation_collection
 
     def parse_all_specifications(self) -> dict:

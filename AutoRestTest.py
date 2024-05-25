@@ -37,6 +37,8 @@ class AutoRestTest:
         _construct_db_dir()
         self.db_q_table = os.path.join(os.path.dirname(__file__), "src/data/q_table")
         self.db_graph = os.path.join(os.path.dirname(__file__), "src/data/graph")
+        self.use_cached_graph = False
+        self.use_cached_table = False
 
     def init_graph(self, spec_name: str, spec_path) -> OperationGraph:
         spec_parser = SpecificationParser(spec_path=spec_path, spec_name=spec_name)
@@ -50,7 +52,7 @@ class AutoRestTest:
         spec_path = f"{self.spec_dir}/{spec_name}.yaml"
         print("CREATING GRAPH...")
         with shelve.open(self.db_graph) as db:
-            if spec_name in db:
+            if spec_name in db and self.use_cached_graph:
                 operation_graph = self.init_graph(spec_name, spec_path)
                 graph_properties = db[spec_name]
                 operation_graph.operation_edges = graph_properties["edges"]
@@ -71,9 +73,9 @@ class AutoRestTest:
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("BEGINNING Q-LEARNING...")
-        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.2)
+        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3)
         with shelve.open(self.db_q_table) as db:
-            if spec_name in db:
+            if spec_name in db and self.use_cached_table:
                 compiled_q_table = db[spec_name]
                 q_learning.operation_agent.q_table = compiled_q_table["operation"]
                 q_learning.header_agent.q_table = compiled_q_table["header"]
@@ -93,6 +95,12 @@ class AutoRestTest:
         q_learning.run()
         print("Q-LEARNING COMPLETED!!!")
 
+    def override_header_agent_q_table(self, operation_graph: OperationGraph, spec_name: str):
+        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.2)
+        with shelve.open(self.db_q_table) as db:
+            q_learning.header_agent.initialize_q_table()
+            db[spec_name]["header"] = q_learning.header_agent.q_table
+
     def print_performance(self):
         print("Total cost of the tool: $", OpenAILanguageModel.get_cumulative_cost())
 
@@ -106,13 +114,14 @@ class AutoRestTest:
         print("BEGINNING AUTO-REST-TEST...")
         operation_graph = self.generate_graph(spec_name)
         self.perform_q_learning(operation_graph, spec_name)
+        #self.override_header_agent_q_table(operation_graph, spec_name)
         self.print_performance()
         print("AUTO-REST-TEST COMPLETED!!!")
 
 if __name__ == "__main__":
     # example of running: python3 AutoRestTest.py one true -s genome-nexus
-    spec_dir = "specs/original/oas"
-    # spec_dir = "aratrl-openapi/"
+    #spec_dir = "specs/original/oas"
+    spec_dir = "aratrl-openapi/"
     args = parse_args()
     auto_rest_test = AutoRestTest(spec_dir=spec_dir, local_test=args.local_test, is_naive=False)
     if args.num_specs == "one":

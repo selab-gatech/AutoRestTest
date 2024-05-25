@@ -12,7 +12,7 @@ from src.utils import _construct_db_dir
 from src.value_generator import identify_generator
 
 class QLearning:
-    def __init__(self, operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=300, mutation_rate=0.3):
+    def __init__(self, operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=600, mutation_rate=0.3):
         self.q_table = {}
         self.operation_graph = operation_graph
         self.api_url = operation_graph.request_generator.api_url
@@ -33,10 +33,17 @@ class QLearning:
         self.parameter_agent.initialize_q_table()
         self.value_agent.initialize_q_table()
 
+    def print_q_tables(self):
+        #print("OPERATION Q-TABLE: ", self.operation_agent.q_table)
+        print("HEADER Q-TABLE: ", self.header_agent.q_table)
+        #print("PARAMETER Q-TABLE: ", self.parameter_agent.q_table)
+        #print("VALUE Q-TABLE: ", self.value_agent.q_table)
+
     def get_mapping(self, select_params, select_values):
         mapping = {}
         for i in range(len(select_params)):
-            mapping[select_params[i]] = select_values[select_params[i]]
+            if select_params[i] in select_values:
+                mapping[select_params[i]] = select_values[select_params[i]]
         return mapping
 
     def get_mutated_value(self, param_type):
@@ -53,9 +60,10 @@ class QLearning:
         avail_methods = ["get", "post", "put", "delete", "patch"]
 
         individual_mutation_rate = 0.4
+        method_mutate_rate = 0.1
 
         specific_method = None
-        if operation_properties.http_method and random.random() < individual_mutation_rate and operation_properties.http_method.lower() in avail_methods:
+        if operation_properties.http_method and random.random() < method_mutate_rate and operation_properties.http_method.lower() in avail_methods:
             avail_methods.remove(operation_properties.http_method.lower())
             specific_method = random.choice(avail_methods)
 
@@ -63,7 +71,6 @@ class QLearning:
             for parameter_name, parameter_properties in operation_properties.parameters.items():
                 if parameter_name in parameters:
                     if parameter_properties.schema and random.random() < individual_mutation_rate:
-                        print("MUTATED PARAM VALUE")
                         parameters[parameter_name] = self.get_mutated_value(parameter_properties.schema.type)
                     if parameters[parameter_name] is None:
                         parameters.pop(parameter_name, None)
@@ -88,10 +95,11 @@ class QLearning:
         endpoint_path = operation_properties.endpoint_path
         http_method = specific_method if specific_method else operation_properties.http_method.lower()
 
-        for parameter_name, parameter_properties in operation_properties.parameters.items():
-            if parameter_properties.in_value == "path":
-                path_value = parameters[parameter_name]
-                endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
+        if parameters:
+            for parameter_name, parameter_properties in operation_properties.parameters.items():
+                if parameter_properties.in_value == "path" and parameter_name in parameters:
+                    path_value = parameters[parameter_name]
+                    endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
 
         try:
             select_method = getattr(requests, http_method)
@@ -104,9 +112,15 @@ class QLearning:
                 if "application/json" in body:
                     header["Content-Type"] = "application/json"
                     response = select_method(full_url, json=body["application/json"], headers=header)
-                else: # mime_type == "application/x-www-form-urlencoded":
+                elif "application/x-www-form-urlencoded" in body: # mime_type == "application/x-www-form-urlencoded":
                     header["Content-Type"] = "application/x-www-form-urlencoded"
                     response = select_method(full_url, data=body["application/x-www-form-urlencoded"], headers=header)
+                elif "multipart/form-data" in body:
+                    header["Content-Type"] = "multipart/form-data"
+                    response = select_method(full_url, files=body["multipart/form-data"], headers=header)
+                else: # mime_type == "text/plain":
+                    header["Content-Type"] = "text/plain"
+                    response = select_method(full_url, data=body["text/plain"], headers=header)
                 return response
             response = select_method(full_url, params=parameters, headers=header)
             return response
@@ -115,17 +129,30 @@ class QLearning:
             return None
         except Exception as err:
             print("Unexpected error: ", err)
+            print("Parameters: ", parameters)
+            print("Body: ", body)
             return None
+
+    def penalize_repetitive_responses(self, response):
+        num_occurrences = self.responses[response.status_code]
+        max_occurrences = max(self.responses.values())
+        surprise_score = 3 * (1-(num_occurrences/max_occurrences)) if max_occurrences > 0 else 1
+        return -1 + surprise_score
 
     def determine_reward(self, response):
         if response is None:
             return -10
+
         if response.status_code == 401:
-            return -1
+            return -2
+        elif response.status_code == 405:
+            return -2
         elif response.status_code // 100 == 2:
             return -1
-        elif response.status_code // 100 == 4 or response.status_code // 100 == 5:
-            return 1
+        elif response.status_code // 100 == 4:
+            return self.penalize_repetitive_responses(response)
+        elif response.status_code // 100 == 5:
+            return self.penalize_repetitive_responses(response)
         else:
             return -5
 
@@ -159,13 +186,13 @@ class QLearning:
                 else:
                     processed_value_action = ValueAction(param_mappings=parameters, body_mappings=body)
                     self.value_agent.update_q_table(operation_id, processed_value_action, reward)
+                self.operation_agent.update_q_table(operation_id, reward)
 
             if response is not None: self.responses[response.status_code] += 1
-
-            self.operation_agent.update_q_table(operation_id, reward)
 
             print(f"Responses: {self.responses}")
 
     def run(self):
         self.execute_operations()
+        #self.print_q_tables()
         print("COLLECTED RESPONSES: ", self.responses)

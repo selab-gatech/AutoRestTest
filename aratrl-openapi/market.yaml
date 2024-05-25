@@ -9,8 +9,9 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0
   version: '1.0'
 servers:
-  - url: http://localhost:8081/products
+  #- url: http://localhost:8081/products
   #- url: http://localhost:8080
+  - url: http://localhost:50117
     description: Inferred Url
 tags:
   - name: backend-controller

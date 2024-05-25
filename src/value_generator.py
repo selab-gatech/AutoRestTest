@@ -348,8 +348,6 @@ class SmartValueGenerator:
             request_body[mime_type] = validated_request_body
         return request_body
 
-
-
     def determine_auth_params(self):
         """
         Determines if the operation consists of any authentication information sent as parameters in either the query or the request body

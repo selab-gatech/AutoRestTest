@@ -40,7 +40,7 @@ class OperationAgent:
         Get the best action based on the Q-table where errors are given a higher score
         :return: operation_id for next action
         """
-        best_action = max(((operation_id, value) for operation_id, value in self.q_table.items()), key=lambda x: x[1])[0]
+        best_action = max(self.q_table.items(), key=lambda x: x[1])[0]
         return best_action
 
     def get_random_action(self):
@@ -71,15 +71,17 @@ class HeaderAgent:
         token_list = []
         print("Initiating Header Agent Q-Table")
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
-            token_info = request_generator.get_auth_info(operation_node, 3)
+            token_info = request_generator.get_auth_info(operation_node, 2)
             for token in token_info:
                 token_list.append(self.construct_basic_token(token))
+        print("Token list has been constructed with the following number of tokens: ", len(token_list))
         for operation_id in self.operation_graph.operation_nodes.keys():
             if operation_id not in self.q_table:
                 self.q_table[operation_id] = []
-            for i in range(min(len(token_list), 10)):
+            for i in range(min(len(token_list), 9)):
                 self.q_table[operation_id].append([token_list[i],0])
-                self.q_table[operation_id].append([None,0])
+            self.q_table[operation_id].append([None,0])
+        print(self.q_table)
         print("Initiated Header Agent Q-Table")
 
     def construct_basic_token(self, token):
