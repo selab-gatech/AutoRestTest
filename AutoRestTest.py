@@ -37,8 +37,8 @@ class AutoRestTest:
         _construct_db_dir()
         self.db_q_table = os.path.join(os.path.dirname(__file__), "src/data/q_table")
         self.db_graph = os.path.join(os.path.dirname(__file__), "src/data/graph")
-        self.use_cached_graph = False
-        self.use_cached_table = False
+        self.use_cached_graph = True
+        self.use_cached_table = True
 
     def init_graph(self, spec_name: str, spec_path) -> OperationGraph:
         spec_parser = SpecificationParser(spec_path=spec_path, spec_name=spec_name)

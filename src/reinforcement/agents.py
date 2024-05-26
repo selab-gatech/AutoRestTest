@@ -7,7 +7,7 @@ import random
 
 from src.generate_graph import OperationGraph
 from src.utils import get_combinations, get_param_combinations, \
-    construct_basic_token
+    construct_basic_token, get_required_params
 
 
 class OperationAgent:
@@ -175,7 +175,16 @@ class ParameterAgent:
         :param operation_id:
         :return:
         """
-        best_params = max(self.q_table[operation_id]['params'].items(), key=lambda x: x[1])[0] if self.q_table[operation_id]['params'] else None
+        required_params = get_required_params(self.operation_graph.operation_nodes[operation_id].operation_properties.parameters)
+        best_params = (None, -np.inf)
+        if self.q_table[operation_id]['params'] and required_params:
+            for params, score in self.q_table[operation_id]['params'].items():
+                if params and required_params.issubset(set(params)) and score > best_params[1]:
+                    best_params = (params, score)
+            best_params = best_params[0]
+        else:
+            best_params = max(self.q_table[operation_id]['params'].items(), key=lambda x: x[1])[0] if self.q_table[operation_id]['params'] else None
+
         best_body = max(self.q_table[operation_id]['body'].items(), key=lambda x: x[1])[0] if self.q_table[operation_id]['body'] else None
 
         return ParameterAction(req_params=best_params, mime_type=best_body)

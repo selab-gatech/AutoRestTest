@@ -1,7 +1,7 @@
 import base64
 import hashlib
 import json
-from typing import Iterable, Dict, List, Any, Optional, Tuple
+from typing import Iterable, Dict, List, Any, Optional, Tuple, Set
 import itertools
 
 from openai import OpenAI
@@ -38,6 +38,13 @@ def get_combinations(arr) -> List[Tuple]:
 
 def get_params(operation_parameters: Dict[str, ParameterProperties]) -> List[str]:
     return list(operation_parameters.keys()) if operation_parameters is not None else []
+
+def get_required_params(operation_parameters: Dict[str, ParameterProperties]) -> Set:
+    required_parameters = set()
+    for parameter, parameter_properties in operation_parameters.items():
+        if parameter_properties.required:
+            required_parameters.add(parameter)
+    return required_parameters
 
 def process_body_params(body: SchemaProperties) -> List[str]:
     if body is None:

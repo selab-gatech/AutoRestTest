@@ -107,6 +107,7 @@ class QLearning:
                 if parameter_properties.in_value == "path" and parameter_name in parameters:
                     path_value = parameters[parameter_name]
                     endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
+                    print(f"FIXED ENDPOINT PATH: {endpoint_path}")
 
         try:
             select_method = getattr(requests, http_method)
@@ -150,30 +151,33 @@ class QLearning:
             print("Body: ", body)
             return None
 
-    def penalize_repetitive_responses(self, response):
-        num_occurrences = self.responses[response.status_code]
-        max_occurrences = max(self.responses.values())
-        surprise_score = 3 * (1-(num_occurrences/max_occurrences)) if max_occurrences > 0 else 1
-        return -1 + surprise_score
-
     def determine_reward(self, response):
         if response is None:
             return -10
 
-        if response.status_code == 401:
+        status_code = response.status_code
+        most_frequent_count = max(self.responses.values()) if self.responses else 1
+        response_count = self.responses[response.status_code]
+        diversity_adjustment = 4*(1-(response_count/most_frequent_count)) - 2 if most_frequent_count > 0 else 1
+
+        if status_code == 401:
             return -2
-        elif response.status_code == 405:
-            return -2
-        elif response.status_code == 406:
-            return -1
-        elif response.status_code // 100 == 2:
-            return 1
-        elif response.status_code // 100 == 4:
-            return 1
-        elif response.status_code // 100 == 5:
-            return 1
-        else:
+        elif status_code == 405:
             return -5
+        elif status_code == 406:
+            base_reward = -1
+        elif status_code // 100 == 2:
+            base_reward = -1
+        elif status_code // 100 == 4:
+            base_reward = 1
+        elif status_code // 100 == 5:
+            base_reward = 1
+        else:
+            base_reward = -5
+
+        #reward = base_reward + diversity_adjustment
+        reward = base_reward
+        return reward
 
     def execute_operations(self):
         start_time = time.time()
