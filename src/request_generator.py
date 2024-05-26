@@ -1,3 +1,5 @@
+import random
+import time
 from collections import defaultdict
 from dataclasses import dataclass, asdict, field
 from json import JSONDecodeError
@@ -5,8 +7,11 @@ from typing import Dict, Set, Any, List, Optional, TYPE_CHECKING
 
 import itertools
 
+import numpy as np
+
 from src.graph.handle_response import ResponseHandler
-from src.utils import remove_nulls, OpenAILanguageModel, get_params, get_request_body_params, get_nested_obj_mappings
+from src.utils import remove_nulls, OpenAILanguageModel, get_params, get_request_body_params, get_nested_obj_mappings, \
+    get_param_combinations, get_combinations, get_required_params, get_body_object_combinations
 
 from src.graph.specification_parser import OperationProperties, ParameterProperties, SchemaProperties
 import requests
@@ -224,23 +229,100 @@ class RequestGenerator:
         print("Attempting to get auth info for operation: ", operation_node.operation_id)
 
         token_info = []
-        has_success = False
         if query_param_auth and self._determine_if_valid_auth(query_param_auth):
-            for i in range(auth_attempts):
-                if self.find_query_auth_mappings(operation_node, query_param_auth, token_info, is_query=True):
-                    has_success = True
-            if has_success:
-                for i in range(auth_attempts):
-                    self.find_query_auth_mappings(operation_node, query_param_auth, token_info, is_query=True)
-        has_success = False
-        if body_param_auth and self._determine_if_valid_auth(body_param_auth):
-            for i in range(auth_attempts):
-                if self.find_query_auth_mappings(operation_node, body_param_auth, token_info, is_query=False):
-                    has_success = True
-            if has_success:
-                for i in range(auth_attempts):
-                    self.find_query_auth_mappings(operation_node, body_param_auth, token_info, is_query=False)
+            self.determine_tokens(operation_node, query_param_auth, token_info)
+        elif body_param_auth and self._determine_if_valid_auth(body_param_auth):
+            self.determine_tokens(operation_node, body_param_auth, token_info, True)
         return token_info
+
+    def _decompose_body_prop_mappings(self, bodies: List):
+        body_mappings = {}
+        for body in bodies:
+            if type(body) == dict:
+                for key, value in body.items():
+                    if key not in body_mappings:
+                        body_mappings[key] = []
+                    body_mappings[key].append(value)
+        return body_mappings
+
+    def determine_tokens(self, operation_node: 'OperationNode', param_auth_info, token_info, is_body=False):
+        param_q_table = {'params': {}, 'body': {}}
+        params = get_param_combinations(operation_node.operation_properties.parameters)
+        if not is_body:
+            for param in params:
+                if set(param_auth_info.values()).issubset(set(param)):
+                    param_q_table['params'][param] = 0
+        else:
+            param_q_table['params'] = {param: 0 for param in params}
+        select_mime = list(operation_node.operation_properties.request_body.keys())[0] if operation_node.operation_properties.request_body else None
+        body_properties = get_body_object_combinations(operation_node.operation_properties.request_body[select_mime]) if select_mime else []
+        if is_body:
+            for body in body_properties:
+                if set(param_auth_info.values()).issubset(set(body)):
+                    param_q_table['body'][body] = 0
+        else:
+            param_q_table['body'] = {key: 0 for key in body_properties}
+        value_generator = SmartValueGenerator(operation_properties=operation_node.operation_properties, temperature=0.7)
+        parameter_mappings, request_body_mappings = value_generator.generate_value_agent_params(num_values=10), value_generator.generate_value_agent_body(num_values=10)
+        request_body_mappings = self._decompose_body_prop_mappings(request_body_mappings[select_mime]) if select_mime else {}
+
+        param_q_table['params'][None] = 0
+        param_q_table['body'][None] = 0
+
+        curr_tokens = []
+        start_time = time.time()
+        while time.time() - start_time < 30 and len(curr_tokens) < 5:
+            # get best action
+            required_params = get_required_params(operation_node.operation_properties.parameters)
+            best_params = (None, -np.inf)
+            if param_q_table['params'] and required_params:
+                for params, score in param_q_table['params'].items():
+                    if params and required_params.issubset(set(params)) and score > best_params[1]:
+                        best_params = (params, score)
+                best_params = best_params[0]
+            else:
+                best_params = max(param_q_table['params'].items(), key=lambda x: x[1])[0] if \
+                param_q_table['params'] else None
+
+            #required_body = get_required_params(operation_node.operation_properties.request_body[select_mime].properties)
+            best_body = max(param_q_table['body'].items(), key=lambda x: x[1])[0] if \
+            param_q_table['body'] else None
+
+            parameters = {}
+            request_body = {}
+            if best_params:
+                for param in best_params:
+                    parameters[param] = random.choice(parameter_mappings[param]) if param in parameter_mappings else None
+            if best_body and select_mime:
+                request_body[select_mime] = {}
+                for prop in best_body:
+                    request_body[select_mime][prop] = random.choice(request_body_mappings[prop]) if prop in request_body_mappings else None
+
+            response = self.send_operation_request(RequestData(
+                endpoint_path=operation_node.operation_properties.endpoint_path,
+                http_method=operation_node.operation_properties.http_method,
+                parameters=parameters,
+                request_body=request_body,
+                operation_properties=operation_node.operation_properties
+            ), allow_retry=False, permitted_retries=0)
+
+            if response and response.response.ok:
+                auth_mappings = {}
+                self._determine_auth_mappings(response.request.parameters, param_auth_info, auth_mappings)
+                if len(auth_mappings) == 2:
+                    curr_tokens.append(auth_mappings)
+                auth_mappings = {}
+                self._determine_auth_mappings(response.request.request_body, param_auth_info, auth_mappings)
+                if len(auth_mappings) == 2:
+                    curr_tokens.append(auth_mappings)
+                param_q_table['params'][best_params] += 2
+                param_q_table['body'][best_body] += 2
+            else:
+                param_q_table['params'][best_params] -= 1
+                param_q_table['body'][best_body] -= 1
+        for token in curr_tokens:
+            if token not in token_info:
+                token_info.append(token)
 
     def find_query_auth_mappings(self, operation_node, query_param_auth, token_info, is_query):
         print("Attempting to query for: " + operation_node.operation_id)

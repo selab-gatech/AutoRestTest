@@ -70,7 +70,7 @@ class HeaderAgent:
         token_list = []
         print("Initiating Header Agent Q-Table")
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
-            token_info = request_generator.get_auth_info(operation_node, 3)
+            token_info = request_generator.get_auth_info(operation_node, 5)
             for token in token_info:
                 token_list.append(construct_basic_token(token))
         print("Token list has been constructed with the following number of tokens: ", len(token_list))

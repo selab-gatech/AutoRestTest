@@ -30,6 +30,9 @@ def get_param_combinations(operation_parameters: Dict[str, ParameterProperties])
 def get_body_combinations(operation_body: Dict[str, SchemaProperties]) -> Dict[str, List[Tuple[str]]]:
     return {k: get_combinations(v) for k, v in get_request_body_params(operation_body).items()}
 
+def get_body_object_combinations(body_schema: SchemaProperties) -> List[Tuple[str]]:
+    return get_combinations(process_body_params(body_schema))
+
 def get_combinations(arr) -> List[Tuple]:
     combinations = []
     for i in range(1, len(arr)+1):

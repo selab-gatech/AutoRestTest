@@ -81,6 +81,18 @@ def identify_generator(value: Any):
                   "null": randomize_null}
     return generators.get(value)
 
+def random_generator():
+    generators = {"integer": randomize_integer,
+                  "float": randomize_float,
+                  "number": randomize_float,
+                  "boolean": randomize_boolean,
+                  "string": randomize_string,
+                  "array": randomize_array,
+                  "object": randomize_object,
+                  "null": randomize_null}
+    return random.choice(list(generators.values()))
+
+
 class NaiveValueGenerator:
     def __init__(self, parameters: Dict[AnyStr, ParameterProperties], request_body: Dict[AnyStr, SchemaProperties]):
         self.parameters: Dict[AnyStr, ParameterProperties] = parameters

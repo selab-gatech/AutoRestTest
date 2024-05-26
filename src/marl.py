@@ -10,7 +10,7 @@ import shelve
 from src.graph.specification_parser import OperationProperties
 from src.reinforcement.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction
 from src.utils import _construct_db_dir, construct_basic_token, get_nested_obj_mappings
-from src.value_generator import identify_generator, randomize_string
+from src.value_generator import identify_generator, randomize_string, random_generator, randomize_object
 
 
 class QLearning:
@@ -64,6 +64,7 @@ class QLearning:
         individual_mutation_rate = 0.4
         method_mutate_rate = 0.1
         media_mutate_rate = 0.1
+        parameter_selection_mutate_rate = 0.3
 
         specific_method = None
         if operation_properties.http_method and random.random() < method_mutate_rate and operation_properties.http_method.lower() in avail_methods:
@@ -73,6 +74,9 @@ class QLearning:
         if random.random() < individual_mutation_rate:
             random_token_params = {"username": randomize_string(), "password": randomize_string()}
             header = {"Authorization": "Basic " + construct_basic_token(random_token_params)}
+
+        if random.random() < parameter_selection_mutate_rate:
+            parameters = {randomize_string(): random_generator()() for _ in range(random.randint(1,5))}
 
         if operation_properties.parameters and parameters:
             for parameter_name, parameter_properties in operation_properties.parameters.items():
@@ -85,7 +89,10 @@ class QLearning:
         if operation_properties.request_body and body:
             for mime, body_properties in operation_properties.request_body.items():
                 if mime in body and random.random() < individual_mutation_rate:
-                    body[mime] = self.get_mutated_value(body_properties.type)
+                    if random.random() < 0.5:
+                        body[mime] = self.get_mutated_value(body_properties.type)
+                    else:
+                        body[mime] = randomize_object()
                 if body[mime] is None:
                     body.pop(mime, None)
 
@@ -107,7 +114,6 @@ class QLearning:
                 if parameter_properties.in_value == "path" and parameter_name in parameters:
                     path_value = parameters[parameter_name]
                     endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
-                    print(f"FIXED ENDPOINT PATH: {endpoint_path}")
 
         try:
             select_method = getattr(requests, http_method)
@@ -131,7 +137,6 @@ class QLearning:
                     header["Content-Type"] = "multipart/form-data"
                     file = {"file": ("file.txt", json.dumps(body["multipart/form-data"]).encode('utf-8'), "application/json"),
                             "metadata": (None, "metadata")}
-
                     body["multipart/form-data"] = file
                     response = select_method(full_url, files=body["multipart/form-data"], headers=header)
                 else: # mime_type == "text/plain":
@@ -151,33 +156,50 @@ class QLearning:
             print("Body: ", body)
             return None
 
-    def determine_reward(self, response):
+    def determine_header_reward(self, response):
         if response is None:
-            return -10
-
+            return 0
         status_code = response.status_code
-        most_frequent_count = max(self.responses.values()) if self.responses else 1
-        response_count = self.responses[response.status_code]
-        diversity_adjustment = 4*(1-(response_count/most_frequent_count)) - 2 if most_frequent_count > 0 else 1
-
         if status_code == 401:
             return -2
-        elif status_code == 405:
-            return -5
-        elif status_code == 406:
-            base_reward = -1
-        elif status_code // 100 == 2:
-            base_reward = -1
         elif status_code // 100 == 4:
-            base_reward = 1
+            return 0
         elif status_code // 100 == 5:
-            base_reward = 1
+            return 1
+        elif status_code // 100 == 2:
+            return 2
         else:
-            base_reward = -5
+            return -3
 
-        #reward = base_reward + diversity_adjustment
-        reward = base_reward
-        return reward
+    def determine_good_response_reward(self, response):
+        if response is None:
+            return -10
+        status_code = response.status_code
+        if status_code // 100 == 2:
+            return 2
+        elif status_code // 100 == 4:
+            return -2
+        elif status_code // 100 == 5:
+            return -1
+        else:
+            return -5
+
+    def determine_bad_response_reward(self, response):
+        if response is None:
+            return -10
+        status_code = response.status_code
+        if status_code == 405:
+            return -3
+        elif status_code == 401:
+            return -1
+        if status_code // 100 == 4:
+            return 1
+        elif status_code // 100 == 5:
+            return 1
+        elif status_code // 100 == 2:
+            return -1
+        else:
+            return 0
 
     def execute_operations(self):
         start_time = time.time()
@@ -200,18 +222,22 @@ class QLearning:
             else:
                 response = self.send_operation(self.operation_graph.operation_nodes[operation_id].operation_properties, parameters, body, header)
 
-            reward = self.determine_reward(response)
+            #reward = self.determine_reward(response)
 
             if not mutate_operation:
-                impacted_operation = random.choice([self.parameter_agent, self.header_agent, self.value_agent])
-                if impacted_operation == self.parameter_agent:
-                    self.parameter_agent.update_q_table(operation_id, select_params, reward)
-                elif impacted_operation == self.header_agent:
-                    self.header_agent.update_q_table(operation_id, select_header, reward)
-                else:
-                    processed_value_action = ValueAction(param_mappings=parameters, body_mappings=body)
-                    self.value_agent.update_q_table(operation_id, processed_value_action, reward)
-                self.operation_agent.update_q_table(operation_id, reward)
+                #impacted_operation = random.choice([self.parameter_agent, self.header_agent, self.value_agent])
+                #if impacted_operation == self.parameter_agent:
+                #    self.parameter_agent.update_q_table(operation_id, select_params, reward)
+                #elif impacted_operation == self.header_agent:
+                #    self.header_agent.update_q_table(operation_id, select_header, reward)
+                #else:
+
+                self.parameter_agent.update_q_table(operation_id, select_params, self.determine_good_response_reward(response))
+                self.header_agent.update_q_table(operation_id, select_header, self.determine_header_reward(response))
+                processed_value_action = ValueAction(param_mappings=parameters, body_mappings=body)
+                self.value_agent.update_q_table(operation_id, processed_value_action, self.determine_good_response_reward(response))
+                #    self.value_agent.update_q_table(operation_id, processed_value_action, reward)
+                self.operation_agent.update_q_table(operation_id, self.determine_bad_response_reward(response))
 
             if response is not None: self.responses[response.status_code] += 1
 
