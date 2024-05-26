@@ -261,8 +261,8 @@ class RequestGenerator:
         parameter_mappings, request_body_mappings = value_generator.generate_value_agent_params(num_values=10), value_generator.generate_value_agent_body(num_values=10)
         request_body_mappings = self._decompose_body_prop_mappings(request_body_mappings[select_mime]) if select_mime else {}
 
-        param_q_table['params'][None] = 0
-        param_q_table['body'][None] = 0
+        param_q_table['params']["None"] = 0
+        param_q_table['body']["None"] = 0
 
         curr_tokens = []
         start_time = time.time()
@@ -283,6 +283,11 @@ class RequestGenerator:
             best_body = max(param_q_table['body'].items(), key=lambda x: x[1])[0] if \
             param_q_table['body'] else None
 
+            if best_params == "None":
+                best_params = None
+            if best_body == "None":
+                best_body = None
+
             parameters = {}
             request_body = {}
             if best_params:
@@ -300,6 +305,11 @@ class RequestGenerator:
                 request_body=request_body,
                 operation_properties=operation_node.operation_properties
             ), allow_retry=False, permitted_retries=0)
+
+            if best_params is None:
+                best_params = "None"
+            if best_body is None:
+                best_body = "None"
 
             if response and response.response.ok:
                 auth_mappings = {}
@@ -361,9 +371,10 @@ class RequestGenerator:
                     endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
                     parameters.pop(parameter_name, None)
 
-        for parameter_name, parameter_assignment in parameters:
-            if request_data.operation_properties.parameters[parameter_name].in_value == "path":
-                raise ValueError("Path parameter is still assigned for query")
+        if parameters:
+            for parameter_name, parameter_assignment in parameters.items():
+                if request_data.operation_properties.parameters[parameter_name].in_value == "path":
+                    raise ValueError("Path parameter is still assigned for query")
 
         try:
             select_method = getattr(requests, http_method) # selects correct http method

@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import shelve
 
@@ -28,6 +29,28 @@ def parse_args():
                         help="Specifies whether the test is local (true/false)")
     parser.add_argument("-s", "--spec_name", type=str, default=None, help="Optional name of the specification")
     return parser.parse_args()
+
+def output_q_table(operation_table, header_table, parameter_table, value_table, spec_name):
+    simplified_param_table = {}
+    for operation, operation_values in parameter_table.items():
+        simplified_param_table[operation] = {"params": {}, "body": {}}
+        for parameter, parameter_values in operation_values["params"].items():
+            simplified_param_table[operation]["params"][str(parameter)] = parameter_values
+        for body, body_values in operation_values["body"].items():
+            simplified_param_table[operation]["body"][str(body)] = body_values
+
+    compiled_q_table = {
+        "operation": operation_table,
+        "header": header_table,
+        "parameter": simplified_param_table,
+        "value": value_table
+    }
+    output_dir = os.path.join(os.path.dirname(__file__), "src/data/completed_tables")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    with open(f"{output_dir}/{spec_name}.json", "w") as f:
+        json.dump(compiled_q_table, f, indent=2)
+
 
 class AutoRestTest:
     def __init__(self, spec_dir: str, local_test: bool, is_naive=False):
@@ -73,7 +96,7 @@ class AutoRestTest:
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("BEGINNING Q-LEARNING...")
-        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=600)
+        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=60)
         with shelve.open(self.db_q_table) as db:
             if spec_name in db and self.use_cached_table:
                 compiled_q_table = db[spec_name]
@@ -118,7 +141,8 @@ class AutoRestTest:
         q_learning = self.perform_q_learning(operation_graph, spec_name)
         #self.override_header_agent_q_table(operation_graph, spec_name)
         self.print_performance()
-        q_learning.print_q_tables()
+        output_q_table(q_learning.operation_agent.q_table, q_learning.header_agent.q_table,
+                       q_learning.parameter_agent.q_table, q_learning.value_agent.q_table, spec_name)
         print("AUTO-REST-TEST COMPLETED!!!")
 
 if __name__ == "__main__":

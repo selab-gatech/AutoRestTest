@@ -143,8 +143,8 @@ class ParameterAgent:
             mimes = get_combinations(list(operation_node.operation_properties.request_body.keys())) if operation_node.operation_properties.request_body else []
             self.q_table[operation_id]['body'] = {mime: 0 for mime in mimes}
 
-            self.q_table[operation_id]['params'][None] = 0
-            self.q_table[operation_id]['body'][None] = 0
+            self.q_table[operation_id]['params']["None"] = 0
+            self.q_table[operation_id]['body']["None"] = 0
             # NOTE: Moved function of request body parameter agent to select combinations of mime types
         print("Initiated Parameter Agent Q-Table")
 
@@ -166,6 +166,10 @@ class ParameterAgent:
         """
         random_params = random.choice(list(self.q_table[operation_id]['params'].keys())) if self.q_table[operation_id]['params'] else None
         random_mime = random.choice(list(self.q_table[operation_id]['body'].keys())) if self.q_table[operation_id]['body'] else None
+        if random_params == "None":
+            random_params = None
+        if random_mime == "None":
+            random_mime = None
         return ParameterAction(req_params=random_params, mime_type=random_mime)
 
     def get_best_action(self, operation_id) -> ParameterAction:
@@ -187,6 +191,11 @@ class ParameterAgent:
 
         best_body = max(self.q_table[operation_id]['body'].items(), key=lambda x: x[1])[0] if self.q_table[operation_id]['body'] else None
 
+        if best_params == "None":
+            best_params = None
+        if best_body == "None":
+            best_body = None
+
         return ParameterAction(req_params=best_params, mime_type=best_body)
 
         #best_body: Tuple = max(((mime, param, value) for mime, mime_params in self.q_table[operation_id]['body'].items()
@@ -202,8 +211,13 @@ class ParameterAgent:
         :param reward:
         :return:
         """
-        current_q_params = self.q_table[operation_id]['params'][action.req_params] if action.req_params and self.q_table[operation_id]['params'] else 0
-        current_q_body = self.q_table[operation_id]['body'][action.mime_type] if action.mime_type and self.q_table[operation_id]['body'] else 0
+        if action.req_params is None:
+            action.req_params = "None"
+        if action.mime_type is None:
+            action.mime_type = "None"
+
+        current_q_params = self.q_table[operation_id]['params'][action.req_params] if self.q_table[operation_id]['params'] else 0
+        current_q_body = self.q_table[operation_id]['body'][action.mime_type] if self.q_table[operation_id]['body'] else 0
         # Note: State is constant "active", so next state = current state
         best_next_q_params = max(self.q_table[operation_id]['params'].values()) if self.q_table[operation_id]['params'] else 0
         best_next_q_body = max(self.q_table[operation_id]['body'].values()) if self.q_table[operation_id]['body'] else 0
@@ -212,9 +226,9 @@ class ParameterAgent:
         best_next_q_combined = best_next_q_params + best_next_q_body
 
         new_q = current_q_combined + self.alpha * (reward + self.gamma * best_next_q_combined - current_q_combined) # Bellman equation
-        if action.req_params and self.q_table[operation_id]['params']:
+        if self.q_table[operation_id]['params']:
             self.q_table[operation_id]['params'][action.req_params] = new_q
-        if action.mime_type and self.q_table[operation_id]['body']:
+        if self.q_table[operation_id]['body']:
             self.q_table[operation_id]['body'][action.mime_type] = new_q
 
 @dataclass
