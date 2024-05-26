@@ -162,12 +162,6 @@ class RequestGenerator:
                 requirements=requirements
             )
 
-        for parameter_name, parameter_properties in operation_properties.parameters.items():
-            if parameter_properties.in_value == "path":
-                path_value = parameters[parameter_name]
-                endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
-                parameters.pop(parameter_name, None)
-
         return RequestData(
             endpoint_path=endpoint_path,
             http_method=http_method,
@@ -359,6 +353,17 @@ class RequestGenerator:
         http_method = request_data.http_method
         parameters = request_data.parameters
         request_body = request_data.request_body
+
+        if parameters:
+            for parameter_name, parameter_properties in request_data.operation_properties.parameters.items():
+                if parameter_properties.in_value == "path" and parameter_name in parameters:
+                    path_value = parameters[parameter_name]
+                    endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
+                    parameters.pop(parameter_name, None)
+
+        for parameter_name, parameter_assignment in parameters:
+            if request_data.operation_properties.parameters[parameter_name].in_value == "path":
+                raise ValueError("Path parameter is still assigned for query")
 
         try:
             select_method = getattr(requests, http_method) # selects correct http method

@@ -21,7 +21,7 @@ Given a summary of an operation and its parameters schema from its OpenAPI Speci
 }
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value. 
 In the case where a given parameter is an array, use a list as the parameter value.
-Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy. If a parameter's schema states that it is required or in the path, include it."""
+Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy. It is vital that you generate values for any parameter that is indicated as required in the OpenAPI Specification."""
 
 VALUE_AGENT_BODY_PROMPT = """
 Given a summary of an operation its request body schema from its OpenAPI Specification, generate [insert number] different valid context-aware request bodies for the operation. Return the answer as a JSON object with the following structure:
