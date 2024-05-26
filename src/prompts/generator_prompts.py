@@ -32,8 +32,8 @@ Given a summary of an operation its request body schema from its OpenAPI Specifi
         "request_body10": [correct request body 10]
     }
 }
-In the case where the request body is an object, use an object with keys to represent the object field names and values to represent their respective field values for the request body value. It is important to generate values for each object property.
-In the case where the request body is an array, use a list as the request body value.
+In the case where the request body is an object, return a correctly formatted object as the [correct request body] value. In the object, include all required fields as specified from the OpenAPI Specification for object request bodies, but otherwise include/exclude optional properties to generate a variety of objects.
+In the case where the request body is an array, use a list as the request body value, with the correct values for each item in the array.
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 VALUE_AGENT_PARAMETERS_PROMPT = """
