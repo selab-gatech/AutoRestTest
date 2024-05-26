@@ -114,6 +114,7 @@ class QLearning:
                 if parameter_properties.in_value == "path" and parameter_name in parameters:
                     path_value = parameters[parameter_name]
                     endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
+                    parameters.pop(parameter_name, None)
 
         try:
             select_method = getattr(requests, http_method)

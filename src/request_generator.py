@@ -166,6 +166,7 @@ class RequestGenerator:
             if parameter_properties.in_value == "path":
                 path_value = parameters[parameter_name]
                 endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
+                parameters.pop(parameter_name, None)
 
         return RequestData(
             endpoint_path=endpoint_path,
@@ -536,7 +537,7 @@ class RequestGenerator:
             self._validate_value_mappings(curr_node, parameter_mappings, parameters, request_body, occurrences)
 
         if not responses[curr_node.operation_id]:
-            response = self.create_and_send_request(curr_node, allow_retry=True)
+            response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=3)
             if response and response.response and response.response.ok:
                 responses[curr_node.operation_id].append(response)
 
