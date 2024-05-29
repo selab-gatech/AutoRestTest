@@ -491,11 +491,14 @@ class QLearning:
                         deconstructed_responses = [self._deconstuct_obj(response_obj) for response_obj in response_content]
                     elif response_content:
                         deconstructed_responses = [self._deconstuct_obj(response_content)]
+                        if self._deconstuct_obj(response_content) is None:
+                            print("RESPONSE CONTENT WITH NONE: ", response_content)
                     if deconstructed_responses:
                         for deconstructed_response in deconstructed_responses:
-                            for response_prop, response_val in deconstructed_response.items():
-                                if response_prop in successful_responses[operation_id] and response_val not in successful_responses[operation_id][response_prop]:
-                                    successful_responses[operation_id][response_prop].append(response_val)
+                            if deconstructed_response:
+                                for response_prop, response_val in deconstructed_response.items():
+                                    if response_prop in successful_responses[operation_id] and response_val not in successful_responses[operation_id][response_prop]:
+                                        successful_responses[operation_id][response_prop].append(response_val)
 
             if response is not None: self.responses[response.status_code] += 1
 
