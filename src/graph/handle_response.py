@@ -63,6 +63,7 @@ class ResponseHandler:
         '''
         Handle the operation dependency error by trying tentative edges.
         '''
+        # TODO: Figure out how to handle tentative edges in response-param vs param-param
         if not failed_operation_node.tentative_edges:
             return
         sorted_edges = sorted(failed_operation_node.tentative_edges, key=lambda x: list(x.similar_parameters.values())[0].similarity, reverse=True) # sort tentative edges by their one parameter similarity value
@@ -79,6 +80,7 @@ class ResponseHandler:
                     if parameter in modified_parameter_schemas:
                         print(f"Updating parameter {parameter} with new schema")
                         logging.info(f"Updating parameter {parameter} with new schema")
+                        logging.info(f"New schema: {modified_parameter_schemas[parameter]}")
                         parameters[parameter] = modified_parameter_schemas[parameter]
 
     def handle_format_constraint_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):
@@ -87,8 +89,8 @@ class ResponseHandler:
             if parameter_format_examples:
                 for parameter in parameters:
                     if parameter in parameter_format_examples:
-                        print(f"Updating parameter {parameter} with new example value")
-                        logging.info(f"Updating parameter {parameter} with new example value")
+                        print(f"Updating parameter {parameter} with new example value {parameter_format_examples[parameter]}")
+                        logging.info(f"Updating parameter {parameter} with new example value {parameter_format_examples[parameter]}")
                         parameters[parameter].example = parameter_format_examples[parameter]
 
     def handle_parameter_dependency_error(self, response_text: str, parameters: Dict[str, 'SchemaProperties']):

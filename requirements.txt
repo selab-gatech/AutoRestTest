@@ -2,9 +2,9 @@ numpy~=1.25.0
 scipy==1.10.1
 scikit-learn
 pathlib
-gensim
 openai
 bs4
 python-dotenv
 prance
 openapi-spec-validator
+gensim

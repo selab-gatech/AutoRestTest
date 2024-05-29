@@ -49,13 +49,17 @@ def get_required_params(operation_parameters: Dict[str, ParameterProperties]) ->
             required_parameters.add(parameter)
     return required_parameters
 
+def encode_dict_as_key(dictionary: Dict) -> str:
+    json_str = json.dumps(dictionary, sort_keys=True)
+    return hashlib.sha256(json_str.encode()).hexdigest()
+
 def process_body_params(body: SchemaProperties) -> List[str]:
     if body is None:
         return []
-    elif body.properties is not None:
+    elif body.properties and body.type == "object":
         return list(body.properties.keys())
-    elif body.items is not None:
-        process_body_params(body.items)
+    elif body.items and body.type == "array":
+        return process_body_params(body.items)
     return []
 
 def get_request_body_params(operation_body: Dict[str, SchemaProperties]) -> Dict[str, List[str]]:

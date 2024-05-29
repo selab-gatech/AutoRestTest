@@ -121,7 +121,8 @@ class SpecificationParser:
             self.base_parser = BaseParser(spec_path, strict=False)
         else:
             raise ValueError("No specification path provided.")
-        self.directory_path = 'specs/original/oas/'
+        #self.directory_path = 'specs/original/oas/'
+        self.directory_path = "specs/aratrl-openapi/"
         self.all_specs = {}
 
     def get_api_url(self) -> str:
@@ -314,9 +315,11 @@ class SpecificationParser:
 
 if __name__ == "__main__":
     # testing
-    spec_parser = SpecificationParser()
-    spec_parser.parse_all_specifications()
-    spec_parser.all_json_spec_output()
+    spec_path = os.path.normpath("../../aratrl-openapi/project.yaml")
+    spec_parser = SpecificationParser(spec_name="project", spec_path=spec_path)
+    spec_parser.single_json_spec_output()
+    #spec_parser.parse_all_specifications()
+    #spec_parser.all_json_spec_output()
 
     #spec_parser = SpecificationParser(spec_path="../specs/original/oas/genome-nexus.yaml", spec_name="genome-nexus")
     #spec_parser.single_json_spec_output()

@@ -30,7 +30,15 @@ def parse_args():
     parser.add_argument("-s", "--spec_name", type=str, default=None, help="Optional name of the specification")
     return parser.parse_args()
 
-def output_q_table(operation_table, header_table, parameter_table, value_table, spec_name):
+def output_q_table(q_learning, spec_name):
+    parameter_table = q_learning.parameter_agent.q_table
+    body_obj_table = q_learning.body_object_agent.q_table
+    header_table = q_learning.header_agent.q_table
+    value_table = q_learning.value_agent.q_table
+    operation_table = q_learning.operation_agent.q_table
+    data_source_table = q_learning.data_source_agent.q_table
+    dependency_table = q_learning.dependency_agent.q_table
+
     simplified_param_table = {}
     for operation, operation_values in parameter_table.items():
         simplified_param_table[operation] = {"params": {}, "body": {}}
@@ -39,11 +47,23 @@ def output_q_table(operation_table, header_table, parameter_table, value_table, 
         for body, body_values in operation_values["body"].items():
             simplified_param_table[operation]["body"][str(body)] = body_values
 
+    simplified_body_table = {}
+    for operation, operation_values in body_obj_table.items():
+        simplified_body_table[operation] = {}
+        for mime_type, mime_values in operation_values.items():
+            if mime_type not in simplified_body_table[operation]:
+                simplified_body_table[operation][mime_type] = {}
+            for body, body_values in mime_values.items():
+                simplified_body_table[operation][mime_type][str(body)] = body_values
+
     compiled_q_table = {
-        "operation": operation_table,
-        "header": header_table,
-        "parameter": simplified_param_table,
-        "value": value_table
+        "OPERATION AGENT": operation_table,
+        "HEADER AGENT": header_table,
+        "PARAMETER AGENT": simplified_param_table,
+        "VALUE AGENT": value_table,
+        "BODY OBJECT AGENT": simplified_body_table,
+        "DATA SOURCE AGENT": data_source_table,
+        "DEPENDENCY AGENT": dependency_table
     }
     output_dir = os.path.join(os.path.dirname(__file__), "src/data/completed_tables")
     if not os.path.exists(output_dir):
@@ -60,8 +80,10 @@ class AutoRestTest:
         _construct_db_dir()
         self.db_q_table = os.path.join(os.path.dirname(__file__), "src/data/q_table")
         self.db_graph = os.path.join(os.path.dirname(__file__), "src/data/graph")
-        self.use_cached_graph = False
-        self.use_cached_table = False
+        self.use_cached_graph = True
+        self.use_cached_table = True
+        self.use_cached_values = True
+        self.use_cached_headers = True
 
     def init_graph(self, spec_name: str, spec_path) -> OperationGraph:
         spec_parser = SpecificationParser(spec_path=spec_path, spec_name=spec_name)
@@ -96,32 +118,38 @@ class AutoRestTest:
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("BEGINNING Q-LEARNING...")
-        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=60)
+        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=600, mutation_rate=0.2)
         with shelve.open(self.db_q_table) as db:
             if spec_name in db and self.use_cached_table:
                 compiled_q_table = db[spec_name]
-                q_learning.operation_agent.q_table = compiled_q_table["operation"]
-                q_learning.header_agent.q_table = compiled_q_table["header"]
-                q_learning.parameter_agent.q_table = compiled_q_table["parameter"]
-                q_learning.value_agent.q_table = compiled_q_table["value"]
+                if self.use_cached_headers:
+                    q_learning.header_agent.q_table = compiled_q_table["header"]
+                else:
+                    q_learning.header_agent.initialize_q_table()
+                if self.use_cached_values:
+                    q_learning.value_agent.q_table = compiled_q_table["value"]
+                else:
+                    q_learning.value_agent.initialize_q_table()
                 print(f"Loaded Q-table for {spec_name} from shelve.")
             else:
-                q_learning.initialize_agents()
+                q_learning.initialize_llm_agents()
                 compiled_q_table = {
-                    "operation": q_learning.operation_agent.q_table,
                     "header": q_learning.header_agent.q_table,
-                    "parameter": q_learning.parameter_agent.q_table,
                     "value": q_learning.value_agent.q_table
                 }
                 db[spec_name] = compiled_q_table
                 print(f"Initialized new Q-tables for {spec_name}.")
-        #q_learning.print_q_tables()
+        q_learning.parameter_agent.initialize_q_table()
+        q_learning.operation_agent.initialize_q_table()
+        q_learning.body_object_agent.initialize_q_table()
+        q_learning.data_source_agent.initialize_q_table()
+        q_learning.dependency_agent.initialize_q_table()
         q_learning.run()
         print("Q-LEARNING COMPLETED!!!")
         return q_learning
 
     def override_header_agent_q_table(self, operation_graph: OperationGraph, spec_name: str):
-        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.2, time_duration=600)
+        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.2, time_duration=1200)
         with shelve.open(self.db_q_table) as db:
             q_learning.header_agent.initialize_q_table()
             db[spec_name]["header"] = q_learning.header_agent.q_table
@@ -141,8 +169,7 @@ class AutoRestTest:
         q_learning = self.perform_q_learning(operation_graph, spec_name)
         #self.override_header_agent_q_table(operation_graph, spec_name)
         self.print_performance()
-        output_q_table(q_learning.operation_agent.q_table, q_learning.header_agent.q_table,
-                       q_learning.parameter_agent.q_table, q_learning.value_agent.q_table, spec_name)
+        output_q_table(q_learning, spec_name)
         print("AUTO-REST-TEST COMPLETED!!!")
 
 if __name__ == "__main__":

@@ -15,7 +15,9 @@ from src.prompts.generator_prompts import (REQUEST_BODY_GEN_PROMPT,
                                            PARAMETER_REQUIREMENTS_PROMPT, RETRY_PARAMETER_REQUIREMENTS_PROMPT,
                                            FAILED_PARAMETER_MATCHINGS_PROMPT, FAILED_PARAMETER_RESPONSE_PROMPT,
                                            IDENTIFY_AUTHENTICATION_GEN_PROMPT, PARAMETER_NECESSITY_PROMPT,
-                                           get_value_agent_body_prompt, get_value_agent_params_prompt, FIX_JSON_OBJ)
+                                           get_value_agent_body_prompt, get_value_agent_params_prompt, FIX_JSON_OBJ,
+                                           INFORMED_VALUE_AGENT_PROMPT, get_informed_agent_body_prompt,
+                                           get_informed_agent_params_prompt)
 from src.prompts.system_prompts import PARAMETERS_GEN_SYSTEM_MESSAGE, REQUEST_BODY_GEN_SYSTEM_MESSAGE, \
     IDENTIFY_AUTHENTICATION_SYSTEM_MESSAGE, FIX_JSON_SYSTEM_MESSAGE
 from src.utils import OpenAILanguageModel, remove_nulls, get_request_body_params, get_nested_obj_mappings, \
@@ -23,7 +25,7 @@ from src.utils import OpenAILanguageModel, remove_nulls, get_request_body_params
 from src.graph.specification_parser import SchemaProperties, ParameterProperties, OperationProperties
 
 if TYPE_CHECKING:
-    from src.request_generator import RequestRequirements, RequestData
+    from src.request_generator import RequestRequirements, RequestData, RequestResponse
 
 def randomize_boolean():
     return random.choice([True, False])
@@ -157,9 +159,9 @@ class SmartValueGenerator:
             prompt += PARAMETER_REQUIREMENTS_PROMPT + '\n'.join(select_params.keys()) + "\n\n"
 
         if is_request_body:
-            prompt += "REQUEST_BODY:\n"
+            prompt += "REQUEST_BODY VALUES:\n"
         else:
-            prompt += "PARAMETERS:\n"
+            prompt += "PARAMETER VALUES:\n"
 
         return prompt
 
@@ -178,10 +180,33 @@ class SmartValueGenerator:
         prompt += FAILED_PARAMETER_MATCHINGS_PROMPT + json.dumps(failed_mappings, indent=2) + "\n"
         prompt += FAILED_PARAMETER_RESPONSE_PROMPT + response.text + "\n\n"
         if is_request_body:
-            prompt += "REQUEST_BODY:\n"
+            prompt += "REQUEST_BODY VALUES:\n"
         else:
-            prompt += "PARAMETERS:\n"
+            prompt += "PARAMETERS VALUES:\n"
         #print("Prompt: ", prompt)
+        return prompt
+
+    def compose_informed_value_prompt(self, prompt_data: PromptData, responses: List['RequestResponse']):
+        GEN_PROMPT = prompt_data.GEN_PROMPT
+        schema = prompt_data.schema
+        is_request_body = prompt_data.is_request_body
+
+        prompt = f"{GEN_PROMPT}\n"
+        prompt += template_gen_prompt(summary=self.summary, schema=schema)
+        if is_request_body:
+            prompt += get_informed_agent_body_prompt() + "\n"
+            for response in responses:
+                prompt += f"FAILED REQUEST BODY: {response.request.request_body}\n"
+                prompt += f"RESPONSE: {response.response.text}\n\n"
+        else:
+            prompt += get_informed_agent_params_prompt() + "\n"
+            for response in responses:
+                prompt += f"FAILED PARAMETERS: {response.request.parameters}\n"
+                prompt += f"RESPONSE: {response.response.text}\n\n"
+        if is_request_body:
+            prompt += "REQUEST_BODY VALUES:\n"
+        else:
+            prompt += "PARAMETER VALUES:\n"
         return prompt
 
     def _compose_auth_gen_prompt(self, schema):
@@ -427,3 +452,45 @@ class SmartValueGenerator:
             validated_request_body = self._validate_value_body(generated_request_body.get("request_body"))
             request_body[mime_type] = validated_request_body
         return request_body
+
+    def generate_informed_value_agent_body(self, num_values: int, responses: List['RequestResponse']):
+        if self.request_body is None or len(self.request_body) == 0:
+            return {}
+
+        request_body = {}
+        for mime_type, schema in self.request_body.items():
+            prompt_data = PromptData(GEN_PROMPT=get_value_agent_body_prompt(num_values),
+                                     FEWSHOT_PROMPT="",
+                                     schema=schema,
+                                     select_params=self._isolate_nonreq_request_body(schema),
+                                     is_request_body=True)
+            request_body_prompt = self.compose_informed_value_prompt(prompt_data, responses)
+            generated_request_body = self.language_model.query(user_message=request_body_prompt, system_message=REQUEST_BODY_GEN_SYSTEM_MESSAGE, json_mode=True)
+            try:
+                generated_request_body = json.loads(generated_request_body)
+            except json.JSONDecodeError:
+                generated_request_body = attempt_fix_json(generated_request_body)
+            validated_request_body = self.validate_request_body(generated_request_body.get("request_body"))
+            request_body[mime_type] = validated_request_body
+        return request_body
+
+    def generate_informed_value_agent_params(self, num_values: int, responses: List['RequestResponse']):
+        if self.parameters is None or len(self.parameters) == 0:
+            return {}
+
+        prompt_data = PromptData(GEN_PROMPT=get_value_agent_params_prompt(num_values),
+                                 FEWSHOT_PROMPT="",
+                                 schema=self.parameters,
+                                 select_params=self._isolate_nonreq_params(self.parameters),
+                                 is_request_body=False)
+        parameter_prompt = self.compose_informed_value_prompt(prompt_data, responses)
+        generated_parameters = self.language_model.query(user_message=parameter_prompt, system_message=PARAMETERS_GEN_SYSTEM_MESSAGE, json_mode=True)
+        try:
+            generated_parameters = json.loads(generated_parameters)
+        except json.JSONDecodeError:
+            generated_parameters = attempt_fix_json(generated_parameters)
+        parameter_matchings = self._validate_value_params(generated_parameters.get("parameters"))
+        return parameter_matchings
+
+
+

@@ -1,4 +1,5 @@
 import heapq
+import logging
 from typing import List, Dict, Tuple, Optional
 
 from src.request_generator import RequestGenerator
@@ -34,12 +35,17 @@ class OperationGraph:
         for operation_id, operation_node in self.operation_nodes.items():
             print("=====================================")
             print(f"Operation: {operation_id}")
+            #print(f"Operation Properties: {operation_node.operation_properties}")
             for edge in operation_node.outgoing_edges:
                 print(f"Edge: {edge.source.operation_id} -> {edge.destination.operation_id} with parameters: {edge.similar_parameters}")
             for tentative_edge in operation_node.tentative_edges:
                 print(f"Tentative Edge: {tentative_edge.source.operation_id} -> {tentative_edge.destination.operation_id} with parameters: {tentative_edge.similar_parameters}")
             print()
             print()
+
+    def print_edges(self):
+        for operation_edge in self.operation_edges:
+            print(f"Edge: {operation_edge.source.operation_id} -> {operation_edge.destination.operation_id} with parameters: {operation_edge.similar_parameters}")
 
     def add_operation_node(self, operation_properties: OperationProperties):
         self.operation_nodes[operation_properties.operation_id] = OperationNode(operation_properties)
@@ -106,23 +112,60 @@ class OperationGraph:
                     continue
                 # Note: We consider responses from get requests as dependencies for request bodies
                 # Note: We consider responses from post/put requests as dependencies for get requests
-                if (operation_properties.parameters or operation_properties.request_body) and dependent_operation_properties.responses:
-                    parameter_similarities, next_closest_similarities = operation_dependency_comparator.compare(operation_properties, dependent_operation_properties)
-                    self.update_operation_dependencies(operation_id, dependent_operation_id, parameter_similarities, next_closest_similarities)
+                parameter_similarities, next_closest_similarities = operation_dependency_comparator.compare_response(operation_properties, dependent_operation_properties)
+                self.update_operation_dependencies(operation_id, dependent_operation_id, parameter_similarities, next_closest_similarities)
 
     def validate_graph(self):
         if not self.request_generator:
             raise ValueError("Request generator not assigned to the operation graph")
         self.request_generator.perform_all_requests()
 
-    def create_graph(self, auto_validate=True):
+    def print_cliques(self):
+        cliques = self.generate_cliques()
+        all_cliques = "ALL CLIQUES: \n"
+        for clique in cliques:
+            clique_str = ""
+            for node in clique:
+                clique_str += f"{node.operation_id}, "
+            all_cliques += f"[{clique_str[:-2]}]\n"
+        print(all_cliques)
 
+    def generate_cliques(self):
+        # NOTE: THIS IS NOT FUNCTIONAL FOR DIRECTED GRAPHS: NOT USED IDEA
+        def bron_kerbosch(current_clique, potential_nodes, excluded_nodes, cliques):
+            if not potential_nodes and not excluded_nodes:
+                cliques.append(current_clique)
+                return
+            for node in list(potential_nodes):
+                adjacent_nodes = set()
+                for operation_edge in self.operation_nodes[node.operation_id].outgoing_edges:
+                    adjacent_nodes.add(operation_edge.destination)
+                bron_kerbosch(
+                    current_clique.union([node]),
+                    potential_nodes.intersection(adjacent_nodes),
+                    excluded_nodes.intersection(adjacent_nodes),
+                    cliques
+                )
+                potential_nodes.remove(node)
+                excluded_nodes.add(node)
+
+        def find_cliques():
+            cliques = []
+            bron_kerbosch(set(), set(self.operation_nodes.values()), set(), cliques)
+            return cliques
+
+        return find_cliques()
+
+    def create_graph(self, auto_validate=True):
         operations: Dict[str, OperationProperties] = self.spec_parser.parse_specification()
+        print("PARSED SPECIFICATION!!!")
         for operation_id, operation_properties in operations.items():
             self.add_operation_node(operation_properties)
         self.determine_dependencies(operations)
-        if auto_validate:
-            self.validate_graph()
+        print("COMPLETED COSINE SIMILARITY!!!")
+        #self.print_edges()
+        #if auto_validate:
+        #    self.validate_graph()
 
 
 if __name__ == "__main__":

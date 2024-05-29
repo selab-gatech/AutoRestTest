@@ -1,7 +1,10 @@
+import logging
+import os
 from typing import List, Dict, Tuple
 
 from dataclasses import dataclass
 
+import numpy as np
 from gensim.downloader import load
 
 from scipy.spatial.distance import cosine
@@ -10,40 +13,51 @@ from src.graph.specification_parser import OperationProperties, SchemaProperties
 
 @dataclass
 class SimilarityValue:
-    response_val: str = ""
+    dependent_val: str = ""
     in_value: str = ""
     similarity: float = 0.0
 
     def to_dict(self):
         return {
-            "response": self.response_val,
+            "response": self.dependent_val,
             "in_value": self.in_value,
             "similarity": self.similarity
         }
 
 class OperationDependencyComparator:
     def __init__(self):
-        #current_file_path = os.path.dirname(os.path.abspath(__file__))
-        #word_file = os.path.join(current_file_path, "models/glove.6B.50d.w2v.txt")
-        #self.model = KeyedVectors.load_word2vec_format(word_file, binary=False)
         self.model = load("glove-wiki-gigaword-50")
-        self.threshold = 0.65
+        self.threshold = 0.7
 
     @staticmethod
-    def get_parameter_list(operation: OperationProperties) -> List[str]:
+    def handle_parameter_cases(parameter):
+        reconstructed_parameter = []
+        for index, char in enumerate(parameter):
+            if char.isalpha():
+                if char.isupper() and index != 0:
+                    reconstructed_parameter.append(" " + char.lower())
+                elif char == "_" or char == "-":
+                    reconstructed_parameter.append(" ")
+                else:
+                    reconstructed_parameter.append(char)
+        return "".join(reconstructed_parameter)
+
+    @staticmethod
+    def get_parameter_list(operation: OperationProperties) -> List[Dict[str,str]]:
         if operation.parameters is None:
             return []
-        return [parameter.lower().strip() for parameter, parameter_details in operation.parameters.items()]
+        return [{OperationDependencyComparator.handle_parameter_cases(parameter): parameter}
+                for parameter, parameter_details in operation.parameters.items()]
 
     @staticmethod
-    def handle_properties(properties: Dict[str, SchemaProperties]) -> List[str]:
+    def handle_properties(properties: Dict[str, SchemaProperties]) -> List[Dict[str,str]]:
         property_list = []
         for item, item_details in properties.items():
-            property_list.append(item.lower().strip())
+            property_list.append({OperationDependencyComparator.handle_parameter_cases(item): item})
         return property_list
 
     @staticmethod
-    def handle_schema_parameters(schema: SchemaProperties) -> List[str]:
+    def handle_schema_parameters(schema: SchemaProperties) -> List[Dict[str,str]]:
         if schema.properties:
             return OperationDependencyComparator.handle_properties(schema.properties)
         elif schema.items:
@@ -51,7 +65,7 @@ class OperationDependencyComparator:
         return []
 
     @staticmethod
-    def get_request_body_list(operation: OperationProperties) -> List[str]:
+    def get_request_body_list(operation: OperationProperties) -> List[Dict[str,str]]:
         if operation.request_body is None:
             return []
         request_body_list = []
@@ -60,7 +74,7 @@ class OperationDependencyComparator:
         return request_body_list
 
     @staticmethod
-    def get_response_list(operation: OperationProperties) -> List[str]:
+    def get_response_list(operation: OperationProperties) -> List[Dict[str,str]]:
         if operation.responses is None:
             return []
         response_list = []
@@ -70,35 +84,58 @@ class OperationDependencyComparator:
                     response_list += OperationDependencyComparator.handle_schema_parameters(response_details)
         return response_list
 
-    def cosine_similarity(self, operation1_parameters: List[str], operation2_responses: List[str], in_value: str = None) -> Dict[str, SimilarityValue]:
+    def encode_sentence_or_word(self, thing: str):
+        words = thing.split(" ")
+        word_vectors = [self.model[word] for word in words if word in self.model]
+        return np.mean(word_vectors, axis=0) if word_vectors else None
+
+    def cosine_similarity(self, operation1_vals: List[Dict[str,str]], operation2_vals: List[Dict[str,str]], in_value: str = None) -> Dict[str, SimilarityValue]:
         """
         Returns parameters that might map between operations
         """
-        parameter_similarity = {}
-        for parameter in operation1_parameters:
-            for response in operation2_responses:
-                if parameter in self.model and response in self.model:
-                    similarity = 1 - cosine(self.model[parameter], self.model[response])
-                    parameter_similarity[parameter] = SimilarityValue(
-                        response_val=response,
-                        in_value=in_value,
-                        similarity=similarity
-                    )
+        parameter_response_similarity = {}
+        for parameter_pairing in operation1_vals:
+            for processed_parameter, parameter in parameter_pairing.items():
+                for dependency_pairing in operation2_vals:
+                    for processed_dependency, dependency in dependency_pairing.items():
+                        parameter_encoding = self.encode_sentence_or_word(processed_parameter)
+                        dependency_encoding = self.encode_sentence_or_word(processed_dependency)
+                        if parameter_encoding is not None and dependency_encoding is not None:
+                            similarity = 1 - cosine(parameter_encoding, dependency_encoding)
+                            parameter_response_similarity[parameter] = SimilarityValue(
+                                dependent_val=dependency,
+                                in_value=in_value,
+                                similarity=similarity
+                            )
 
-        return parameter_similarity
+        return parameter_response_similarity
 
-    def compare(self, operation1: OperationProperties, operation2: OperationProperties) -> (Dict[str, SimilarityValue], List[Tuple[str, SimilarityValue]]):
+    def compare_response(self, operation1: OperationProperties, operation2: OperationProperties) -> (Dict[str, SimilarityValue], List[Tuple[str, SimilarityValue]]):
         parameter_matchings: Dict[str, SimilarityValue] = {}
         similar_parameters: Dict[str, SimilarityValue] = {}
         next_most_similar_parameters: List[(str, SimilarityValue)] = []
+
+        operation1_parameters = self.get_parameter_list(operation1)
+        operation1_body = self.get_request_body_list(operation1)
+        operation2_parameters = self.get_parameter_list(operation2)
+        operation2_body = self.get_request_body_list(operation2)
         operation2_responses = self.get_response_list(operation2)
 
         if operation1.parameters:
-            operation1_parameters = self.get_parameter_list(operation1)
-            parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_responses, in_value="query")
+            if operation2.parameters:
+                parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_parameters, in_value="query to query")
+            if operation2.request_body:
+                parameter_matchings.update(self.cosine_similarity(operation1_parameters, operation2_body, in_value="query to body"))
+            if operation2.responses:
+                parameter_matchings.update(self.cosine_similarity(operation1_parameters, operation2_responses, in_value="query to response"))
+
         if operation1.request_body:
-            operation1_parameters = self.get_request_body_list(operation1)
-            parameter_matchings.update(self.cosine_similarity(operation1_parameters, operation2_responses, in_value="request body"))
+            if operation2.parameters:
+                parameter_matchings.update(self.cosine_similarity(operation1_body, operation2_parameters, in_value="body to query"))
+            if operation2.request_body:
+                parameter_matchings.update(self.cosine_similarity(operation1_body, operation2_body, in_value="body to body"))
+            if operation2.responses:
+                parameter_matchings.update(self.cosine_similarity(operation1_body, operation2_responses, in_value="body to response"))
 
         for parameter, similarity in parameter_matchings.items():
             if similarity.similarity > self.threshold:
@@ -107,4 +144,5 @@ class OperationDependencyComparator:
                 next_most_similar_parameters.append((parameter, similarity))
 
         return similar_parameters, next_most_similar_parameters
+
 

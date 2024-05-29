@@ -8,7 +8,7 @@ Given a summary of an operation its request body schema from its OpenAPI Specifi
 }
 In the case where the request body is an object, return a correctly formatted object as the [correct request body] value. In the object, include all required fields as specified from the OpenAPI Specification for object request bodies, but otherwise include/exclude optional properties to ensure the object is accepted.
 In the case where the request body is an array, use a list as the request_body value.
-Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
+Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy. Use any provided example values to guide your generation formatting."""
 
 PARAMETERS_GEN_PROMPT = """
 Given a summary of an operation and its parameters schema from its OpenAPI Specification, generate valid context-aware values for the parameters of the operation. Return the answer as a JSON object with the following structure:
@@ -20,8 +20,9 @@ Given a summary of an operation and its parameters schema from its OpenAPI Speci
     }
 }
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value. 
-In the case where a given parameter is an array, use a list as the parameter value.
-Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy. It is vital that you generate values for any parameter that is indicated as required in the OpenAPI Specification."""
+In the case where a given parameter is an array, use a list as the parameter value. Do not generate lists with more than two items.
+Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy. Use any provided example values to guide your generation formatting. 
+It is vital that you generate values for any parameter that is indicated as required in the OpenAPI Specification."""
 
 VALUE_AGENT_BODY_PROMPT = """
 Given a summary of an operation its request body schema from its OpenAPI Specification, generate [insert number] different valid context-aware request bodies for the operation. Return the answer as a JSON object with the following structure:
@@ -32,8 +33,8 @@ Given a summary of an operation its request body schema from its OpenAPI Specifi
         "request_body10": [correct request body 10]
     }
 }
-In the case where the request body is an object, return a correctly formatted object as the [correct request body] value. In the object, include all required fields as specified from the OpenAPI Specification for object request bodies, but otherwise include/exclude optional properties to generate a variety of objects.
-In the case where the request body is an array, use a list as the request body value, with the correct values for each item in the array.
+In the case where the request body is an object, return a correctly formatted object as the [correct request body] value. In the object, you must include every possible object property.
+In the case where the request body is an array, use a list as the request body value, with the correct values for each item in the array. Do not generate lists with more than two items.
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 VALUE_AGENT_PARAMETERS_PROMPT = """
@@ -59,8 +60,13 @@ Given a summary of an operation and its parameters schema from its OpenAPI Speci
     }
 }
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value.
-In the case where a given parameter is an array, use a list as the parameter value.
+In the case where a given parameter is an array, use a list as the parameter value. Do not generate lists with more than two items.
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
+
+INFORMED_VALUE_AGENT_PROMPT = """
+Here is a list of [replace_type] that you generated values for, but received errors. Identify if the values caused the error, and ensure that your new generated values are compatible with the operation.
+It is still crucial that you generate values for all parameters and object properties.
+"""
 
 #FEWSHOT_REQUEST_BODY_GEN_PROMPT = """
 #SUMMARY:
@@ -152,3 +158,9 @@ def get_value_agent_body_prompt(num: int) -> str:
 
 def get_value_agent_params_prompt(num: int) -> str:
     return VALUE_AGENT_PARAMETERS_PROMPT.replace("[insert number]", str(num))
+
+def get_informed_agent_body_prompt() -> str:
+    return INFORMED_VALUE_AGENT_PROMPT.replace("[replace_type]", "request bodies")
+
+def get_informed_agent_params_prompt() -> str:
+    return INFORMED_VALUE_AGENT_PROMPT.replace("[replace_type]", "parameters")

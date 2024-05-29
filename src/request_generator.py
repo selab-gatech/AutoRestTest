@@ -1,3 +1,4 @@
+import copy
 import random
 import time
 from collections import defaultdict
@@ -257,8 +258,24 @@ class RequestGenerator:
                     param_q_table['body'][body] = 0
         else:
             param_q_table['body'] = {key: 0 for key in body_properties}
+
         value_generator = SmartValueGenerator(operation_properties=operation_node.operation_properties, temperature=0.7)
-        parameter_mappings, request_body_mappings = value_generator.generate_value_agent_params(num_values=10), value_generator.generate_value_agent_body(num_values=10)
+        failed_responses = []
+        for i in range(3):
+            response = self.create_and_send_request(operation_node, allow_retry=True, permitted_retries=1)
+            if response and response.response and not response.response.ok:
+                failed_responses.append(response)
+        if failed_responses:
+            parameter_mappings, request_body_mappings = (
+                value_generator.generate_informed_value_agent_params(num_values=10,
+                                                                     responses=failed_responses),
+                value_generator.generate_informed_value_agent_body(num_values=10,
+                                                                   responses=failed_responses))
+        else:
+            parameter_mappings, request_body_mappings = value_generator.generate_value_agent_params(
+                num_values=10), value_generator.generate_value_agent_body(
+                num_values=10)
+
         request_body_mappings = self._decompose_body_prop_mappings(request_body_mappings[select_mime]) if select_mime else {}
 
         param_q_table['params']["None"] = 0
@@ -266,7 +283,7 @@ class RequestGenerator:
 
         curr_tokens = []
         start_time = time.time()
-        while time.time() - start_time < 30 and len(curr_tokens) < 5:
+        while time.time() - start_time < 25 and len(curr_tokens) < 5:
             # get best action
             required_params = get_required_params(operation_node.operation_properties.parameters)
             best_params = (None, -np.inf)
@@ -325,9 +342,11 @@ class RequestGenerator:
             else:
                 param_q_table['params'][best_params] -= 1
                 param_q_table['body'][best_body] -= 1
-        for token in curr_tokens:
-            if token not in token_info:
-                token_info.append(token)
+
+        if curr_tokens:
+            for token in curr_tokens:
+                if token not in token_info:
+                    token_info.append(token)
 
     def find_query_auth_mappings(self, operation_node, query_param_auth, token_info, is_query):
         print("Attempting to query for: " + operation_node.operation_id)
@@ -364,15 +383,17 @@ class RequestGenerator:
         parameters = request_data.parameters
         request_body = request_data.request_body
 
-        if parameters:
-            for parameter_name, parameter_properties in request_data.operation_properties.parameters.items():
-                if parameter_properties.in_value == "path" and parameter_name in parameters:
-                    path_value = parameters[parameter_name]
-                    endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
-                    parameters.pop(parameter_name, None)
+        processed_parameters = copy.deepcopy(parameters)
 
-        if parameters:
-            for parameter_name, parameter_assignment in parameters.items():
+        if processed_parameters:
+            for parameter_name, parameter_properties in request_data.operation_properties.parameters.items():
+                if parameter_properties.in_value == "path" and parameter_name in processed_parameters:
+                    path_value = processed_parameters[parameter_name]
+                    endpoint_path = endpoint_path.replace("{" + parameter_name + "}", str(path_value))
+                    processed_parameters.pop(parameter_name, None)
+
+        if processed_parameters:
+            for parameter_name, parameter_assignment in processed_parameters.items():
                 if request_data.operation_properties.parameters[parameter_name].in_value == "path":
                     raise ValueError("Path parameter is still assigned for query")
 
@@ -400,12 +421,12 @@ class RequestGenerator:
             print(f"Params: {parameters}")
             print(f"Request Body: {request_body}")
             return None
-        #except Exception as err:
-        #    print(f"Unexpected error due to: {err}")
-        #    print(f"Endpoint Path: {endpoint_path}")
-        #    print(f"Params: {parameters}")
-        #    print(f"Request Body: {request_body}")
-        #    return None
+        except Exception as err:
+            print(f"Unexpected error due to: {err}")
+            print(f"Endpoint Path: {endpoint_path}")
+            print(f"Params: {parameters}")
+            print(f"Request Body: {request_body}")
+            return None
 
     def _send_mime_type(self, select_method, full_url, parameters, request_body):
         params = parameters if parameters else {}
@@ -448,11 +469,11 @@ class RequestGenerator:
         parameter_matchings = {}
 
         for parameter, similarity_value in edge.similar_parameters.items():
-            if similarity_value.response_val in response_mappings:
-                if similarity_value.in_value == "query":
-                    parameter_matchings[parameter] = response_mappings[similarity_value.response_val]
-                elif similarity_value.in_value == "request body":
-                    request_body_matchings[parameter] = response_mappings[similarity_value.response_val]
+            if similarity_value.dependent_val in response_mappings:
+                if similarity_value.in_value == "query to response":
+                    parameter_matchings[parameter] = response_mappings[similarity_value.dependent_val]
+                elif similarity_value.in_value == "body to response":
+                    request_body_matchings[parameter] = response_mappings[similarity_value.dependent_val]
 
         request_requirement = RequestRequirements(
             edge=edge,
@@ -468,7 +489,7 @@ class RequestGenerator:
         for response in responses:
             if response and response.response and response.response.ok:
                 return response
-        return responses[0]
+        return None
 
     def depth_traversal(self, curr_node: 'OperationNode', visited: Set):
         """
@@ -480,15 +501,26 @@ class RequestGenerator:
         visited.add(curr_node.operation_id)
         dependent_responses: Dict['OperationEdge', RequestResponse] = {}
         print("Building dependencies for operation: ", curr_node.operation_id)
+
+        # Allow for circular nodes to determine if this is curr dependency
+        response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=2)
+        if response and response.response and response.response.ok:
+            self.responses[curr_node.operation_id] = response
+
         for edge in curr_node.outgoing_edges:
             if edge.destination.operation_id not in visited:
                 self.depth_traversal(edge.destination, visited)
-            dependent_response = self.responses[edge.destination.operation_id] if edge.destination.operation_id in self.responses else None
-            if dependent_response is not None and dependent_response.response.ok:
-                dependent_responses[edge] = dependent_response
-        respones = self.handle_request_and_dependencies(curr_node, dependent_responses)
-        best_response = self._determine_best_response(respones)
-        self.responses[curr_node.operation_id] = best_response
+            if edge.destination.operation_id not in self.responses:
+                self.handle_edge_adjustment(edge) # can't rely on a node that can't execute
+            else:
+                dependent_response = self.responses[edge.destination.operation_id]
+                if dependent_response is not None and dependent_response.response.ok:
+                    dependent_responses[edge] = dependent_response
+
+        responses = self.handle_request_and_dependencies(curr_node, dependent_responses)
+        best_response = self._determine_best_response(responses)
+        if best_response:
+            self.responses[curr_node.operation_id] = best_response
         print("Completed building dependencies for operation: ", curr_node.operation_id)
 
     def _validate_value_mappings(self, curr_node: 'OperationNode', parameter_mappings: Dict, req_param_mappings: Dict[str, List[Any]], req_body_mappings: Dict[str, List[Any]], occurrences: Dict):
@@ -532,30 +564,46 @@ class RequestGenerator:
 
     def value_depth_traversal(self, curr_node: 'OperationNode', parameter_mappings: Dict, responses: Dict[str, List], visited: Set):
         visited.add(curr_node.operation_id)
-        dependent_responses: Dict['OperationEdge', List[RequestResponse]] = defaultdict(list)
+        #dependent_responses: Dict['OperationEdge', List[RequestResponse]] = defaultdict(list)
+
+        #response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=3)
+        #responses[curr_node.operation_id] = [response] if response and response.response and response.response.ok else []
 
         for edge in curr_node.outgoing_edges:
             if edge.destination.operation_id not in visited:
                 self.value_depth_traversal(edge.destination, parameter_mappings, responses, visited)
-            possible_dependent_responses = responses[edge.destination.operation_id]
-            for dependent_response in possible_dependent_responses:
-                if dependent_response and dependent_response.response and dependent_response.response.ok:
-                    dependent_responses[edge].append(dependent_response)
+            #possible_dependent_responses = responses[edge.destination.operation_id]
+            #for dependent_response in possible_dependent_responses:
+            #    if dependent_response and dependent_response.response and dependent_response.response.ok:
+            #        dependent_responses[edge].append(dependent_response)
+
 
         occurrences = {}
-        self.handle_dependent_values(curr_node, dependent_responses, occurrences, parameter_mappings, responses)
+        #self.handle_dependent_values(curr_node, dependent_responses, occurrences, parameter_mappings, responses)
 
         desired_size = 10
         lowest_occurrences = min(occurrences.values()) if occurrences else 0
         if lowest_occurrences < desired_size:
             value_generator = SmartValueGenerator(operation_properties=curr_node.operation_properties, temperature=0.7)
-            parameters, request_body = value_generator.generate_value_agent_params(num_values=desired_size - lowest_occurrences), value_generator.generate_value_agent_body(num_values=desired_size - lowest_occurrences)
+            failed_responses = []
+            for i in range(3):
+                response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=1)
+                if response and response.response and not response.response.ok:
+                    failed_responses.append(response)
+                elif response and response.response and response.response.ok:
+                    responses[curr_node.operation_id].append(response)
+            if failed_responses:
+                parameters, request_body = (
+                    value_generator.generate_informed_value_agent_params(num_values=desired_size - lowest_occurrences, responses=failed_responses),
+                    value_generator.generate_informed_value_agent_body(num_values=desired_size - lowest_occurrences, responses=failed_responses))
+            else:
+                parameters, request_body = value_generator.generate_value_agent_params(num_values=desired_size - lowest_occurrences), value_generator.generate_value_agent_body(num_values=desired_size - lowest_occurrences)
             self._validate_value_mappings(curr_node, parameter_mappings, parameters, request_body, occurrences)
 
-        if not responses[curr_node.operation_id]:
-            response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=3)
-            if response and response.response and response.response.ok:
-                responses[curr_node.operation_id].append(response)
+        #if not responses[curr_node.operation_id]:
+        #    response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=3)
+        #    if response and response.response and response.response.ok:
+        #        responses[curr_node.operation_id].append(response)
 
         print("Completed value table generation for operation: ", curr_node.operation_id)
 
@@ -569,10 +617,10 @@ class RequestGenerator:
     def handle_dependent_values(self, curr_node, dependent_responses, occurrences, parameter_mappings, responses):
         if not dependent_responses:
             return
-        for edge, response_returns in dependent_responses.items():
+        items = dependent_responses.items()
+        random.shuffle(list(items))
+        for edge, response_returns in items[:5]:
             for dependent_response in response_returns:
-                if occurrences and max(occurrences.values()) == 5:  # limit number of dependency created values
-                    break
                 requirements = self.determine_requirement(dependent_response, edge)
                 response = self.create_and_send_request(curr_node, requirements, allow_retry=True, permitted_retries=2)
                 if response and response.response and response.response.ok:
@@ -641,6 +689,21 @@ class RequestGenerator:
         request_data: RequestData = self.make_request_data(curr_node.operation_properties, requirement)
         response: RequestResponse = self.send_operation_request(request_data, allow_retry=allow_retry, permitted_retries=permitted_retries)
         return response
+
+    def solve_all_cliques(self):
+        cliques = self.operation_graph.generate_cliques()
+        for clique in cliques:
+            successfull_node = None
+            response = None
+            for node in clique:
+                response = self.create_and_send_request(node, allow_retry=True, permitted_retries=3)
+                if response and response.response and response.response.ok:
+                    successfull_node = node
+                    break
+            if successfull_node and response:
+                for node in clique:
+                    if node != successfull_node:
+                        pass
 
     def perform_all_requests(self):
         '''
