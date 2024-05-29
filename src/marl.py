@@ -239,11 +239,11 @@ class QLearning:
         elif status_code == 401:
             return -3
         elif status_code // 100 == 4:
-            return -1
+            return 1
         elif status_code // 100 == 5:
             return 1
         elif status_code // 100 == 2:
-            return 1
+            return -1
         else:
             return -5
 
