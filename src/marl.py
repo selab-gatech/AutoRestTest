@@ -241,7 +241,7 @@ class QLearning:
         elif status_code // 100 == 4:
             return 1
         elif status_code // 100 == 5:
-            return 1
+            return 2
         elif status_code // 100 == 2:
             return -1
         else:
