@@ -221,6 +221,8 @@ class QLearning:
         status_code = response.status_code
         if status_code // 100 == 2:
             return 2
+        elif status_code == 405:
+            return -3
         elif status_code // 100 == 4:
             return -1
         elif status_code // 100 == 5:
@@ -451,7 +453,7 @@ class QLearning:
                     used_dependent_params = {}
                     if parameter_dependencies:
                         for parameter in parameters:
-                            if parameter in select_params.req_params:
+                            if parameter in select_params.req_params and parameter in parameter_dependencies:
                                 used_dependent_params[parameter] = parameter_dependencies[parameter]
                     used_dependent_body = {}
                     if request_body_dependencies and unconstructed_body and all_select_properties[select_params.mime_type]:

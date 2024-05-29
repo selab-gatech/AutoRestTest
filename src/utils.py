@@ -49,6 +49,20 @@ def get_required_params(operation_parameters: Dict[str, ParameterProperties]) ->
             required_parameters.add(parameter)
     return required_parameters
 
+def get_required_body_params(operation_body: SchemaProperties) -> Set:
+    if operation_body is None:
+        return None
+    required_body = set()
+    if operation_body.properties and operation_body.type == "object":
+        for key, value in operation_body.properties.items():
+            if value.required:
+                required_body.add(key)
+    elif operation_body.items and operation_body.type == "array":
+        required_body = get_required_body_params(operation_body.items)
+    else:
+        return None
+    return required_body
+
 def encode_dict_as_key(dictionary: Dict) -> str:
     json_str = json.dumps(dictionary, sort_keys=True)
     return hashlib.sha256(json_str.encode()).hexdigest()

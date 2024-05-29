@@ -80,8 +80,8 @@ class AutoRestTest:
         _construct_db_dir()
         self.db_q_table = os.path.join(os.path.dirname(__file__), "src/data/q_table")
         self.db_graph = os.path.join(os.path.dirname(__file__), "src/data/graph")
-        self.use_cached_graph = True
-        self.use_cached_table = True
+        self.use_cached_graph = False
+        self.use_cached_table = False
         self.use_cached_values = True
         self.use_cached_headers = True
 
@@ -118,7 +118,7 @@ class AutoRestTest:
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("BEGINNING Q-LEARNING...")
-        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=600, mutation_rate=0.2)
+        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=1200, mutation_rate=0.2)
         with shelve.open(self.db_q_table) as db:
             if spec_name in db and self.use_cached_table:
                 compiled_q_table = db[spec_name]

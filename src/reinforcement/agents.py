@@ -7,7 +7,7 @@ import random
 
 from src.generate_graph import OperationGraph
 from src.utils import get_combinations, get_param_combinations, \
-    construct_basic_token, get_required_params
+    construct_basic_token, get_required_params, get_required_body_params
 
 
 class OperationAgent:
@@ -354,7 +354,15 @@ class BodyObjAgent:
         return self.get_best_action(operation_id, mime)
 
     def get_best_action(self, operation_id, mime):
-        best_action = max(self.q_table[operation_id][mime].items(), key=lambda x: x[1])[0] if self.q_table[operation_id][mime] else None
+        required_obj_params = get_required_body_params(
+            self.operation_graph.operation_nodes[operation_id].operation_properties.request_body[mime])
+        best_action = (None, -np.inf)
+        if required_obj_params:
+            for body_obj, value in self.q_table[operation_id][mime].items():
+                if value > best_action[1] and required_obj_params.issubset(set(body_obj)):
+                    best_action = (body_obj, value)
+        else:
+            best_action = max(self.q_table[operation_id][mime].items(), key=lambda x: x[1])[0] if self.q_table[operation_id][mime] else None
         if best_action == "None":
             best_action = None
         return best_action
