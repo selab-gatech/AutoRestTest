@@ -4,6 +4,7 @@ import os
 import random
 import time
 from collections import defaultdict
+from typing import Dict, List
 
 import requests
 import shelve
@@ -12,7 +13,8 @@ from src.generate_graph import OperationGraph
 from src.graph.specification_parser import OperationProperties
 from src.reinforcement.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction, BodyObjAgent, \
     DataSourceAgent, DependencyAgent
-from src.utils import _construct_db_dir, construct_basic_token, get_nested_obj_mappings, process_body_params
+from src.utils import _construct_db_dir, construct_basic_token, get_object_shallow_mappings, get_body_params, \
+    get_response_params
 from src.value_generator import identify_generator, randomize_string, random_generator, randomize_object
 
 
@@ -91,7 +93,7 @@ class QLearning:
 
         if body:
             for mime, body_properties in body.items():
-                body_mappings = self._deconstuct_obj(body_properties)
+                body_mappings = self._deconstruct_body(body_properties)
                 if body_mappings:
                     new_obj = {}
                     for prop in body_mappings:
@@ -184,7 +186,7 @@ class QLearning:
                     response = select_method(full_url, params=processed_parameters, json=body["application/json"], headers=header)
                 elif "application/x-www-form-urlencoded" in body: # mime_type == "application/x-www-form-urlencoded":
                     header["Content-Type"] = "application/x-www-form-urlencoded"
-                    body_data = get_nested_obj_mappings(body["application/x-www-form-urlencoded"])
+                    body_data = get_object_shallow_mappings(body["application/x-www-form-urlencoded"])
                     if not body_data or not isinstance(body_data, dict):
                         body_data = {"data": body["application/x-www-form-urlencoded"]}
                     body["application/x-www-form-urlencoded"] = body_data
@@ -304,7 +306,7 @@ class QLearning:
                 self.successful_bodies[operation_id] = {}
             if operation_node.operation_properties.request_body:
                 for mime_type, body_properties in operation_node.operation_properties.request_body.items():
-                    body_params = process_body_params(body_properties)
+                    body_params = get_body_params(body_properties)
                     self.successful_bodies[operation_id] = {param: [] for param in body_params}
 
     def _init_response_tracking(self):
@@ -315,7 +317,8 @@ class QLearning:
                 for response_type, response_properties in operation_node.operation_properties.responses.items():
                     if response_properties.content:
                         for response, response_details in response_properties.content.items():
-                            response_params = process_body_params(response_details)
+                            response_params = []
+                            get_response_params(response_details, response_params)
                             self.successful_responses[operation_id] = {param: [] for param in response_params}
 
     def _construct_body_property(self, body_property, unconstructed_body):
@@ -332,26 +335,33 @@ class QLearning:
             if mime == mime_type:
                 return self._construct_body_property(body_properties, unconstructed_body)
 
-    def _deconstuct_obj(self, body):
+    def _deconstruct_body(self, body):
         if body is None:
             return None
         if type(body) == dict:
-            obj_mappings = {}
-            # If object is a container object, parse the array
-            for prop, val in body.items():
-                if len(body) == 1 and type(val) == list:
-                    return self._deconstuct_obj(val)
-                else:
-                    obj_mappings[prop] = val
-            return obj_mappings
+            return {prop: val for prop, val in body.items()}
         elif type(body) == list:
             possible_length = len(body)
             if possible_length > 0:
-                return self._deconstuct_obj(body[random.randint(0, possible_length - 1)])
+                return self._deconstruct_body(body[random.randint(0, possible_length - 1)])
             else:
                 return None
         else:
             return None
+
+    def _deconstruct_response(self, response, response_mappings: Dict[str, List]):
+        if response is None:
+            return
+        if type(response) == dict:
+            for prop, val in response.items():
+                if prop not in response_mappings:
+                    response_mappings[prop] = []
+                if val not in response_mappings[prop]:
+                    response_mappings[prop].append(val)
+                self._deconstruct_response(val, response_mappings)
+        elif type(response) == list:
+            for item in response:
+                self._deconstruct_response(item, response_mappings)
 
     def generate_default_values(self, operation_id):
         parameters = {}
@@ -442,7 +452,7 @@ class QLearning:
                 body = {}
                 if select_params.mime_type and select_params.mime_type in self.operation_graph.operation_nodes[operation_id].operation_properties.request_body:
                     unconstructed_body = {}
-                    possible_body_properties = process_body_params(self.operation_graph.operation_nodes[operation_id].operation_properties.request_body[select_params.mime_type])
+                    possible_body_properties = get_body_params(self.operation_graph.operation_nodes[operation_id].operation_properties.request_body[select_params.mime_type])
                     for body_property, dependency in request_body_dependencies.items():
                         if body_property in possible_body_properties:
                             if dependency["in_value"] == "params" and dependency["dependent_operation"] in self.successful_parameters and dependency["dependent_val"] in self.successful_parameters[dependency["dependent_operation"]]:
@@ -457,7 +467,7 @@ class QLearning:
                                 if self.successful_responses[dependency["dependent_operation"]][dependency["dependent_val"]]:
                                     unconstructed_body[body_property] = random.choice(self.successful_responses[dependency["dependent_operation"]][dependency["dependent_val"]])
 
-                    deconstructed_llm_body = self._deconstuct_obj(llm_body[select_params.mime_type]) if llm_body and select_params.mime_type in llm_body else None
+                    deconstructed_llm_body = self._deconstruct_body(llm_body[select_params.mime_type]) if llm_body and select_params.mime_type in llm_body else None
                     if deconstructed_llm_body:
                         for prop in possible_body_properties:
                             if prop not in unconstructed_body:
@@ -476,7 +486,7 @@ class QLearning:
                 for mime, body_properties in body.items():
                     if type(body_properties) == dict:
                         select_properties = self.body_object_agent.get_action(operation_id, mime)
-                        deconstructed_body = self._deconstuct_obj(body_properties)
+                        deconstructed_body = self._deconstruct_body(body_properties)
                         if select_properties:
                             new_bodies_properties = {prop: deconstructed_body[prop] for prop in deconstructed_body if prop in select_properties}
                             body[mime] = new_bodies_properties
@@ -531,8 +541,8 @@ class QLearning:
                             if body_param in all_select_properties[select_params.mime_type] and body_param in request_body_dependencies:
                                 used_dependent_body[body_param] = request_body_dependencies[body_param]
                     self.dependency_agent.update_q_table(operation_id, used_dependent_params, used_dependent_body, self.determine_good_response_reward(response))
+                # Update LLM value agent if LLM data source
                 elif data_source == "LLM" and select_values is not None:
-                    # Update LLM value agent if LLM data source
                     processed_value_action = ValueAction(param_mappings=parameters, body_mappings=select_values.body_mappings)
                     self.value_agent.update_q_table(operation_id, processed_value_action,
                                                     self.determine_value_response_reward(response))
@@ -545,7 +555,7 @@ class QLearning:
                             self.successful_parameters[operation_id][param_name].append(param_val)
                 if body and self.successful_bodies[operation_id]:
                     for mime, body_properties in body.items():
-                        deconstructed_body = self._deconstuct_obj(body_properties)
+                        deconstructed_body = self._deconstruct_body(body_properties)
                         if deconstructed_body:
                             for prop_name, prop_val in deconstructed_body.items():
                                 if prop_name in self.successful_bodies[operation_id] and prop_val not in self.successful_bodies[operation_id][prop_name]:
@@ -556,11 +566,16 @@ class QLearning:
                     except json.JSONDecodeError:
                         response_content = None
 
-                    deconstructed_response = self._deconstuct_obj(response_content)
+                    deconstructed_response: Dict[str, List] = {}
+                    self._deconstruct_response(response_content, deconstructed_response)
                     if deconstructed_response:
-                        for response_prop, response_val in deconstructed_response.items():
-                            if response_prop in self.successful_responses[operation_id] and response_val not in self.successful_responses[operation_id][response_prop]:
-                                self.successful_responses[operation_id][response_prop].append(response_val)
+                        for response_prop, response_vals in deconstructed_response.items():
+                            if response_prop in self.successful_responses[operation_id]:
+                                for response_val in response_vals:
+                                    if response_val not in self.successful_responses[operation_id][response_prop]:
+                                        self.successful_responses[operation_id][response_prop].append(response_val)
+                            else:
+                                self.successful_responses[operation_id][response_prop] = response_vals
 
             if response is not None: self.responses[response.status_code] += 1
             if response is not None and operation_id not in self.operation_response_counter: self.operation_response_counter[operation_id] = {response.status_code: 1}

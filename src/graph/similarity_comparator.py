@@ -50,20 +50,25 @@ class OperationDependencyComparator:
                 for parameter, parameter_details in operation.parameters.items()]
 
     @staticmethod
-    def handle_schema_parameters(schema: SchemaProperties) -> List[Dict[str,str]]:
+    def handle_response_params(response: SchemaProperties, response_params: List[Dict[str,str]]) -> None:
+        if response.properties:
+            for item, item_details in response.properties.items():
+                if {OperationDependencyComparator.handle_parameter_cases(item): item} not in response_params:
+                    response_params.append({OperationDependencyComparator.handle_parameter_cases(item): item})
+                OperationDependencyComparator.handle_response_params(item_details, response_params)
+        elif response.items:
+            OperationDependencyComparator.handle_response_params(response.items, response_params)
+        else:
+            return
+
+    @staticmethod
+    def handle_body_params(body: SchemaProperties) -> List[Dict[str,str]]:
         object_params = []
-        if schema.properties:
-            for item, item_details in schema.properties.items():
-                # Do check for "container" objects that are just an array of values
-                if len(schema.properties) == 1 and item_details.type == "array":
-                    object_params = OperationDependencyComparator.handle_schema_parameters(item_details.items)
-                    
-                else:
-                    object_params.append({OperationDependencyComparator.handle_parameter_cases(item): item})
-            return object_params
-        elif schema.items:
-            return OperationDependencyComparator.handle_schema_parameters(schema.items)
-        return []
+        if body.properties:
+            object_params = [{OperationDependencyComparator.handle_parameter_cases(item): item} for item, item_details in body.properties.items()]
+        elif body.items:
+            object_params = OperationDependencyComparator.handle_body_params(body.items)
+        return object_params
 
     @staticmethod
     def get_request_body_list(operation: OperationProperties) -> List[Dict[str,str]]:
@@ -71,7 +76,7 @@ class OperationDependencyComparator:
             return []
         request_body_list = []
         for request_body_type, request_body_properties in operation.request_body.items():
-            request_body_list += OperationDependencyComparator.handle_schema_parameters(request_body_properties)
+            request_body_list += OperationDependencyComparator.handle_body_params(request_body_properties)
         return request_body_list
 
     @staticmethod
@@ -82,7 +87,9 @@ class OperationDependencyComparator:
         for response_type, response_properties in operation.responses.items():
             if response_properties.content:
                 for response, response_details in response_properties.content.items():
-                    response_list += OperationDependencyComparator.handle_schema_parameters(response_details)
+                    curr_responses = []
+                    OperationDependencyComparator.handle_response_params(response_details, curr_responses)
+                    response_list += curr_responses
         return response_list
 
     def encode_sentence_or_word(self, thing: str):

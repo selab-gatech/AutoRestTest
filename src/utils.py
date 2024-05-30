@@ -31,7 +31,7 @@ def get_body_combinations(operation_body: Dict[str, SchemaProperties]) -> Dict[s
     return {k: get_combinations(v) for k, v in get_request_body_params(operation_body).items()}
 
 def get_body_object_combinations(body_schema: SchemaProperties) -> List[Tuple[str]]:
-    return get_combinations(process_body_params(body_schema))
+    return get_combinations(get_body_params(body_schema))
 
 def get_combinations(arr) -> List[Tuple]:
     combinations = []
@@ -49,18 +49,14 @@ def get_required_params(operation_parameters: Dict[str, ParameterProperties]) ->
             required_parameters.add(parameter)
     return required_parameters
 
-def get_required_body_params(operation_body: SchemaProperties) -> Set:
+def get_required_body_params(operation_body: SchemaProperties) -> Optional[Set]:
     if operation_body is None:
         return None
     required_body = set()
 
     if operation_body.properties and operation_body.type == "object":
         for key, value in operation_body.properties.items():
-            # Do check for "container" objects that are just an array of values
-            if len(operation_body.properties) == 1 and value.type == "array":
-                required_body = get_required_body_params(value.items)
-
-            elif value.required:
+            if value.required:
                 required_body.add(key)
 
     elif operation_body.items and operation_body.type == "array":
@@ -74,35 +70,44 @@ def encode_dict_as_key(dictionary: Dict) -> str:
     json_str = json.dumps(dictionary, sort_keys=True)
     return hashlib.sha256(json_str.encode()).hexdigest()
 
-def process_body_params(body: SchemaProperties) -> List[str]:
+def get_body_params(body: SchemaProperties) -> List[str]:
     if body is None:
         return []
+
     elif body.properties and body.type == "object":
         body_params = []
         for key, value in body.properties.items():
-            # Do check for "container" objects that are just an array of values
-            if len(body.properties) == 1 and value.type == "array":
-                body_params = process_body_params(value.items)
-
-            else:
                 body_params.append(key)
-
         return body_params
+
     elif body.items and body.type == "array":
-        return process_body_params(body.items)
+        return get_body_params(body.items)
 
     return []
 
-def get_request_body_params(operation_body: Dict[str, SchemaProperties]) -> Dict[str, List[str]]:
-    return {k: process_body_params(v) for k, v in operation_body.items()} if operation_body is not None else {}
+def get_response_params(response: SchemaProperties, response_params: List):
+    if response is None:
+        return
 
-def get_nested_obj_mappings(thing: Any) -> Optional[Dict[str, Any]]:
+    if response.properties:
+        for key, value in response.properties.items():
+            if key not in response_params:
+                response_params.append(key)
+            get_response_params(value, response_params)
+
+    elif response.items:
+        get_response_params(response.items, response_params)
+
+
+def get_request_body_params(operation_body: Dict[str, SchemaProperties]) -> Dict[str, List[str]]:
+    return {k: get_body_params(v) for k, v in operation_body.items()} if operation_body is not None else {}
+
+def get_object_shallow_mappings(thing: Any) -> Optional[Dict[str, Any]]:
     """
     Determine the mappings of a given item that contains some nested objects
     :param thing: The thing to get the mappings for
     :return:
     """
-    # Note: Checked and no need to do len(1) check for object (not used for any obj param matching)
     if not thing:
         return None
     mappings = {}
@@ -110,7 +115,7 @@ def get_nested_obj_mappings(thing: Any) -> Optional[Dict[str, Any]]:
         for key, value in thing.items():
             mappings[key] = value
     elif type(thing) == list and len(thing) > 0:
-        mappings = get_nested_obj_mappings(thing[0])
+        mappings = get_object_shallow_mappings(thing[0])
     return mappings
 
 def compose_json_fix_prompt(invalid_json_str: str):

@@ -11,7 +11,7 @@ import itertools
 import numpy as np
 
 from src.graph.handle_response import ResponseHandler
-from src.utils import remove_nulls, OpenAILanguageModel, get_params, get_request_body_params, get_nested_obj_mappings, \
+from src.utils import remove_nulls, OpenAILanguageModel, get_params, get_request_body_params, get_object_shallow_mappings, \
     get_param_combinations, get_combinations, get_required_params, get_body_object_combinations
 
 from src.graph.specification_parser import OperationProperties, ParameterProperties, SchemaProperties
@@ -458,7 +458,7 @@ class RequestGenerator:
         if dependent_response is None or not dependent_response.response.ok or dependent_response.response is None:
             return None
         try:
-            response_mappings = get_nested_obj_mappings(dependent_response.response.json())
+            response_mappings = get_object_shallow_mappings(dependent_response.response.json())
         except JSONDecodeError as err:
             print("FAILED TO PARSE JSON RESPONSE ", dependent_response.response.text)
             response_mappings = {}

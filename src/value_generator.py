@@ -20,7 +20,7 @@ from src.prompts.generator_prompts import (REQUEST_BODY_GEN_PROMPT,
                                            get_informed_agent_params_prompt)
 from src.prompts.system_prompts import PARAMETERS_GEN_SYSTEM_MESSAGE, REQUEST_BODY_GEN_SYSTEM_MESSAGE, \
     IDENTIFY_AUTHENTICATION_SYSTEM_MESSAGE, FIX_JSON_SYSTEM_MESSAGE
-from src.utils import OpenAILanguageModel, remove_nulls, get_request_body_params, get_nested_obj_mappings, \
+from src.utils import OpenAILanguageModel, remove_nulls, get_request_body_params, get_object_shallow_mappings, \
     attempt_fix_json
 from src.graph.specification_parser import SchemaProperties, ParameterProperties, OperationProperties
 
