@@ -53,12 +53,19 @@ def get_required_body_params(operation_body: SchemaProperties) -> Set:
     if operation_body is None:
         return None
     required_body = set()
+
     if operation_body.properties and operation_body.type == "object":
         for key, value in operation_body.properties.items():
-            if value.required:
+            # Do check for "container" objects that are just an array of values
+            if len(operation_body.properties) == 1 and value.type == "array":
+                required_body = get_required_body_params(value.items)
+
+            elif value.required:
                 required_body.add(key)
+
     elif operation_body.items and operation_body.type == "array":
         required_body = get_required_body_params(operation_body.items)
+
     else:
         return None
     return required_body
@@ -71,9 +78,19 @@ def process_body_params(body: SchemaProperties) -> List[str]:
     if body is None:
         return []
     elif body.properties and body.type == "object":
-        return list(body.properties.keys())
+        body_params = []
+        for key, value in body.properties.items():
+            # Do check for "container" objects that are just an array of values
+            if len(body.properties) == 1 and value.type == "array":
+                body_params = process_body_params(value.items)
+
+            else:
+                body_params.append(key)
+
+        return body_params
     elif body.items and body.type == "array":
         return process_body_params(body.items)
+
     return []
 
 def get_request_body_params(operation_body: Dict[str, SchemaProperties]) -> Dict[str, List[str]]:
@@ -85,6 +102,7 @@ def get_nested_obj_mappings(thing: Any) -> Optional[Dict[str, Any]]:
     :param thing: The thing to get the mappings for
     :return:
     """
+    # Note: Checked and no need to do len(1) check for object (not used for any obj param matching)
     if not thing:
         return None
     mappings = {}

@@ -34,27 +34,39 @@ def randomize_null():
     return None
 
 def randomize_integer():
-    if random.randint(1, 100) <= 70:
+    percent = random.randint(1, 100)
+    if percent <= 60:
+        return random.randint(0, 20)
+    elif percent <= 90:
         return random.randint(0, 1000)
     else:
         return random.randint(-(2 ** 10), (2 ** 10))
 
 def randomize_float():
-    if random.randint(1, 100) <= 70:
+    percent = random.randint(1, 100)
+    if percent <= 60:
+        return random.uniform(0, 20)
+    elif percent <= 90:
         return random.uniform(0, 1000)
     else:
         return random.uniform(-(2 ** 10), (2 ** 10))
 
 def randomize_string():
-    if random.randint(1, 100) <= 90:
-        length = random.randint(4, 16)
+    percent = random.randint(1, 100)
+    if percent <= 60:
+        length = random.randint(1, 8)
+    elif percent <= 90:
+        length = random.randint(4, 20)
     else:
         length = random.randint(1, 50)
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
 def randomize_array():
-    if random.randint(1, 100) <= 90:
-        length = random.randint(4, 10)
+    percent = random.randint(1, 100)
+    if percent <= 60:
+        length = random.randint(1, 8)
+    elif percent <= 90:
+        length = random.randint(4, 20)
     else:
         length = random.randint(0, 50)
     return [random.randint(-9999, 9999) for _ in range(length)]

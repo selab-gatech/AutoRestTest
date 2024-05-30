@@ -344,6 +344,7 @@ class BodyObjAgent:
             if operation_node.operation_properties.request_body:
                 for mime, body_properties in operation_node.operation_properties.request_body.items():
                     if body_properties.type == "object":
+                        # TODO: Check if this requires a change to account for object list containers
                         body_obj_combinations = get_combinations(body_properties.properties.keys())
                         self.q_table[operation_id][mime] = {body_obj: 0 for body_obj in body_obj_combinations}
                         self.q_table[operation_id][mime]["None"] = 0

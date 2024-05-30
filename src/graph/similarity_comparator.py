@@ -50,16 +50,17 @@ class OperationDependencyComparator:
                 for parameter, parameter_details in operation.parameters.items()]
 
     @staticmethod
-    def handle_properties(properties: Dict[str, SchemaProperties]) -> List[Dict[str,str]]:
-        property_list = []
-        for item, item_details in properties.items():
-            property_list.append({OperationDependencyComparator.handle_parameter_cases(item): item})
-        return property_list
-
-    @staticmethod
     def handle_schema_parameters(schema: SchemaProperties) -> List[Dict[str,str]]:
+        object_params = []
         if schema.properties:
-            return OperationDependencyComparator.handle_properties(schema.properties)
+            for item, item_details in schema.properties.items():
+                # Do check for "container" objects that are just an array of values
+                if len(schema.properties) == 1 and item_details.type == "array":
+                    object_params = OperationDependencyComparator.handle_schema_parameters(item_details.items)
+                    
+                else:
+                    object_params.append({OperationDependencyComparator.handle_parameter_cases(item): item})
+            return object_params
         elif schema.items:
             return OperationDependencyComparator.handle_schema_parameters(schema.items)
         return []
