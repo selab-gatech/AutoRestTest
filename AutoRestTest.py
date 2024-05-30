@@ -113,7 +113,7 @@ class AutoRestTest:
                 db[spec_name] = graph_properties
                 print(f"Initialized new graph for {spec_name}.")
         print("GRAPH CREATED!!!")
-        operation_graph.print_graph()
+        #operation_graph.print_graph()
         return operation_graph
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):

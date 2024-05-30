@@ -111,7 +111,7 @@ class QLearning:
 
         parameter_type_mutate_rate = 0.5
         body_mutate_rate = 0.3
-        mutate_method = random.random() < 0.02
+        mutate_method = random.random() < 0
         mutate_media = random.random() < 0.02
         mutate_parameter_completely = random.random() < 0.05
         mutate_token = random.random() < 0.2
@@ -561,21 +561,15 @@ class QLearning:
                             for prop_name, prop_val in deconstructed_body.items():
                                 if prop_name in self.successful_bodies[operation_id] and prop_val not in self.successful_bodies[operation_id][prop_name]:
                                     self.successful_bodies[operation_id][prop_name].append(prop_val)
-                if response.content and self.successful_responses[operation_id]:
+                if response.content and self.successful_responses[operation_id] is not None:
                     try:
                         response_content = json.loads(response.content)
                     except json.JSONDecodeError:
                         print("Error decoding JSON response content")
                         response_content = None
 
-                    if operation_id == "v2All":
-                        print("RESPONSE CONTENT: ", response_content)
-
                     deconstructed_response: Dict[str, List] = {}
                     self._deconstruct_response(response_content, deconstructed_response)
-
-                    if operation_id == "v2All":
-                        print("DECONSTRUCTED RESPONSE: ", deconstructed_response)
 
                     if deconstructed_response:
                         for response_prop, response_vals in deconstructed_response.items():
