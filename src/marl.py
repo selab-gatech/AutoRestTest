@@ -104,9 +104,6 @@ class QLearning:
         return parameters, body
 
     def mutate_values(self, operation_properties: OperationProperties, parameters, body, header):
-        print("ATTEMPTING MUTATION")
-        print("BEFORE: ", parameters, body, header)
-
         avail_medias = ["application/json", "application/x-www-form-urlencoded", "multipart/form-data", "text/plain"]
         avail_methods = ["get", "post", "put", "delete", "patch"]
 
@@ -114,7 +111,7 @@ class QLearning:
         body_mutate_rate = 0.3
         mutate_method = random.random() < 0.02
         mutate_media = random.random() < 0.02
-        mutate_parameter_completely = random.random() < 0.1
+        mutate_parameter_completely = random.random() < 0.05
         mutate_token = random.random() < 0.2
 
         specific_method = None
@@ -157,8 +154,6 @@ class QLearning:
                 avail_medias.remove(media)
             new_body = {random.choice(avail_medias): body.popitem()[1]}
             body = new_body
-
-        print("AFTER: ", parameters, body, header)
 
         return parameters, body, header, specific_method, mutated_parameter_names
 
@@ -505,7 +500,7 @@ class QLearning:
                     response = self.send_operation(self.operation_graph.operation_nodes[operation_id].operation_properties, parameters, body, header)
             else:
                 response = self.send_operation(self.operation_graph.operation_nodes[operation_id].operation_properties, parameters, body, header)
-            if not response:
+            if response is None:
                 continue
 
             # Only update table when using table values (so not mutated)
