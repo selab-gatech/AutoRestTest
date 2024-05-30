@@ -489,7 +489,7 @@ class QLearning:
             mutate_operation = random.random() < self.mutation_rate
             mutated_parameter_names = False
             if mutate_operation:
-                if random.random() < 0.6:
+                if random.random() < 0.6 or data_source == "WAITING":
                     # Use mutator
                     parameters, body, header, specific_method, mutated_parameter_names = self.mutate_values(self.operation_graph.operation_nodes[operation_id].operation_properties, parameters, body, header)
                     response = self.send_operation(
