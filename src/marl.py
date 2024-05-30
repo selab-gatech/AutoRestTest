@@ -501,6 +501,8 @@ class QLearning:
                     response = self.send_operation(self.operation_graph.operation_nodes[operation_id].operation_properties, parameters, body, header)
             else:
                 response = self.send_operation(self.operation_graph.operation_nodes[operation_id].operation_properties, parameters, body, header)
+            if not response:
+                continue
 
             # Only update table when using table values (so not mutated)
             if not mutate_operation:
@@ -562,9 +564,9 @@ class QLearning:
                                 self.successful_responses[operation_id][response_prop].append(response_val)
 
             if response is not None: self.responses[response.status_code] += 1
-            if operation_id not in self.operation_response_counter: self.operation_response_counter[operation_id] = {response.status_code: 1}
-            elif response.status_code not in self.operation_response_counter[operation_id]: self.operation_response_counter[operation_id][response.status_code] = 1
-            else: self.operation_response_counter[operation_id][response.status_code] += 1
+            if response is not None and operation_id not in self.operation_response_counter: self.operation_response_counter[operation_id] = {response.status_code: 1}
+            elif response is not None and response.status_code not in self.operation_response_counter[operation_id]: self.operation_response_counter[operation_id][response.status_code] = 1
+            elif response is not None: self.operation_response_counter[operation_id][response.status_code] += 1
 
     def output_successes(self):
 
