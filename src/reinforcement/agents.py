@@ -428,36 +428,37 @@ class DependencyAgent:
                 self.q_table[operation_id] = {"params": {}, "body": {}}
 
             for edge in operation_node.outgoing_edges:
-                for parameter, similarity_value in edge.similar_parameters.items():
-                    processed_in_val = similarity_value.in_value.split(" to ")
-                    dependent_parameter = similarity_value.dependent_val
-                    destination = edge.destination.operation_id
+                for parameter, similarities in edge.similar_parameters.items():
+                    for similarity in similarities:
+                        processed_in_val = similarity.in_value.split(" to ")
+                        dependent_parameter = similarity.dependent_val
+                        destination = edge.destination.operation_id
 
-                    if processed_in_val[0] == "query" and parameter not in self.q_table[operation_id]['params']:
-                        self.q_table[operation_id]['params'][parameter] = {}
-                    elif processed_in_val[0] == "body" and parameter not in self.q_table[operation_id]['body']:
-                        self.q_table[operation_id]['body'][parameter] = {}
+                        if processed_in_val[0] == "query" and parameter not in self.q_table[operation_id]['params']:
+                            self.q_table[operation_id]['params'][parameter] = {}
+                        elif processed_in_val[0] == "body" and parameter not in self.q_table[operation_id]['body']:
+                            self.q_table[operation_id]['body'][parameter] = {}
 
-                    if processed_in_val[0] == "query" and destination not in self.q_table[operation_id]['params'][parameter]:
-                        self.q_table[operation_id]['params'][parameter][destination] = {"params": {}, "body": {}, "response": {}}
-                    elif processed_in_val[0] == "body" and destination not in self.q_table[operation_id]['body'][parameter]:
-                        self.q_table[operation_id]['body'][parameter][destination] = {"params": {}, "body": {}, "response": {}}
+                        if processed_in_val[0] == "query" and destination not in self.q_table[operation_id]['params'][parameter]:
+                            self.q_table[operation_id]['params'][parameter][destination] = {"params": {}, "body": {}, "response": {}}
+                        elif processed_in_val[0] == "body" and destination not in self.q_table[operation_id]['body'][parameter]:
+                            self.q_table[operation_id]['body'][parameter][destination] = {"params": {}, "body": {}, "response": {}}
 
-                    if processed_in_val[0] == "query":
-                        if processed_in_val[1] == "query":
-                            self.q_table[operation_id]['params'][parameter][destination]["params"][dependent_parameter] = 0
-                        elif processed_in_val[1] == "body":
-                            self.q_table[operation_id]['params'][parameter][destination]["body"][dependent_parameter] = 0
-                        elif processed_in_val[1] == "response":
-                            self.q_table[operation_id]['params'][parameter][destination]["response"][dependent_parameter] = 0
+                        if processed_in_val[0] == "query":
+                            if processed_in_val[1] == "query":
+                                self.q_table[operation_id]['params'][parameter][destination]["params"][dependent_parameter] = 0
+                            elif processed_in_val[1] == "body":
+                                self.q_table[operation_id]['params'][parameter][destination]["body"][dependent_parameter] = 0
+                            elif processed_in_val[1] == "response":
+                                self.q_table[operation_id]['params'][parameter][destination]["response"][dependent_parameter] = 0
 
-                    elif processed_in_val[0] == "body":
-                        if processed_in_val[1] == "query":
-                            self.q_table[operation_id]['body'][parameter][destination]["params"][dependent_parameter] = 0
-                        elif processed_in_val[1] == "body":
-                            self.q_table[operation_id]['body'][parameter][destination]["body"][dependent_parameter] = 0
-                        elif processed_in_val[1] == "response":
-                            self.q_table[operation_id]['body'][parameter][destination]["response"][dependent_parameter] = 0
+                        elif processed_in_val[0] == "body":
+                            if processed_in_val[1] == "query":
+                                self.q_table[operation_id]['body'][parameter][destination]["params"][dependent_parameter] = 0
+                            elif processed_in_val[1] == "body":
+                                self.q_table[operation_id]['body'][parameter][destination]["body"][dependent_parameter] = 0
+                            elif processed_in_val[1] == "response":
+                                self.q_table[operation_id]['body'][parameter][destination]["response"][dependent_parameter] = 0
 
     def get_action(self, operation_id) -> Tuple[Dict, Dict]:
         if random.uniform(0, 1) < self.epsilon:

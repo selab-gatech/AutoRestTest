@@ -80,7 +80,7 @@ class AutoRestTest:
         _construct_db_dir()
         self.db_q_table = os.path.join(os.path.dirname(__file__), "src/data/q_table")
         self.db_graph = os.path.join(os.path.dirname(__file__), "src/data/graph")
-        self.use_cached_graph = False
+        self.use_cached_graph = True
         self.use_cached_table = True
         self.use_cached_values = True
         self.use_cached_headers = True
@@ -113,7 +113,7 @@ class AutoRestTest:
                 db[spec_name] = graph_properties
                 print(f"Initialized new graph for {spec_name}.")
         print("GRAPH CREATED!!!")
-        #operation_graph.print_graph()
+        operation_graph.print_graph()
         return operation_graph
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):

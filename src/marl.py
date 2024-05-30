@@ -549,6 +549,7 @@ class QLearning:
 
             # Update successful parameters to use for future operation dependencies
             if response is not None and response.ok and not mutated_parameter_names:
+                print("Successful response!")
                 if parameters and self.successful_parameters[operation_id]:
                     for param_name, param_val in parameters.items():
                         if param_name in self.successful_parameters[operation_id] and param_val not in self.successful_parameters[operation_id][param_name]:
@@ -564,10 +565,18 @@ class QLearning:
                     try:
                         response_content = json.loads(response.content)
                     except json.JSONDecodeError:
+                        print("Error decoding JSON response content")
                         response_content = None
+
+                    if operation_id == "v2All":
+                        print("RESPONSE CONTENT: ", response_content)
 
                     deconstructed_response: Dict[str, List] = {}
                     self._deconstruct_response(response_content, deconstructed_response)
+
+                    if operation_id == "v2All":
+                        print("DECONSTRUCTED RESPONSE: ", deconstructed_response)
+
                     if deconstructed_response:
                         for response_prop, response_vals in deconstructed_response.items():
                             if response_prop in self.successful_responses[operation_id]:
@@ -583,18 +592,23 @@ class QLearning:
             elif response is not None: self.operation_response_counter[operation_id][response.status_code] += 1
 
     def output_successes(self):
-
-        compiled_successes = {
-            "PARAMETERS": self.successful_parameters,
-            "BODIES": self.successful_bodies,
-            "RESPONSES": self.successful_responses
-        }
-
-        output_dir = os.path.join(os.path.dirname(__file__), "data/successful_responses")
+        output_dir = os.path.join(os.path.dirname(__file__), "data/successful_values/success_params")
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         with open(f"{output_dir}/{self.operation_graph.spec_name}.json", "w") as f:
-            json.dump(compiled_successes, f, indent=2)
+            json.dump(self.successful_parameters, f, indent=2)
+
+        output_dir = os.path.join(os.path.dirname(__file__), "data/successful_values/success_bodies")
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        with open(f"{output_dir}/{self.operation_graph.spec_name}.json", "w") as f:
+            json.dump(self.successful_bodies, f, indent=2)
+
+        output_dir = os.path.join(os.path.dirname(__file__), "data/successful_values/success_responses")
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        with open(f"{output_dir}/{self.operation_graph.spec_name}.json", "w") as f:
+            json.dump(self.successful_responses, f, indent=2)
 
     def output_operation_response_counter(self):
         output_dir = os.path.join(os.path.dirname(__file__), "data/operation_response_counter")
