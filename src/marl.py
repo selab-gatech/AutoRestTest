@@ -104,6 +104,8 @@ class QLearning:
         return parameters, body
 
     def mutate_values(self, operation_properties: OperationProperties, parameters, body, header):
+        print("ATTEMPTING MUTATION")
+        print("BEFORE: ", parameters, body, header)
 
         avail_medias = ["application/json", "application/x-www-form-urlencoded", "multipart/form-data", "text/plain"]
         avail_methods = ["get", "post", "put", "delete", "patch"]
@@ -155,6 +157,8 @@ class QLearning:
                 avail_medias.remove(media)
             new_body = {random.choice(avail_medias): body.popitem()[1]}
             body = new_body
+
+        print("AFTER: ", parameters, body, header)
 
         return parameters, body, header, specific_method, mutated_parameter_names
 
