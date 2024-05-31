@@ -146,7 +146,7 @@ class QLearning:
                         if not body_properties.properties:
                             continue
                         for status_code, response_properties in operation2_node.operation_properties.responses.items():
-                            if status_code == "200" and response_properties.content:
+                            if status_code and status_code[0] == "2" and response_properties.content:
                                 for content_type, response_details in response_properties.content.items():
                                     response_params = {}
                                     get_response_param_mappings(response_details, response_params)
