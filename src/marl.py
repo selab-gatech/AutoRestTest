@@ -429,7 +429,7 @@ class QLearning:
 
     def select_exploration_agent(self):
         # SELECT BETWEEN HEADER, (PARAMETER & BODY), (DATA_SOURCE & VALUE & DEPENDENCY)
-        agent_options = ["HEADER", "PARAMETER & BODY", "DATA_SOURCE & VALUE & DEPENDENCY", "NONE"]
+        agent_options = ["HEADER", "PARAMETER & BODY", "DATA_SOURCE & VALUE & DEPENDENCY", "NONE", "ALL"]
         return random.choice(agent_options)
 
     def execute_operations(self):
@@ -448,13 +448,13 @@ class QLearning:
             operation_id = random.choice(list(self.operation_graph.operation_nodes.keys()))
             #operation_id = "findByIdUsingGET_3"
 
-            if exploring_agent != "PARAMETER & BODY":
+            if exploring_agent != "PARAMETER & BODY" or exploring_agent == "NONE":
                 select_params = self.parameter_agent.get_best_action(operation_id)
             else:
                 select_params = self.parameter_agent.get_random_action(operation_id)
 
-            if exploring_agent != "HEADER":
-                select_header = self.header_agent.get_action(operation_id)
+            if exploring_agent != "HEADER" or exploring_agent == "NONE":
+                select_header = self.header_agent.get_best_action(operation_id)
             else:
                 select_header = self.header_agent.get_random_action(operation_id)
 
@@ -481,7 +481,7 @@ class QLearning:
                                             body_mappings) if select_params.mime_type else None
                 # 80% chance of using LLM values
                 else:
-                    if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY":
+                    if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY" or exploring_agent == "NONE":
                         select_values = self.value_agent.get_best_action(operation_id)
                     else:
                         select_values = self.value_agent.get_random_action(operation_id)
@@ -490,7 +490,7 @@ class QLearning:
                     body = self.get_mapping([select_params.mime_type],
                                             select_values.body_mappings) if select_params.mime_type else None
             elif data_source == "LLM":
-                if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY":
+                if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY" or exploring_agent == "NONE":
                     select_values = self.value_agent.get_best_action(operation_id)
                 else:
                     select_values = self.value_agent.get_random_action(operation_id)
@@ -501,7 +501,7 @@ class QLearning:
                 parameters = self.get_mapping(select_params.req_params, param_mappings) if select_params.req_params else None
                 body = self.get_mapping([select_params.mime_type], body_mappings) if select_params.mime_type else None
             elif data_source == "DEPENDENCY":
-                if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY":
+                if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY" or exploring_agent == "NONE":
                     parameter_dependencies, request_body_dependencies = self.dependency_agent.get_best_action(operation_id)
                     llm_select_values = self.value_agent.get_best_action(operation_id)
                 else:
@@ -618,14 +618,14 @@ class QLearning:
                        self.data_source_agent.update_q_table(operation_id, data_source, self.determine_good_response_reward(response))
 
                     # Update dependency agent if dependency data source
-                    elif data_source == "DEPENDENCY":
+                    if data_source == "DEPENDENCY":
                         used_dependent_params = {}
                         if parameter_dependencies:
                             for parameter in parameters:
                                 if parameter in select_params.req_params and parameter in parameter_dependencies:
                                     used_dependent_params[parameter] = parameter_dependencies[parameter]
                         used_dependent_body = {}
-                        if request_body_dependencies and unconstructed_body and all_select_properties[select_params.mime_type]:
+                        if request_body_dependencies and unconstructed_body and select_params.mime_type in all_select_properties and all_select_properties[select_params.mime_type]:
                             for body_param in unconstructed_body:
                                 if body_param in all_select_properties[select_params.mime_type] and body_param in request_body_dependencies:
                                     used_dependent_body[body_param] = request_body_dependencies[body_param]
