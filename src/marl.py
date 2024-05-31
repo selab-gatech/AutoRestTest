@@ -458,7 +458,7 @@ class QLearning:
             else:
                 select_header = self.header_agent.get_random_action(operation_id)
 
-            if time.time() - start_time > 30:
+            if time.time() - start_time > 20:
                 if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY":
                     data_source = self.data_source_agent.get_best_action(operation_id)
                 else:
@@ -467,6 +467,8 @@ class QLearning:
                 data_source = "WAITING"
 
             print("SENDING TO OPERATION: ", operation_id)
+            print("EXPLORING AGENCT: ", exploring_agent)
+            print("DATA SOURCE: ", data_source)
             print("SELECTED PARAMETERS: ", select_params.req_params)
             print("SELECTED BODY: ", select_params.mime_type)
 
@@ -562,11 +564,9 @@ class QLearning:
 
             header = {"Authorization": select_header} if select_header else None
 
-            print("DATA SOURCE: ", data_source)
-
             # Use body agent to select properties
             all_select_properties = {}
-            if body:
+            if body and data_source != "DEFAULT" and data_source != "WAITING":
                 for mime, body_properties in body.items():
                     if type(body_properties) == dict:
                         select_properties = self.body_object_agent.get_action(operation_id, mime)
@@ -596,6 +596,11 @@ class QLearning:
                 response = self.send_operation(self.operation_graph.operation_nodes[operation_id].operation_properties, parameters, body, header)
             if response is None:
                 continue
+
+            if mutate_operation:
+                print("MUTATED OPERATION VALUES")
+            else:
+                print("NOT MUTATED OPERATION VALUES")
 
             # Only update table when using table values (so not mutated)
             if not mutate_operation:
