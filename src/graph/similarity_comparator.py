@@ -84,8 +84,8 @@ class OperationDependencyComparator:
         if operation.responses is None:
             return []
         response_list = []
-        for response_type, response_properties in operation.responses.items():
-            if response_properties.content:
+        for status_code, response_properties in operation.responses.items():
+            if status_code == "200" and response_properties.content:
                 for response, response_details in response_properties.content.items():
                     curr_responses = []
                     OperationDependencyComparator.handle_response_params(response_details, curr_responses)

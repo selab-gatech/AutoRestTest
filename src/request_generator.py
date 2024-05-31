@@ -213,7 +213,7 @@ class RequestGenerator:
 
     def get_auth_info(self, operation_node: 'OperationNode', auth_attempts: int = 3):
         operation_properties = operation_node.operation_properties
-        value_generator = SmartValueGenerator(operation_properties=operation_properties, engine="gpt-3.5-turbo-0125")
+        value_generator = SmartValueGenerator(operation_properties=operation_properties)
 
         auth_parameters = value_generator.determine_auth_params()
         #print(f"Auth parameters for operation {operation_node.operation_id}: {auth_parameters}")
@@ -584,14 +584,14 @@ class RequestGenerator:
         desired_size = 10
         lowest_occurrences = min(occurrences.values()) if occurrences else 0
         if lowest_occurrences < desired_size:
-            value_generator = SmartValueGenerator(operation_properties=curr_node.operation_properties, temperature=0.7)
             failed_responses = []
             for i in range(3):
-                response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=1)
+                response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=i)
                 if response and response.response and not response.response.ok:
                     failed_responses.append(response)
                 elif response and response.response and response.response.ok:
                     responses[curr_node.operation_id].append(response)
+            value_generator = SmartValueGenerator(operation_properties=curr_node.operation_properties, temperature=0.7, engine="gpt-4o")
             if failed_responses:
                 parameters, request_body = (
                     value_generator.generate_informed_value_agent_params(num_values=desired_size - lowest_occurrences, responses=failed_responses),

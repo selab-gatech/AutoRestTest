@@ -391,9 +391,10 @@ class DataSourceAgent:
         self.epsilon = epsilon
 
     def initialize_q_table(self):
+        available_data_sources = ["LLM", "OPERATION_DEPENDENCY", "DEFAULT"] if self.operation_graph.operation_edges else ["DEFAULT", "LLM"]
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
             if operation_id not in self.q_table:
-                self.q_table[operation_id] = {"LLM": 0, "DEPENDENCY": 0, "DEFAULT": 0}
+                self.q_table[operation_id] = {data_source: 0 for data_source in available_data_sources}
 
     def get_action(self, operation_id):
         if random.uniform(0, 1) < self.epsilon:
@@ -539,6 +540,8 @@ class DependencyAgent:
                     for dependent_param, value in dependent_params.items():
                         if dependent_param == dependent["dependent_val"]:
                             self.q_table[operation_id]['body'][param][dependent["dependent_operation"]][location][dependent_param] = new_q
+
+
 
 
 

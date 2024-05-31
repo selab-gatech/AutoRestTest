@@ -98,6 +98,18 @@ def get_response_params(response: SchemaProperties, response_params: List):
     elif response.items:
         get_response_params(response.items, response_params)
 
+def get_response_param_mappings(response: SchemaProperties, response_mappings):
+    if response is None:
+        return
+
+    if response.properties:
+        for key, value in response.properties.items():
+            response_mappings[key] = value
+            get_response_param_mappings(value, response_mappings)
+
+    elif response.items:
+        get_response_param_mappings(response.items, response_mappings)
+
 
 def get_request_body_params(operation_body: Dict[str, SchemaProperties]) -> Dict[str, List[str]]:
     return {k: get_body_params(v) for k, v in operation_body.items()} if operation_body is not None else {}

@@ -4,6 +4,7 @@ import os
 import random
 import time
 from collections import defaultdict
+from dataclasses import asdict
 from typing import Dict, List
 
 import requests
@@ -14,7 +15,7 @@ from src.graph.specification_parser import OperationProperties
 from src.reinforcement.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction, BodyObjAgent, \
     DataSourceAgent, DependencyAgent
 from src.utils import _construct_db_dir, construct_basic_token, get_object_shallow_mappings, get_body_params, \
-    get_response_params
+    get_response_params, get_response_param_mappings, remove_nulls
 from src.value_generator import identify_generator, randomize_string, random_generator, randomize_object
 
 
@@ -74,7 +75,7 @@ class QLearning:
         select_type = random.choice(avail_types)
         return identify_generator(select_type)()
 
-    def assign_random_from_successful(self, parameters, body, operation_id):
+    def assign_random_from_successful(self, parameters, body, operation_id, complete_body_mappings):
         possible_options = []
         for operation_idx, operation_parameters in self.successful_parameters.items():
             for parameter_name, parameter_values in operation_parameters.items():
@@ -93,17 +94,68 @@ class QLearning:
 
         if body:
             for mime, body_properties in body.items():
-                body_mappings = self._deconstruct_body(body_properties)
-                if body_mappings:
-                    new_obj = {}
-                    for prop in body_mappings:
-                        if random.random() < 0.5 and possible_options:
-                            new_obj[prop] = random.choice(possible_options)
-                        else:
-                            new_obj[prop] = body_mappings[prop]
-                    body[mime] = self._construct_body(new_obj, operation_id, mime)
+                if random.random() < 0.3 or operation_id not in complete_body_mappings:
+                    body_mappings = self._deconstruct_body(body_properties)
+                    if body_mappings:
+                        new_obj = {}
+                        for prop in body_mappings:
+                            if random.random() < 0.5 and possible_options:
+                                new_obj[prop] = random.choice(possible_options)
+                            else:
+                                new_obj[prop] = body_mappings[prop]
+                        body[mime] = self._construct_body(new_obj, operation_id, mime)
+                else:
+                    if random.random() < 0.3:
+                        possible_objs = []
+                        for dependent_operation, dependent_prop in complete_body_mappings[operation_id].items():
+                            if dependent_operation in self.successful_bodies and dependent_prop in \
+                                    self.successful_bodies[dependent_operation]:
+                                possible_objs.extend(self.successful_bodies[dependent_operation][dependent_prop])
+                        if possible_objs:
+                            selected_obj = random.choice(possible_objs)
+                            body[mime] = selected_obj
+                    else:
+                        body_mappings = self._deconstruct_body(body_properties)
+                        if body_mappings:
+                            possible_objs = []
+                            for dependent_operation, dependent_prop in complete_body_mappings[operation_id].items():
+                                if dependent_operation in self.successful_bodies and dependent_prop in self.successful_bodies[
+                                    dependent_operation]:
+                                    possible_objs.extend(self.successful_bodies[dependent_operation][dependent_prop])
+                            if possible_objs:
+                                selected_obj = random.choice(possible_objs)
+                                new_obj = {}
+                                response_mappings = self._deconstruct_body(selected_obj)
+                                for prop in body_mappings:
+                                    if prop in response_mappings:
+                                        new_obj[prop] = response_mappings[prop]
+                                    else:
+                                        new_obj[prop] = body_mappings[prop]
+                                body[mime] = self._construct_body(new_obj, operation_id, mime)
 
         return parameters, body
+
+    def determine_complete_body_mappings(self):
+        complete_body_mappings = {}
+        for operation1_id, operation1_node in self.operation_graph.operation_nodes.items():
+            for operation2_id, operation2_node in self.operation_graph.operation_nodes.items():
+                if operation1_id == operation2_id:
+                    continue
+                if operation1_node.operation_properties.request_body and operation2_node.operation_properties.responses:
+                    for mime_type, body_properties in operation1_node.operation_properties.request_body.items():
+                        if not body_properties.properties:
+                            continue
+                        for status_code, response_properties in operation2_node.operation_properties.responses.items():
+                            if status_code == "200" and response_properties.content:
+                                for content_type, response_details in response_properties.content.items():
+                                    response_params = {}
+                                    get_response_param_mappings(response_details, response_params)
+                                    for prop, val in response_params.items():
+                                        if val.properties == body_properties.properties:
+                                            if operation1_id not in complete_body_mappings:
+                                                complete_body_mappings[operation1_id] = {}
+                                            complete_body_mappings[operation1_id][operation2_id] = prop
+        return complete_body_mappings
 
     def mutate_values(self, operation_properties: OperationProperties, parameters, body, header):
         avail_medias = ["application/json", "application/x-www-form-urlencoded", "multipart/form-data", "text/plain"]
@@ -375,22 +427,42 @@ class QLearning:
                 body[mime_type] = identify_generator(body_properties.type)()
         return parameters, body
 
+    def select_exploration_agent(self):
+        # SELECT BETWEEN HEADER, (PARAMETER & BODY), (DATA_SOURCE & VALUE & DEPENDENCY)
+        agent_options = ["HEADER", "PARAMETER & BODY", "DATA_SOURCE & VALUE & DEPENDENCY", "NONE"]
+        return random.choice(agent_options)
+
     def execute_operations(self):
         start_time = time.time()
+
+        complete_body_mappings = self.determine_complete_body_mappings()
 
         while time.time() - start_time < self.time_duration:
             print("=========================================================================")
             print(f"Responses: {dict(self.responses)}")
             print("TIME REMAINING: ", self.time_duration - (time.time() - start_time))
+
+            exploring_agent = self.select_exploration_agent()
+
             #operation_id = self.operation_agent.get_action()
             operation_id = random.choice(list(self.operation_graph.operation_nodes.keys()))
             #operation_id = "findByIdUsingGET_3"
 
-            select_params = self.parameter_agent.get_action(operation_id)
-            select_header = self.header_agent.get_action(operation_id)
+            if exploring_agent != "PARAMETER & BODY":
+                select_params = self.parameter_agent.get_best_action(operation_id)
+            else:
+                select_params = self.parameter_agent.get_random_action(operation_id)
+
+            if exploring_agent != "HEADER":
+                select_header = self.header_agent.get_action(operation_id)
+            else:
+                select_header = self.header_agent.get_random_action(operation_id)
 
             if time.time() - start_time > 30:
-                data_source = self.data_source_agent.get_action(operation_id)
+                if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY":
+                    data_source = self.data_source_agent.get_best_action(operation_id)
+                else:
+                    data_source = self.data_source_agent.get_random_action(operation_id)
             else:
                 data_source = "WAITING"
 
@@ -409,13 +481,19 @@ class QLearning:
                                             body_mappings) if select_params.mime_type else None
                 # 80% chance of using LLM values
                 else:
-                    select_values = self.value_agent.get_action(operation_id)
+                    if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY":
+                        select_values = self.value_agent.get_best_action(operation_id)
+                    else:
+                        select_values = self.value_agent.get_random_action(operation_id)
                     parameters = self.get_mapping(select_params.req_params,
                                                   select_values.param_mappings) if select_params.req_params else None
                     body = self.get_mapping([select_params.mime_type],
                                             select_values.body_mappings) if select_params.mime_type else None
             elif data_source == "LLM":
-                select_values = self.value_agent.get_action(operation_id)
+                if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY":
+                    select_values = self.value_agent.get_best_action(operation_id)
+                else:
+                    select_values = self.value_agent.get_random_action(operation_id)
                 parameters = self.get_mapping(select_params.req_params, select_values.param_mappings) if select_params.req_params else None
                 body = self.get_mapping([select_params.mime_type], select_values.body_mappings) if select_params.mime_type else None
             elif data_source == "DEFAULT":
@@ -423,8 +501,13 @@ class QLearning:
                 parameters = self.get_mapping(select_params.req_params, param_mappings) if select_params.req_params else None
                 body = self.get_mapping([select_params.mime_type], body_mappings) if select_params.mime_type else None
             elif data_source == "DEPENDENCY":
-                parameter_dependencies, request_body_dependencies = self.dependency_agent.get_action(operation_id)
-                llm_select_values = self.value_agent.get_action(operation_id)
+                if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY":
+                    parameter_dependencies, request_body_dependencies = self.dependency_agent.get_best_action(operation_id)
+                    llm_select_values = self.value_agent.get_best_action(operation_id)
+                else:
+                    parameter_dependencies, request_body_dependencies = self.dependency_agent.get_random_action(operation_id)
+                    llm_select_values = self.value_agent.get_random_action(operation_id)
+
                 llm_parameters = self.get_mapping(select_params.req_params,
                                               llm_select_values.param_mappings) if select_params.req_params else None
                 llm_body = self.get_mapping([select_params.mime_type],
@@ -481,6 +564,7 @@ class QLearning:
 
             print("DATA SOURCE: ", data_source)
 
+            # Use body agent to select properties
             all_select_properties = {}
             if body:
                 for mime, body_properties in body.items():
@@ -498,7 +582,7 @@ class QLearning:
             mutate_operation = random.random() < self.mutation_rate
             mutated_parameter_names = False
             if mutate_operation:
-                if random.random() < 0.6 or data_source == "WAITING":
+                if random.random() < 0.5 or data_source == "WAITING":
                     # Use mutator
                     parameters, body, header, specific_method, mutated_parameter_names = self.mutate_values(self.operation_graph.operation_nodes[operation_id].operation_properties, parameters, body, header)
                     response = self.send_operation(
@@ -506,7 +590,7 @@ class QLearning:
                         header, specific_method)
                 else:
                     # Pick random response
-                    parameters, body = self.assign_random_from_successful(parameters, body, operation_id)
+                    parameters, body = self.assign_random_from_successful(parameters, body, operation_id, complete_body_mappings)
                     response = self.send_operation(self.operation_graph.operation_nodes[operation_id].operation_properties, parameters, body, header)
             else:
                 response = self.send_operation(self.operation_graph.operation_nodes[operation_id].operation_properties, parameters, body, header)
@@ -515,37 +599,43 @@ class QLearning:
 
             # Only update table when using table values (so not mutated)
             if not mutate_operation:
-                self.parameter_agent.update_q_table(operation_id, select_params, self.determine_parameter_response_reward(response))
-                self.header_agent.update_q_table(operation_id, select_header, self.determine_header_reward(response))
                 self.operation_agent.update_q_table(operation_id, self.determine_bad_response_reward(response))
 
+                if exploring_agent == "PARAMETER & BODY":
+                    self.parameter_agent.update_q_table(operation_id, select_params, self.determine_parameter_response_reward(response))
+                    # If body object agent is used, update the q-table
+                    if all_select_properties:
+                        for mime, select_properties in all_select_properties.items():
+                            self.body_object_agent.update_q_table(operation_id, mime, select_properties,
+                                                                  self.determine_good_response_reward(response))
+
+                if exploring_agent == "HEADER":
+                    self.header_agent.update_q_table(operation_id, select_header, self.determine_header_reward(response))
+
                 # For the first thirty seconds, do not update data source table (to account for minimal filled dependencies)
-                if data_source != "WAITING":
-                    self.data_source_agent.update_q_table(operation_id, data_source, self.determine_good_response_reward(response))
+                if exploring_agent == "DATA_SOURCE & VALUE & DEPENDENCY":
+                    if data_source != "WAITING":
+                       self.data_source_agent.update_q_table(operation_id, data_source, self.determine_good_response_reward(response))
 
-                # If body object agent is used, update the q-table
-                if all_select_properties:
-                    for mime, select_properties in all_select_properties.items():
-                        self.body_object_agent.update_q_table(operation_id, mime, select_properties, self.determine_good_response_reward(response))
+                    # Update dependency agent if dependency data source
+                    elif data_source == "DEPENDENCY":
+                        used_dependent_params = {}
+                        if parameter_dependencies:
+                            for parameter in parameters:
+                                if parameter in select_params.req_params and parameter in parameter_dependencies:
+                                    used_dependent_params[parameter] = parameter_dependencies[parameter]
+                        used_dependent_body = {}
+                        if request_body_dependencies and unconstructed_body and all_select_properties[select_params.mime_type]:
+                            for body_param in unconstructed_body:
+                                if body_param in all_select_properties[select_params.mime_type] and body_param in request_body_dependencies:
+                                    used_dependent_body[body_param] = request_body_dependencies[body_param]
+                        self.dependency_agent.update_q_table(operation_id, used_dependent_params, used_dependent_body, self.determine_good_response_reward(response))
 
-                # Update dependency agent if dependency data source
-                if data_source == "DEPENDENCY":
-                    used_dependent_params = {}
-                    if parameter_dependencies:
-                        for parameter in parameters:
-                            if parameter in select_params.req_params and parameter in parameter_dependencies:
-                                used_dependent_params[parameter] = parameter_dependencies[parameter]
-                    used_dependent_body = {}
-                    if request_body_dependencies and unconstructed_body and all_select_properties[select_params.mime_type]:
-                        for body_param in unconstructed_body:
-                            if body_param in all_select_properties[select_params.mime_type] and body_param in request_body_dependencies:
-                                used_dependent_body[body_param] = request_body_dependencies[body_param]
-                    self.dependency_agent.update_q_table(operation_id, used_dependent_params, used_dependent_body, self.determine_good_response_reward(response))
-                # Update LLM value agent if LLM data source
-                elif data_source == "LLM" and select_values is not None:
-                    processed_value_action = ValueAction(param_mappings=parameters, body_mappings=select_values.body_mappings)
-                    self.value_agent.update_q_table(operation_id, processed_value_action,
-                                                    self.determine_value_response_reward(response))
+                    # Update LLM value agent if LLM data source
+                    elif data_source == "LLM" and select_values is not None:
+                        processed_value_action = ValueAction(param_mappings=parameters, body_mappings=select_values.body_mappings)
+                        self.value_agent.update_q_table(operation_id, processed_value_action,
+                                                        self.determine_value_response_reward(response))
 
             # Update successful parameters to use for future operation dependencies
             if response is not None and response.ok and not mutated_parameter_names:
@@ -613,7 +703,7 @@ class QLearning:
 
     def run(self):
         self.execute_operations()
-        self.output_successes()
+        #self.output_successes()
         self.output_operation_response_counter()
 
         #self.print_q_tables()

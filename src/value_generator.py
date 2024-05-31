@@ -145,7 +145,7 @@ class PromptData:
     failed_mappings: Dict = field(default_factory=dict)
 
 class SmartValueGenerator:
-    def __init__(self, operation_properties: OperationProperties, requirements: 'RequestRequirements' = None, engine="gpt-3.5-turbo-0125", temperature=0.7):
+    def __init__(self, operation_properties: OperationProperties, requirements: 'RequestRequirements' = None, engine="gpt-4o", temperature=0.7):
         self.operation_properties: OperationProperties = operation_properties
         self.processed_operation = remove_nulls(asdict(operation_properties))
         self.parameters: Dict[str, Dict] = self.processed_operation.get("parameters")
