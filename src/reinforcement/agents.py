@@ -390,7 +390,7 @@ class DataSourceAgent:
         self.epsilon = epsilon
 
     def initialize_q_table(self):
-        #available_data_sources = ["LLM", "DEPENDENCY"] if self.operation_graph.operation_edges else ["LLM"]
+        available_data_sources = ["LLM", "DEPENDENCY"] if self.operation_graph.operation_edges else ["LLM"]
         available_data_sources = ["LLM", "DEPENDENCY", "DEFAULT"] if self.operation_graph.operation_edges else [
             "DEFAULT", "LLM"]
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
@@ -467,14 +467,18 @@ class DependencyAgent:
             return self.get_random_action(operation_id)
         return self.get_best_action(operation_id)
 
-    def get_best_action(self, operation_id):
+    def get_best_action(self, operation_id, successful_responses, successful_params, successful_body):
         best_params = {}
         for param, dependent_ops in self.q_table[operation_id]['params'].items():
             best_dependent = {"dependent_val": None, "dependent_operation": None, "value": -np.inf, "in_value": None}
             for dependent_op, value_dict in dependent_ops.items():
                 for location, dependent_params in value_dict.items():
                     for dependent_param, value in dependent_params.items():
-                        if value > best_dependent["value"]:
+                        if value > best_dependent["value"] and location == "response" and dependent_op in successful_responses and dependent_param in successful_responses[dependent_op] and successful_responses[dependent_op][dependent_param]:
+                            best_dependent = {"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location}
+                        elif value > best_dependent["value"] and location == "params" and dependent_op in successful_params and dependent_param in successful_params[dependent_op] and successful_params[dependent_op][dependent_param]:
+                            best_dependent = {"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location}
+                        elif value > best_dependent["value"] and location == "body" and dependent_op in successful_body and dependent_param in successful_body[dependent_op] and successful_body[dependent_op][dependent_param]:
                             best_dependent = {"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location}
             best_params[param] = best_dependent
 
@@ -484,21 +488,30 @@ class DependencyAgent:
             for dependent_op, value_dict in dependent_ops.items():
                 for location, dependent_params in value_dict.items():
                     for dependent_param, value in dependent_params.items():
-                        if value > best_dependent["value"]:
+                        if value > best_dependent["value"] and location == "response" and dependent_op in successful_responses and dependent_param in successful_responses[dependent_op] and successful_responses[dependent_op][dependent_param]:
+                            best_dependent = {"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location}
+                        elif value > best_dependent["value"] and location == "params" and dependent_op in successful_params and dependent_param in successful_params[dependent_op] and successful_params[dependent_op][dependent_param]:
+                            best_dependent = {"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location}
+                        elif value > best_dependent["value"] and location == "body" and dependent_op in successful_body and dependent_param in successful_body[dependent_op] and successful_body[dependent_op][dependent_param]:
                             best_dependent = {"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location}
             best_body[param] = best_dependent
 
         return best_params, best_body
 
-    def get_random_action(self, operation_id):
+    def get_random_action(self, operation_id, successful_responses, successful_params, successful_body):
         random_params = {}
         for param, dependent_ops in self.q_table[operation_id]['params'].items():
             random_dependencies = []
             for dependent_op, value_dict in dependent_ops.items():
                 for location, dependent_params in value_dict.items():
                     for dependent_param, value in dependent_params.items():
-                        random_dependencies.append({"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location})
-            random_params[param] = random.choice(random_dependencies)
+                        if location == "response" and dependent_op in successful_responses and dependent_param in successful_responses[dependent_op] and successful_responses[dependent_op][dependent_param]:
+                            random_dependencies.append({"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location})
+                        elif location == "params" and dependent_op in successful_params and dependent_param in successful_params[dependent_op] and successful_params[dependent_op][dependent_param]:
+                            random_dependencies.append({"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location})
+                        elif location == "body" and dependent_op in successful_body and dependent_param in successful_body[dependent_op] and successful_body[dependent_op][dependent_param]:
+                            random_dependencies.append({"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location})
+            random_params[param] = random.choice(random_dependencies) if random_dependencies else {"dependent_val": None, "dependent_operation": None, "value": 0, "in_value": None}
 
         random_body = {}
         for param, dependent_ops in self.q_table[operation_id]['body'].items():
@@ -506,8 +519,13 @@ class DependencyAgent:
             for dependent_op, value_dict in dependent_ops.items():
                 for location, dependent_params in value_dict.items():
                     for dependent_param, value in dependent_params.items():
-                        random_dependencies.append({"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location})
-            random_body[param] = random.choice(random_dependencies)
+                        if location == "response" and dependent_op in successful_responses and dependent_param in successful_responses[dependent_op] and successful_responses[dependent_op][dependent_param]:
+                            random_dependencies.append({"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location})
+                        elif location == "params" and dependent_op in successful_params and dependent_param in successful_params[dependent_op] and successful_params[dependent_op][dependent_param]:
+                            random_dependencies.append({"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location})
+                        elif location == "body" and dependent_op in successful_body and dependent_param in successful_body[dependent_op] and successful_body[dependent_op][dependent_param]:
+                            random_dependencies.append({"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location})
+            random_body[param] = random.choice(random_dependencies) if random_dependencies else {"dependent_val": None, "dependent_operation": None, "value": 0, "in_value": None}
 
         return random_params, random_body
 
@@ -516,6 +534,8 @@ class DependencyAgent:
             for param, dependent in dependent_params.items():
                 current_q = 0
                 best_next_q = -np.inf
+                if not dependent["dependent_operation"]:
+                    continue
                 for location, dependent_params in self.q_table[operation_id]['params'][param][dependent["dependent_operation"]].items():
                     for dependent_param, value in dependent_params.items():
                         if dependent_param == dependent["dependent_val"]:
@@ -531,6 +551,8 @@ class DependencyAgent:
             for param, dependent in dependent_body.items():
                 current_q = 0
                 best_next_q = -np.inf
+                if not dependent["dependent_operation"]:
+                    continue
                 for location, dependent_params in self.q_table[operation_id]['body'][param][dependent["dependent_operation"]].items():
                     for dependent_param, value in dependent_params.items():
                         if dependent_param == dependent["dependent_val"]:

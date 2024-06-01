@@ -418,15 +418,24 @@ class QLearning:
                 self._deconstruct_response(item, response_mappings)
 
     def generate_default_values(self, operation_id):
+        default_assignments = {
+            "integer": 1,
+            "number": 1.0,
+            "string": "default",
+            "boolean": True,
+            "array": ["default"],
+            "object": {"default": 1}
+        }
+
         parameters = {}
         if self.operation_graph.operation_nodes[operation_id].operation_properties.parameters:
             for parameter_name, parameter_properties in self.operation_graph.operation_nodes[operation_id].operation_properties.parameters.items():
                 if parameter_properties.schema:
-                    parameters[parameter_name] = identify_generator(parameter_properties.schema.type)()
+                    parameters[parameter_name] = default_assignments[parameter_properties.schema.type]
         body = {}
         if self.operation_graph.operation_nodes[operation_id].operation_properties.request_body:
             for mime_type, body_properties in self.operation_graph.operation_nodes[operation_id].operation_properties.request_body.items():
-                body[mime_type] = identify_generator(body_properties.type)()
+                body[mime_type] = default_assignments[body_properties.type]
         return parameters, body
 
     def select_exploration_agent(self):
@@ -477,7 +486,7 @@ class QLearning:
             #    select_header = self.header_agent.get_random_action(operation_id)
             select_header = None
 
-            if time.time() - start_time > 20:
+            if time.time() - start_time > 10:
                 if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY":
                     data_source = self.data_source_agent.get_best_action(operation_id)
                 else:
@@ -523,11 +532,14 @@ class QLearning:
                 body = self.get_mapping([select_params.mime_type], body_mappings) if select_params.mime_type else None
             elif data_source == "DEPENDENCY":
                 if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY" or exploring_agent == "NONE":
-                    parameter_dependencies, request_body_dependencies = self.dependency_agent.get_best_action(operation_id)
+                    parameter_dependencies, request_body_dependencies = self.dependency_agent.get_best_action(operation_id, self.successful_responses, self.successful_parameters, self.successful_bodies)
                     llm_select_values = self.value_agent.get_best_action(operation_id)
                 else:
-                    parameter_dependencies, request_body_dependencies = self.dependency_agent.get_random_action(operation_id)
+                    parameter_dependencies, request_body_dependencies = self.dependency_agent.get_random_action(operation_id, self.successful_responses, self.successful_parameters, self.successful_bodies)
                     llm_select_values = self.value_agent.get_random_action(operation_id)
+
+                print("PARAMETER DEPENDENCIES: ", parameter_dependencies)
+                print("BODY DEPENDENCIES: ", request_body_dependencies)
 
                 llm_parameters = self.get_mapping(select_params.req_params,
                                               llm_select_values.param_mappings) if select_params.req_params else None
@@ -550,7 +562,7 @@ class QLearning:
                                 if self.successful_responses[dependency["dependent_operation"]][dependency["dependent_val"]]:
                                     parameters[parameter] = random.choice(self.successful_responses[dependency["dependent_operation"]][dependency["dependent_val"]])
                     for param in select_params.req_params:
-                        if param not in parameters:
+                        if param not in parameters or not parameters[param]:
                             parameters[param] = llm_parameters[param] if llm_parameters and param in llm_parameters else random_generator()()
 
                 body = {}
@@ -680,6 +692,7 @@ class QLearning:
                         response_content = json.loads(response.content)
                     except json.JSONDecodeError:
                         print("Error decoding JSON response content")
+                        print("Response content: ", response.content)
                         response_content = None
 
                     deconstructed_response: Dict[str, List] = {}
@@ -695,10 +708,14 @@ class QLearning:
                                 self.successful_responses[operation_id][response_prop] = response_vals
 
                     else:
-                        self.successful_primitives.setdefault(operation_id, []).append(response.content)
-                        if type(response.content) == list:
-                            for item in response.content:
-                                self.successful_primitives.setdefault(operation_id, []).append(item)
+                        if operation_id not in self.successful_primitives:
+                            self.successful_primitives[operation_id] = []
+                        if isinstance(response_content, list):
+                            for item in response_content:
+                                if item not in self.successful_primitives[operation_id]:
+                                    self.successful_primitives[operation_id].append(item)
+                        elif response_content not in self.successful_primitives[operation_id]:
+                            self.successful_primitives[operation_id].append(response_content)
 
             if response is not None: self.responses[response.status_code] += 1
             if response is not None and operation_id not in self.operation_response_counter: self.operation_response_counter[operation_id] = {response.status_code: 1}
@@ -739,7 +756,7 @@ class QLearning:
 
     def run(self):
         self.execute_operations()
-        #self.output_successes()
+        self.output_successes()
         self.output_operation_response_counter()
 
         #self.print_q_tables()
