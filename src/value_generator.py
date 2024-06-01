@@ -210,14 +210,16 @@ class SmartValueGenerator:
             prompt += get_informed_agent_body_prompt() + "\n"
             for request_response in responses:
                 if request_response is not None:
-                    prompt += f"FAILED REQUEST BODY: {request_response.request.request_body}\n"
-                    prompt += f"RESPONSE: {request_response.response.text}\n\n"
+                    prompt += f"PAST REQUEST BODY: {request_response.request.request_body}\n"
+                    prompt += f"RESPONSE: {request_response.response.text[:1000]}\n"
+                    prompt += f"STATUS CODE: {request_response.response.status_code}\n\n"
         else:
             prompt += get_informed_agent_params_prompt() + "\n"
             for request_response in responses:
                 if request_response is not None:
-                    prompt += f"FAILED PARAMETERS: {request_response.request.parameters}\n"
-                    prompt += f"RESPONSE: {request_response.response.text}\n\n"
+                    prompt += f"PAST PARAMETERS: {request_response.request.parameters}\n"
+                    prompt += f"RESPONSE: {request_response.response.text[:1000]}\n"
+                    prompt += f"STATUS CODE: {request_response.response.status_code}\n\n"
         if is_request_body:
             prompt += "REQUEST_BODY VALUES:\n"
         else:
@@ -485,7 +487,7 @@ class SmartValueGenerator:
                 generated_request_body = json.loads(generated_request_body)
             except json.JSONDecodeError:
                 generated_request_body = attempt_fix_json(generated_request_body)
-            validated_request_body = self.validate_request_body(generated_request_body.get("request_body"))
+            validated_request_body = self._validate_value_body(generated_request_body.get("request_body"))
             request_body[mime_type] = validated_request_body
         return request_body
 

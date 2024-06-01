@@ -554,6 +554,7 @@ class RequestGenerator:
                     if num_bodies < 10:
                         parameter_mappings[operation_id]['body'][mime].append([mime_param, 0])
                         occurrences[mime] = occurrences.get(mime, 0) + 1
+
                 #body_params = get_nested_obj_mappings(mime_params) # handler works for getting first obj values same as get_request_body_params
                 #for body_param, value in body_params.items():
                 #    if body_param not in parameter_mappings[operation_id]['body'][mime]:
@@ -577,6 +578,7 @@ class RequestGenerator:
             #    if dependent_response and dependent_response.response and dependent_response.response.ok:
             #        dependent_responses[edge].append(dependent_response)
 
+        print("Building value table generation for operation: ", curr_node.operation_id)
 
         occurrences = {}
         #self.handle_dependent_values(curr_node, dependent_responses, occurrences, parameter_mappings, responses)
@@ -627,6 +629,7 @@ class RequestGenerator:
                     responses[curr_node.operation_id].append(response)
                     self._validate_value_mappings(curr_node, parameter_mappings, self._embed_obj_val_list(response.request.parameters),
                                                   self._embed_obj_val_list(response.request.request_body), occurrences)
+
                 #if requirements:
                 #    self._validate_value_mappings(curr_node, parameter_mappings, self._embed_obj_val_list(requirements.parameter_requirements),
                 #                              self._embed_obj_val_list(requirements.request_body_requirements), occurrences)
