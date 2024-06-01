@@ -41,7 +41,7 @@ class QLearning:
         self.successful_parameters = {}
         self.successful_bodies = {}
         self.successful_responses = {}
-        self.primitive_successes = {}
+        self.successful_primitives = {}
         self.operation_response_counter = {}
         self._init_parameter_tracking()
         self._init_body_tracking()
@@ -85,12 +85,12 @@ class QLearning:
         for operation_idx, operation_responses in self.successful_responses.items():
             for response_name, response_values in operation_responses.items():
                 possible_options.extend(response_values)
-        for operation_idx, operation_primitives in self.primitive_successes.items():
+        for operation_idx, operation_primitives in self.successful_primitives.items():
             possible_options.extend(operation_primitives)
 
         if parameters:
             for parameter in parameters:
-                if random.random() < 0.5 and possible_options:
+                if random.random() < 0.7 and possible_options:
                     parameters[parameter] = random.choice(possible_options)
 
         if body:
@@ -695,8 +695,10 @@ class QLearning:
                                 self.successful_responses[operation_id][response_prop] = response_vals
 
                     else:
-                        self.primitive_successes.setdefault(operation_id, []).append(response.content)
-
+                        self.successful_primitives.setdefault(operation_id, []).append(response.content)
+                        if type(response.content) == list:
+                            for item in response.content:
+                                self.successful_primitives.setdefault(operation_id, []).append(item)
 
             if response is not None: self.responses[response.status_code] += 1
             if response is not None and operation_id not in self.operation_response_counter: self.operation_response_counter[operation_id] = {response.status_code: 1}
@@ -721,6 +723,12 @@ class QLearning:
             os.makedirs(output_dir)
         with open(f"{output_dir}/{self.operation_graph.spec_name}.json", "w") as f:
             json.dump(self.successful_responses, f, indent=2)
+
+        output_dir = os.path.join(os.path.dirname(__file__), "data/successful_values/success_primitives")
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        with open(f"{output_dir}/{self.operation_graph.spec_name}.json", "w") as f:
+            json.dump(self.successful_primitives, f, indent=2)
 
     def output_operation_response_counter(self):
         output_dir = os.path.join(os.path.dirname(__file__), "data/operation_response_counter")
