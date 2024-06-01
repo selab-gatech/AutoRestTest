@@ -4,7 +4,7 @@ info:
   description: Examples of different numerical algorithms accessible via REST
   version: "1.0"
 servers:
-- url: //localhost:30102/
+- url: http://localhost:30102/
 tags:
 - name: ncs-rest
   description: Ncs Rest
