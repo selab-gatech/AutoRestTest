@@ -134,17 +134,31 @@ class OperationDependencyComparator:
             if operation2.parameters:
                 parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_parameters, in_value="query to query")
             if operation2.request_body:
-                parameter_matchings.update(self.cosine_similarity(operation1_parameters, operation2_body, in_value="query to body"))
+                added_parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_body, in_value="query to body")
+                for parameter, similarities in added_parameter_matchings.items():
+                    parameter_matchings.setdefault(parameter, []).extend(similarities)
             if operation2.responses:
-                parameter_matchings.update(self.cosine_similarity(operation1_parameters, operation2_responses, in_value="query to response"))
+                added_parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_body,
+                                                                   in_value="query to body")
+                for parameter, similarities in added_parameter_matchings.items():
+                    parameter_matchings.setdefault(parameter, []).extend(similarities)
 
         if operation1.request_body:
             if operation2.parameters:
-                parameter_matchings.update(self.cosine_similarity(operation1_body, operation2_parameters, in_value="body to query"))
+                added_parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_body,
+                                                                   in_value="query to body")
+                for parameter, similarities in added_parameter_matchings.items():
+                    parameter_matchings.setdefault(parameter, []).extend(similarities)
             if operation2.request_body:
-                parameter_matchings.update(self.cosine_similarity(operation1_body, operation2_body, in_value="body to body"))
+                added_parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_body,
+                                                                   in_value="query to body")
+                for parameter, similarities in added_parameter_matchings.items():
+                    parameter_matchings.setdefault(parameter, []).extend(similarities)
             if operation2.responses:
-                parameter_matchings.update(self.cosine_similarity(operation1_body, operation2_responses, in_value="body to response"))
+                added_parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_body,
+                                                                   in_value="query to body")
+                for parameter, similarities in added_parameter_matchings.items():
+                    parameter_matchings.setdefault(parameter, []).extend(similarities)
 
         for parameter, similarities in parameter_matchings.items():
             for similarity in similarities:

@@ -41,6 +41,7 @@ class QLearning:
         self.successful_parameters = {}
         self.successful_bodies = {}
         self.successful_responses = {}
+        self.primitive_successes = {}
         self.operation_response_counter = {}
         self._init_parameter_tracking()
         self._init_body_tracking()
@@ -84,6 +85,8 @@ class QLearning:
         for operation_idx, operation_responses in self.successful_responses.items():
             for response_name, response_values in operation_responses.items():
                 possible_options.extend(response_values)
+        for operation_idx, operation_primitives in self.primitive_successes.items():
+            possible_options.extend(operation_primitives)
 
         if parameters:
             for parameter in parameters:
@@ -228,6 +231,7 @@ class QLearning:
             print("PARAMETERS: ", parameters)
             print("BODY: ", body)
             print("HEADER: ", header)
+            print("FULL URL: ", full_url)
             if body:
                 if not header:
                     header = {}
@@ -689,6 +693,10 @@ class QLearning:
                                         self.successful_responses[operation_id][response_prop].append(response_val)
                             else:
                                 self.successful_responses[operation_id][response_prop] = response_vals
+
+                    else:
+                        self.primitive_successes.setdefault(operation_id, []).append(response.content)
+
 
             if response is not None: self.responses[response.status_code] += 1
             if response is not None and operation_id not in self.operation_response_counter: self.operation_response_counter[operation_id] = {response.status_code: 1}
