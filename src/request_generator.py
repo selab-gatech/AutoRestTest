@@ -584,18 +584,17 @@ class RequestGenerator:
         desired_size = 10
         lowest_occurrences = min(occurrences.values()) if occurrences else 0
         if lowest_occurrences < desired_size:
-            failed_responses = []
+            possible_responses = []
             for i in range(3):
                 response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=i)
-                if response and response.response and not response.response.ok:
-                    failed_responses.append(response)
-                elif response and response.response and response.response.ok:
-                    responses[curr_node.operation_id].append(response)
+                possible_responses.append(response)
+                #elif response and response.response and response.response.ok:
+                #    responses[curr_node.operation_id].append(response)
             value_generator = SmartValueGenerator(operation_properties=curr_node.operation_properties, temperature=0.7, engine="gpt-4o")
-            if failed_responses:
+            if possible_responses:
                 parameters, request_body = (
-                    value_generator.generate_informed_value_agent_params(num_values=desired_size - lowest_occurrences, responses=failed_responses),
-                    value_generator.generate_informed_value_agent_body(num_values=desired_size - lowest_occurrences, responses=failed_responses))
+                    value_generator.generate_informed_value_agent_params(num_values=desired_size - lowest_occurrences, responses=possible_responses),
+                    value_generator.generate_informed_value_agent_body(num_values=desired_size - lowest_occurrences, responses=possible_responses))
             else:
                 parameters, request_body = value_generator.generate_value_agent_params(num_values=desired_size - lowest_occurrences), value_generator.generate_value_agent_body(num_values=desired_size - lowest_occurrences)
             self._validate_value_mappings(curr_node, parameter_mappings, parameters, request_body, occurrences)

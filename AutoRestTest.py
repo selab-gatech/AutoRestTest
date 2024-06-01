@@ -78,8 +78,6 @@ class AutoRestTest:
         self.local_test = local_test
         self.is_naive = is_naive
         _construct_db_dir()
-        self.db_q_table = os.path.join(os.path.dirname(__file__), "src/data/q_table")
-        self.db_graph = os.path.join(os.path.dirname(__file__), "src/data/graph")
         self.use_cached_graph = False
         self.use_cached_table = False
         self.use_cached_values = True
@@ -95,8 +93,9 @@ class AutoRestTest:
 
     def generate_graph(self, spec_name: str):
         spec_path = f"{self.spec_dir}/{spec_name}.yaml"
+        db_graph = os.path.join(os.path.dirname(__file__), f"src/data/graphs/{spec_name}_graph")
         print("CREATING GRAPH...")
-        with shelve.open(self.db_graph) as db:
+        with shelve.open(db_graph) as db:
             if spec_name in db and self.use_cached_graph:
                 operation_graph = self.init_graph(spec_name, spec_path)
                 graph_properties = db[spec_name]
@@ -122,7 +121,8 @@ class AutoRestTest:
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("BEGINNING Q-LEARNING...")
         q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=1800, mutation_rate=0.25)
-        with shelve.open(self.db_q_table) as db:
+        db_q_table = os.path.join(os.path.dirname(__file__), f"src/data/q_tables/{spec_name}_q_table")
+        with shelve.open(db_q_table) as db:
             if spec_name in db and self.use_cached_table:
                 compiled_q_table = db[spec_name]
                 #if self.use_cached_headers:

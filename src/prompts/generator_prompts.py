@@ -66,8 +66,8 @@ If the OpenAPI Specification includes examples, include some of the example valu
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 INFORMED_VALUE_AGENT_PROMPT = """
-Here is a list of [replace_type] that you generated values for, but received errors. Identify if the values caused the error, and ensure that your new generated values are compatible with the operation.
-It is still crucial that you generate values for all parameters and object properties.
+Here is a list of [replace_type] that you generated values for along with thier server responses. Identify if the values caused an error, and ensure that your new generated values are compatible with the operation.
+You MUST still generate values for all parameters and object properties.
 """
 
 #FEWSHOT_REQUEST_BODY_GEN_PROMPT = """

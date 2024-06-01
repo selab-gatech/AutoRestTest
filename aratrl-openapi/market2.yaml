@@ -10,7 +10,7 @@ info:
   version: "1.0"
 servers:
 #- url: http://localhost:30117/
-  - url: http://localhost:30117
+  - url: http://localhost:50117
 tags:
 - name: cart-rest-controller
   description: Cart Rest Controller
