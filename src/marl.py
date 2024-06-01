@@ -431,11 +431,27 @@ class QLearning:
         if self.operation_graph.operation_nodes[operation_id].operation_properties.parameters:
             for parameter_name, parameter_properties in self.operation_graph.operation_nodes[operation_id].operation_properties.parameters.items():
                 if parameter_properties.schema:
-                    parameters[parameter_name] = default_assignments[parameter_properties.schema.type]
+                    if random.random() < 0.75:
+                        parameters[parameter_name] = default_assignments[parameter_properties.schema.type]
+                    else:
+                        parameters[parameter_name] = identify_generator(parameter_properties.schema.type)()
         body = {}
         if self.operation_graph.operation_nodes[operation_id].operation_properties.request_body:
             for mime_type, body_properties in self.operation_graph.operation_nodes[operation_id].operation_properties.request_body.items():
-                body[mime_type] = default_assignments[body_properties.type]
+                if random.random() < 0.75:
+                    if body_properties.type == "object" and body_properties.properties:
+                        body[mime_type] = {prop: default_assignments[body_properties.properties[prop].type] for prop in body_properties.properties}
+                    elif body_properties.type == "array" and body_properties.items:
+                        body[mime_type] = [default_assignments[body_properties.items.type]]
+                    else:
+                        body[mime_type] = default_assignments[body_properties.type]
+                else:
+                    if body_properties.type == "object" and body_properties.properties:
+                        body[mime_type] = {prop: identify_generator(body_properties.properties[prop].type)() for prop in body_properties.properties}
+                    elif body_properties.type == "array" and body_properties.items:
+                        body[mime_type] = [identify_generator(body_properties.items.type)()]
+                    else:
+                        body[mime_type] = identify_generator(body_properties.type)()
         return parameters, body
 
     def select_exploration_agent(self):
