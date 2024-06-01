@@ -46,10 +46,8 @@ class QLearning:
         self._init_body_tracking()
         self._init_response_tracking()
 
-        self.operation_response_counter = {}
-
     def initialize_llm_agents(self):
-        self.header_agent.initialize_q_table()
+        #self.header_agent.initialize_q_table()
         self.value_agent.initialize_q_table()
 
     def print_q_tables(self):
@@ -429,7 +427,8 @@ class QLearning:
 
     def select_exploration_agent(self):
         # SELECT BETWEEN HEADER, (PARAMETER & BODY), (DATA_SOURCE & VALUE & DEPENDENCY)
-        agent_options = ["HEADER", "PARAMETER & BODY", "DATA_SOURCE & VALUE & DEPENDENCY", "NONE", "ALL"]
+        #agent_options = ["HEADER", "PARAMETER & BODY", "DATA_SOURCE & VALUE & DEPENDENCY", "NONE", "ALL"]
+        agent_options = ["PARAMETER & BODY", "DATA_SOURCE & VALUE & DEPENDENCY", "NONE", "ALL"]
         return random.choice(agent_options)
 
     def execute_operations(self):
@@ -438,8 +437,17 @@ class QLearning:
         complete_body_mappings = self.determine_complete_body_mappings()
 
         while time.time() - start_time < self.time_duration:
+
+            unique_processed_200s = set()
+            for operation_idx, status_codes in self.operation_response_counter.items():
+                for status_code in status_codes:
+                    if status_code // 100 == 2:
+                        unique_processed_200s.add(operation_idx)
+
             print("=========================================================================")
             print(f"Responses: {dict(self.responses)}")
+            print(f"Total number of operations: {len(self.operation_graph.operation_nodes)}.")
+            print(f"Number of uniquely successful operations: {len(unique_processed_200s)}.")
             print("TIME REMAINING: ", self.time_duration - (time.time() - start_time))
 
             exploring_agent = self.select_exploration_agent()
@@ -453,10 +461,11 @@ class QLearning:
             else:
                 select_params = self.parameter_agent.get_random_action(operation_id)
 
-            if exploring_agent != "HEADER" or exploring_agent == "NONE":
-                select_header = self.header_agent.get_best_action(operation_id)
-            else:
-                select_header = self.header_agent.get_random_action(operation_id)
+            #if exploring_agent != "HEADER" or exploring_agent == "NONE":
+            #    select_header = self.header_agent.get_best_action(operation_id)
+            #else:
+            #    select_header = self.header_agent.get_random_action(operation_id)
+            select_header = None
 
             if time.time() - start_time > 20:
                 if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY":
@@ -614,8 +623,8 @@ class QLearning:
                             self.body_object_agent.update_q_table(operation_id, mime, select_properties,
                                                                   self.determine_good_response_reward(response))
 
-                if exploring_agent == "HEADER":
-                    self.header_agent.update_q_table(operation_id, select_header, self.determine_header_reward(response))
+                #if exploring_agent == "HEADER":
+                #    self.header_agent.update_q_table(operation_id, select_header, self.determine_header_reward(response))
 
                 # For the first thirty seconds, do not update data source table (to account for minimal filled dependencies)
                 if exploring_agent == "DATA_SOURCE & VALUE & DEPENDENCY":

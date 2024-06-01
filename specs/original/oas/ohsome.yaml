@@ -13,7 +13,8 @@ info:
     url: https://ohsome.org/copyrights
   version: 1.2.3
 servers:
-  - url: http://localhost:9005/v1
+  - url: https://api.ohsome.org/v1
+  #- url: http://localhost:9005/v1
 tags:
   - name: Area
     description: Compute the area of polygonal OSM elements

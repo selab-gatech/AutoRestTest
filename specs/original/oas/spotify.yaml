@@ -1,6 +1,7 @@
 openapi: 3.0.1
 servers:
   - url: http://localhost:9008/v1
+  #- url: https://api.spotify.com/v1
 info:
   contact:
     name: sonallux

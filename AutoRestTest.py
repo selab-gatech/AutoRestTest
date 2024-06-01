@@ -33,7 +33,7 @@ def parse_args():
 def output_q_table(q_learning, spec_name):
     parameter_table = q_learning.parameter_agent.q_table
     body_obj_table = q_learning.body_object_agent.q_table
-    header_table = q_learning.header_agent.q_table
+    #header_table = q_learning.header_agent.q_table
     value_table = q_learning.value_agent.q_table
     operation_table = q_learning.operation_agent.q_table
     data_source_table = q_learning.data_source_agent.q_table
@@ -58,7 +58,7 @@ def output_q_table(q_learning, spec_name):
 
     compiled_q_table = {
         "OPERATION AGENT": operation_table,
-        "HEADER AGENT": header_table,
+        #"HEADER AGENT": header_table,
         "PARAMETER AGENT": simplified_param_table,
         "VALUE AGENT": value_table,
         "BODY OBJECT AGENT": simplified_body_table,
@@ -80,8 +80,8 @@ class AutoRestTest:
         _construct_db_dir()
         self.db_q_table = os.path.join(os.path.dirname(__file__), "src/data/q_table")
         self.db_graph = os.path.join(os.path.dirname(__file__), "src/data/graph")
-        self.use_cached_graph = True
-        self.use_cached_table = True
+        self.use_cached_graph = False
+        self.use_cached_table = False
         self.use_cached_values = True
         self.use_cached_headers = True
 
@@ -110,7 +110,10 @@ class AutoRestTest:
                     "edges": operation_graph.operation_edges,
                     "nodes": operation_graph.operation_nodes
                 }
-                db[spec_name] = graph_properties
+                try:
+                    db[spec_name] = graph_properties
+                except Exception as e:
+                    print("Error saving graph to shelve.")
                 print(f"Initialized new graph for {spec_name}.")
         print("GRAPH CREATED!!!")
         #operation_graph.print_graph()
@@ -118,26 +121,34 @@ class AutoRestTest:
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("BEGINNING Q-LEARNING...")
-        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=3600, mutation_rate=0.25)
+        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=1800, mutation_rate=0.25)
         with shelve.open(self.db_q_table) as db:
             if spec_name in db and self.use_cached_table:
                 compiled_q_table = db[spec_name]
-                if self.use_cached_headers:
-                    q_learning.header_agent.q_table = compiled_q_table["header"]
-                else:
-                    q_learning.header_agent.initialize_q_table()
+                #if self.use_cached_headers:
+                #    q_learning.header_agent.q_table = compiled_q_table["header"]
+                #else:
+                #    q_learning.header_agent.initialize_q_table()
+                #    db[spec_name]["header"] = q_learning.header_agent.q_table
                 if self.use_cached_values:
                     q_learning.value_agent.q_table = compiled_q_table["value"]
                 else:
                     q_learning.value_agent.initialize_q_table()
+                    try:
+                        db[spec_name]["value"] = q_learning.value_agent.q_table
+                    except Exception as e:
+                        print("Error saving value agent to shelve.")
                 print(f"Loaded Q-table for {spec_name} from shelve.")
             else:
                 q_learning.initialize_llm_agents()
                 compiled_q_table = {
-                    "header": q_learning.header_agent.q_table,
+                #    "header": q_learning.header_agent.q_table,
                     "value": q_learning.value_agent.q_table
                 }
-                db[spec_name] = compiled_q_table
+                try:
+                    db[spec_name] = compiled_q_table
+                except:
+                    print("Error saving Q-table to shelve.")
                 print(f"Initialized new Q-tables for {spec_name}.")
         q_learning.parameter_agent.initialize_q_table()
         q_learning.operation_agent.initialize_q_table()

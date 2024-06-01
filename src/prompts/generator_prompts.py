@@ -35,6 +35,7 @@ Given a summary of an operation its request body schema from its OpenAPI Specifi
 }
 In the case where the request body is an object, return a correctly formatted object as the [correct request body] value. In the object, you must include every possible object property.
 In the case where the request body is an array, use a list as the request body value, with the correct values for each item in the array. Do not generate lists with more than two items.
+If the OpenAPI Specification includes examples, include some of the example values in your generated values. If the OpenAPI Specification includes enums, ensure that your generated values are within the enum values.
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 VALUE_AGENT_PARAMETERS_PROMPT = """
@@ -61,6 +62,7 @@ Given a summary of an operation and its parameters schema from its OpenAPI Speci
 }
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value.
 In the case where a given parameter is an array, use a list as the parameter value. Do not generate lists with more than two items.
+If the OpenAPI Specification includes examples, include some of the example values in your generated values. If the OpenAPI Specification includes enums, ensure that your generated values are within the enum values.
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 INFORMED_VALUE_AGENT_PROMPT = """

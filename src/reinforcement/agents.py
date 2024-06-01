@@ -68,12 +68,12 @@ class HeaderAgent:
     def initialize_q_table(self):
         request_generator = self.operation_graph.request_generator
         token_list = []
+
         print("Initiating Header Agent Q-Table")
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
             token_info = request_generator.get_auth_info(operation_node, 5)
             for token in token_info:
                 token_list.append(construct_basic_token(token))
-        print("Token list has been constructed with the following number of tokens: ", len(token_list))
         for operation_id in self.operation_graph.operation_nodes.keys():
             if operation_id not in self.q_table:
                 self.q_table[operation_id] = []
@@ -81,7 +81,6 @@ class HeaderAgent:
             for i in range(min(9, len(token_list))):
                 self.q_table[operation_id].append([token_list[i],0])
             self.q_table[operation_id].append([None,0])
-        print(self.q_table)
         print("Initiated Header Agent Q-Table")
 
     def get_action(self, operation_id):
