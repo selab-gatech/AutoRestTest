@@ -438,18 +438,20 @@ class QLearning:
         body = {}
         if self.operation_graph.operation_nodes[operation_id].operation_properties.request_body:
             for mime_type, body_properties in self.operation_graph.operation_nodes[operation_id].operation_properties.request_body.items():
-                if random.random() < 0.75:
-                    if body_properties.type == "object" and body_properties.properties:
-                        body[mime_type] = {prop: default_assignments[body_properties.properties[prop].type] for prop in body_properties.properties}
-                    elif body_properties.type == "array" and body_properties.items:
+                if body_properties.type == "object" and body_properties.properties:
+                    for prop in body_properties.properties:
+                        if random.random() < 0.75:
+                            body[mime_type] = {prop: default_assignments[body_properties.properties[prop].type] for prop in body_properties.properties}
+                        else:
+                            body[mime_type] = {prop: identify_generator(body_properties.properties[prop].type)() for prop in body_properties.properties}
+                elif body_properties.type == "array" and body_properties.items:
+                    if random.random() < 0.75:
                         body[mime_type] = [default_assignments[body_properties.items.type]]
                     else:
-                        body[mime_type] = default_assignments[body_properties.type]
-                else:
-                    if body_properties.type == "object" and body_properties.properties:
-                        body[mime_type] = {prop: identify_generator(body_properties.properties[prop].type)() for prop in body_properties.properties}
-                    elif body_properties.type == "array" and body_properties.items:
                         body[mime_type] = [identify_generator(body_properties.items.type)()]
+                else:
+                    if random.random() < 0.75:
+                        body[mime_type] = default_assignments[body_properties.type]
                     else:
                         body[mime_type] = identify_generator(body_properties.type)()
         return parameters, body
@@ -502,7 +504,7 @@ class QLearning:
             #    select_header = self.header_agent.get_random_action(operation_id)
             select_header = None
 
-            if time.time() - start_time > 10:
+            if time.time() - start_time > 15:
                 if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY":
                     data_source = self.data_source_agent.get_best_action(operation_id)
                 else:
@@ -552,7 +554,7 @@ class QLearning:
                     llm_select_values = self.value_agent.get_best_action(operation_id)
                 else:
                     parameter_dependencies, request_body_dependencies = self.dependency_agent.get_random_action(operation_id, self.successful_responses, self.successful_parameters, self.successful_bodies)
-                    llm_select_values = self.value_agent.get_random_action(operation_id)
+                    llm_select_values = self.value_agent.get_best_action(operation_id)
 
                 print("PARAMETER DEPENDENCIES: ", parameter_dependencies)
                 print("BODY DEPENDENCIES: ", request_body_dependencies)
@@ -613,7 +615,7 @@ class QLearning:
 
             # Use body agent to select properties
             all_select_properties = {}
-            if body and data_source != "DEFAULT" and data_source != "WAITING":
+            if body and data_source != "WAITING":
                 for mime, body_properties in body.items():
                     if type(body_properties) == dict:
                         select_properties = self.body_object_agent.get_action(operation_id, mime)

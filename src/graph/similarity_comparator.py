@@ -27,7 +27,7 @@ class SimilarityValue:
 class OperationDependencyComparator:
     def __init__(self):
         self.model = load("glove-wiki-gigaword-50")
-        self.threshold = 0.75
+        self.threshold = 0.8
 
     @staticmethod
     def handle_parameter_cases(parameter):
@@ -138,25 +138,21 @@ class OperationDependencyComparator:
                 for parameter, similarities in added_parameter_matchings.items():
                     parameter_matchings.setdefault(parameter, []).extend(similarities)
             if operation2.responses:
-                added_parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_body,
-                                                                   in_value="query to body")
+                added_parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_responses, in_value="query to response")
                 for parameter, similarities in added_parameter_matchings.items():
                     parameter_matchings.setdefault(parameter, []).extend(similarities)
 
         if operation1.request_body:
             if operation2.parameters:
-                added_parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_body,
-                                                                   in_value="query to body")
+                added_parameter_matchings = self.cosine_similarity(operation1_body, operation2_parameters, in_value="body to query")
                 for parameter, similarities in added_parameter_matchings.items():
                     parameter_matchings.setdefault(parameter, []).extend(similarities)
             if operation2.request_body:
-                added_parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_body,
-                                                                   in_value="query to body")
+                added_parameter_matchings = self.cosine_similarity(operation1_body, operation2_body, in_value="body to body")
                 for parameter, similarities in added_parameter_matchings.items():
                     parameter_matchings.setdefault(parameter, []).extend(similarities)
             if operation2.responses:
-                added_parameter_matchings = self.cosine_similarity(operation1_parameters, operation2_body,
-                                                                   in_value="query to body")
+                added_parameter_matchings = self.cosine_similarity(operation1_body, operation2_responses, in_value="body to response")
                 for parameter, similarities in added_parameter_matchings.items():
                     parameter_matchings.setdefault(parameter, []).extend(similarities)
 

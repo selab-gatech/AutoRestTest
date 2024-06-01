@@ -78,7 +78,7 @@ class AutoRestTest:
         self.local_test = local_test
         self.is_naive = is_naive
         _construct_db_dir()
-        self.use_cached_graph = True
+        self.use_cached_graph = False
         self.use_cached_table = True
         self.use_cached_values = True
         self.use_cached_headers = True
@@ -155,6 +155,7 @@ class AutoRestTest:
         q_learning.body_object_agent.initialize_q_table()
         q_learning.dependency_agent.initialize_q_table()
         q_learning.data_source_agent.initialize_q_table()
+        output_q_table(q_learning, spec_name)
         q_learning.run()
         print("Q-LEARNING COMPLETED!!!")
         return q_learning
