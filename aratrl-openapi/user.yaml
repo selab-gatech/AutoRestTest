@@ -9,7 +9,7 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0
   version: "1.0"
 servers:
-- url: //localhost:30115/
+- url: http://localhost:30115/
 tags:
 - name: basic-error-controller
   description: Basic Error Controller

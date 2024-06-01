@@ -4,7 +4,7 @@ info:
   description: Examples of different string algorithms accessible via REST
   version: "1.0"
 servers:
-- url: //localhost:30108/
+- url: http://localhost:30108/
 tags:
 - name: scs-rest
   description: Scs Rest
