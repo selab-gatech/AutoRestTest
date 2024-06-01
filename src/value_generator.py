@@ -190,7 +190,8 @@ class SmartValueGenerator:
         prompt += template_gen_prompt(summary=self.summary, schema=schema)
         prompt += RETRY_PARAMETER_REQUIREMENTS_PROMPT + '\n'.join(select_params.keys()) + "\n\n"
         prompt += FAILED_PARAMETER_MATCHINGS_PROMPT + json.dumps(failed_mappings, indent=2) + "\n"
-        prompt += FAILED_PARAMETER_RESPONSE_PROMPT + response.text + "\n\n"
+        if response is not None:
+            prompt += FAILED_PARAMETER_RESPONSE_PROMPT + response.text + "\n\n"
         if is_request_body:
             prompt += "REQUEST_BODY VALUES:\n"
         else:
@@ -207,14 +208,16 @@ class SmartValueGenerator:
         prompt += template_gen_prompt(summary=self.summary, schema=schema)
         if is_request_body:
             prompt += get_informed_agent_body_prompt() + "\n"
-            for response in responses:
-                prompt += f"FAILED REQUEST BODY: {response.request.request_body}\n"
-                prompt += f"RESPONSE: {response.response.text}\n\n"
+            for request_response in responses:
+                if request_response is not None:
+                    prompt += f"FAILED REQUEST BODY: {request_response.request.request_body}\n"
+                    prompt += f"RESPONSE: {request_response.response.text}\n\n"
         else:
             prompt += get_informed_agent_params_prompt() + "\n"
-            for response in responses:
-                prompt += f"FAILED PARAMETERS: {response.request.parameters}\n"
-                prompt += f"RESPONSE: {response.response.text}\n\n"
+            for request_response in responses:
+                if request_response is not None:
+                    prompt += f"FAILED PARAMETERS: {request_response.request.parameters}\n"
+                    prompt += f"RESPONSE: {request_response.response.text}\n\n"
         if is_request_body:
             prompt += "REQUEST_BODY VALUES:\n"
         else:

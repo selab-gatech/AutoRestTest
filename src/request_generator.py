@@ -263,7 +263,7 @@ class RequestGenerator:
         failed_responses = []
         for i in range(3):
             response = self.create_and_send_request(operation_node, allow_retry=True, permitted_retries=1)
-            if response and response.response and not response.response.ok:
+            if response is not None and response.response and not response.response.ok:
                 failed_responses.append(response)
         if failed_responses:
             parameter_mappings, request_body_mappings = (
@@ -587,7 +587,8 @@ class RequestGenerator:
             possible_responses = []
             for i in range(3):
                 response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=i)
-                possible_responses.append(response)
+                if response is not None:
+                    possible_responses.append(response)
                 #elif response and response.response and response.response.ok:
                 #    responses[curr_node.operation_id].append(response)
             value_generator = SmartValueGenerator(operation_properties=curr_node.operation_properties, temperature=0.7, engine="gpt-4o")
