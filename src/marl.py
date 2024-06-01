@@ -444,10 +444,16 @@ class QLearning:
                     if status_code // 100 == 2:
                         unique_processed_200s.add(operation_idx)
 
+            not_hit_operations = set()
+            for operation_idx in self.operation_graph.operation_nodes.keys():
+                if operation_idx not in unique_processed_200s:
+                    not_hit_operations.add(operation_idx)
+
             print("=========================================================================")
             print(f"Responses: {dict(self.responses)}")
             print(f"Total number of operations: {len(self.operation_graph.operation_nodes)}.")
             print(f"Number of uniquely successful operations: {len(unique_processed_200s)}.")
+            print(f"Operations not hit: {not_hit_operations}.")
             print("TIME REMAINING: ", self.time_duration - (time.time() - start_time))
 
             exploring_agent = self.select_exploration_agent()
@@ -476,7 +482,7 @@ class QLearning:
                 data_source = "WAITING"
 
             print("SENDING TO OPERATION: ", operation_id)
-            print("EXPLORING AGENCT: ", exploring_agent)
+            print("EXPLORING AGENT: ", exploring_agent)
             print("DATA SOURCE: ", data_source)
             print("SELECTED PARAMETERS: ", select_params.req_params)
             print("SELECTED BODY: ", select_params.mime_type)
