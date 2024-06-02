@@ -3,7 +3,7 @@ info:
   title: Features service
   version: "1.0"
 servers:
-- url: http://localhost:30100/
+- url: http://localhost:30100
 paths:
   /products/{productName}/features:
     get:

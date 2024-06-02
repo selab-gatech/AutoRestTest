@@ -1,6 +1,6 @@
 openapi: 3.0.0
 servers:
-  - url: 'http://localhost:30106/rest'
+  - url: 'http://localhost:50106/rest'
 info:
   description: 'REST countries API'
   title: REST countries API

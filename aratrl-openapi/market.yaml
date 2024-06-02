@@ -11,7 +11,7 @@ info:
 servers:
   #- url: http://localhost:8081/products
   #- url: http://localhost:8080
-  - url: http://localhost:50117
+  - url: http://localhost:30117
     description: Inferred Url
 tags:
   - name: backend-controller
