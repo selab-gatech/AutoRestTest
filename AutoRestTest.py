@@ -4,6 +4,7 @@ import os
 import shelve
 
 from src.generate_graph import OperationGraph
+from src.graph.similarity_comparator import OperationDependencyComparator
 from src.marl import QLearning
 from src.request_generator import RequestGenerator
 

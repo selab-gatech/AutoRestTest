@@ -724,6 +724,7 @@ class QLearning:
                                         self.successful_responses[operation_id][response_prop].append(response_val)
                             else:
                                 self.successful_responses[operation_id][response_prop] = response_vals
+                                self.dependency_agent.dynamic_responses(operation_id, response_prop)
 
                     else:
                         if operation_id not in self.successful_primitives:

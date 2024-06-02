@@ -107,10 +107,10 @@ class OperationDependencyComparator:
                 param_param_similarity[parameter] = []
                 for dependency_pairing in operation2_vals:
                     for processed_dependency, dependency in dependency_pairing.items():
-                        parameter_encoding = self.encode_sentence_or_word(processed_parameter)
-                        dependency_encoding = self.encode_sentence_or_word(processed_dependency)
-                        if parameter_encoding is not None and dependency_encoding is not None:
-                            similarity = 1 - cosine(parameter_encoding, dependency_encoding)
+                        param_embedding = self.encode_sentence_or_word(processed_parameter)
+                        dependency_embedding = self.encode_sentence_or_word(processed_dependency)
+                        if param_embedding is not None and dependency_embedding is not None:
+                            similarity = 1 - cosine(param_embedding, dependency_embedding)
                             param_param_similarity[parameter].append(SimilarityValue(
                                 dependent_val=dependency,
                                 in_value=in_value,

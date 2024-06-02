@@ -30,6 +30,7 @@ class OperationGraph:
         self.operation_nodes: Dict[str, OperationNode] = {}
         self.operation_edges: List[OperationEdge] = []
         self.next_most_similar_count = 3
+        self.dependency_comparator = OperationDependencyComparator()
 
     def print_graph(self):
         for operation_id, operation_node in self.operation_nodes.items():
@@ -107,14 +108,13 @@ class OperationGraph:
                 return
 
     def determine_dependencies(self, operations):
-        operation_dependency_comparator = OperationDependencyComparator()
         for operation_id, operation_properties in operations.items():
             for dependent_operation_id, dependent_operation_properties in operations.items():
                 if operation_id == dependent_operation_id:
                     continue
                 # Note: We consider responses from get requests as dependencies for request bodies
                 # Note: We consider responses from post/put requests as dependencies for get requests
-                parameter_similarities, next_closest_similarities = operation_dependency_comparator.compare_cosine(operation_properties, dependent_operation_properties)
+                parameter_similarities, next_closest_similarities = self.dependency_comparator.compare_cosine(operation_properties, dependent_operation_properties)
                 self.update_operation_dependencies(operation_id, dependent_operation_id, parameter_similarities, next_closest_similarities)
 
     def validate_graph(self):

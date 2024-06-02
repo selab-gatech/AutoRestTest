@@ -5,6 +5,8 @@ from typing import List, Dict, Any, Tuple
 import numpy as np
 import random
 
+from scipy.spatial.distance import cosine
+
 from src.generate_graph import OperationGraph
 from src.utils import get_combinations, get_param_combinations, \
     construct_basic_token, get_required_params, get_required_body_params
@@ -564,6 +566,24 @@ class DependencyAgent:
                         if dependent_param == dependent["dependent_val"]:
                             self.q_table[operation_id]['body'][param][dependent["dependent_operation"]][location][dependent_param] = new_q
 
+    def dynamic_responses(self, new_operation_response_id, new_property):
+        dependency_comparator = self.operation_graph.dependency_comparator
+        for operation_id, operation_props in self.q_table.items():
+            for location, param_values in operation_props.items():
+                for param, dependent_values in param_values.items():
+                    processed_param = dependency_comparator.handle_parameter_cases(param)
+                    processed_response = dependency_comparator.handle_parameter_cases(new_property)
+                    param_embedding = dependency_comparator.encode_sentence_or_word(processed_param)
+                    response_embedding = dependency_comparator.encode_sentence_or_word(processed_response)
+                    if param_embedding is not None and response_embedding is not None:
+                        similarity = 1 - cosine(param_embedding, response_embedding)
+                        if similarity > dependency_comparator.threshold:
+                            if new_operation_response_id not in dependent_values:
+                                dependent_values[new_operation_response_id] = {}
+                            if "response" not in dependent_values[new_operation_response_id]:
+                                dependent_values[new_operation_response_id]["response"] = {}
+                            dependent_values[new_operation_response_id]["response"][new_property] = 0
+                            print("New dependency discovered between operation {} and operation {} with parameter {} and response {}".format(operation_id, new_operation_response_id, param, new_property))
 
 
 
