@@ -393,8 +393,7 @@ class DataSourceAgent:
 
     def initialize_q_table(self):
         available_data_sources = ["LLM", "DEPENDENCY"] if self.operation_graph.operation_edges else ["LLM"]
-        available_data_sources = ["LLM", "DEPENDENCY", "DEFAULT"] if self.operation_graph.operation_edges else [
-            "DEFAULT", "LLM"]
+        available_data_sources = ["LLM", "DEPENDENCY", "DEFAULT"]
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
             if operation_id not in self.q_table:
                 self.q_table[operation_id] = {data_source: 0 for data_source in available_data_sources}
