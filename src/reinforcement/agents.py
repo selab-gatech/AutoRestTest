@@ -390,13 +390,18 @@ class DataSourceAgent:
         self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
+        self.available_data_sources = ["LLM", "DEPENDENCY", "DEFAULT"] if operation_graph.operation_edges else ["LLM", "DEFAULT"]
 
     def initialize_q_table(self):
-        available_data_sources = ["LLM", "DEPENDENCY"] if self.operation_graph.operation_edges else ["LLM"]
-        available_data_sources = ["LLM", "DEPENDENCY", "DEFAULT"]
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
             if operation_id not in self.q_table:
-                self.q_table[operation_id] = {data_source: 0 for data_source in available_data_sources}
+                self.q_table[operation_id] = {data_source: 0 for data_source in self.available_data_sources}
+
+    def initialize_dependency_source(self):
+        if "DEPENDENCY" not in self.available_data_sources:
+            for operation_id, data_sources in self.q_table.items():
+                self.q_table[operation_id]["DEPENDENCY"] = 0
+            self.available_data_sources.append("DEPENDENCY")
 
     def get_action(self, operation_id):
         if random.uniform(0, 1) < self.epsilon:
@@ -566,6 +571,7 @@ class DependencyAgent:
                             self.q_table[operation_id]['body'][param][dependent["dependent_operation"]][location][dependent_param] = new_q
 
     def dynamic_responses(self, new_operation_response_id, new_property):
+        updated_tables = False
         dependency_comparator = self.operation_graph.dependency_comparator
         for operation_id, operation_props in self.q_table.items():
             for location, param_values in operation_props.items():
@@ -582,7 +588,9 @@ class DependencyAgent:
                             if "response" not in dependent_values[new_operation_response_id]:
                                 dependent_values[new_operation_response_id]["response"] = {}
                             dependent_values[new_operation_response_id]["response"][new_property] = 0
+                            updated_tables = True
                             print("New dependency discovered between operation {} and operation {} with parameter {} and response {}".format(operation_id, new_operation_response_id, param, new_property))
+        return updated_tables
 
 
 
