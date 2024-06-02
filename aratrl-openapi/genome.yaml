@@ -12,7 +12,7 @@ info:
     url: https://github.com/genome-nexus/genome-nexus/blob/master/LICENSE
   version: "2.0"
 servers:
-- url: http://localhost:30110/
+- url: http://localhost:30110
 - url: https://localhost:30110/
 tags:
 - name: info-controller

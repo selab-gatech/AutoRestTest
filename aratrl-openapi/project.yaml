@@ -19,8 +19,7 @@ info:
     url: https://apache.org/license.html
   version: "1.0"
 servers:
-#- url: //localhost:30118/
-  - url: http://localhost:50118
+  - url: http://localhost:30118
 tags:
 - name: assignment-resource
   description: Assignment Resource
