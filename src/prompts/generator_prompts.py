@@ -66,8 +66,12 @@ If the OpenAPI Specification includes examples in an example field or descriptio
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 INFORMED_VALUE_AGENT_PROMPT = """
-Here is a list of [replace_type] that you generated values for, along with their server responses indicating an error. Identify if the values caused an error, and ensure that your new generated values are compatible with the operation.
-You MUST still generate values for all parameters and object properties. You MUST use example or enum values when provided with them in a field or description in your generated values.
+Here is a list of [replace_type] that you generated values for, along with their server responses. Use whether the past values generated an error to ensure that your new generated values are compatible with the operation.
+"""
+
+ENUM_EXAMPLE_CONSTRAINT_PROMPT = """
+You MUST generate values for all parameters and object properties. 
+You MUST include all example or enum values when provided with them in a field or description of each parameter or request body property in your generated values.
 """
 
 #FEWSHOT_REQUEST_BODY_GEN_PROMPT = """

@@ -17,7 +17,7 @@ from src.prompts.generator_prompts import (REQUEST_BODY_GEN_PROMPT,
                                            IDENTIFY_AUTHENTICATION_GEN_PROMPT, PARAMETER_NECESSITY_PROMPT,
                                            get_value_agent_body_prompt, get_value_agent_params_prompt, FIX_JSON_OBJ,
                                            INFORMED_VALUE_AGENT_PROMPT, get_informed_agent_body_prompt,
-                                           get_informed_agent_params_prompt)
+                                           get_informed_agent_params_prompt, ENUM_EXAMPLE_CONSTRAINT_PROMPT)
 from src.prompts.system_prompts import PARAMETERS_GEN_SYSTEM_MESSAGE, REQUEST_BODY_GEN_SYSTEM_MESSAGE, \
     IDENTIFY_AUTHENTICATION_SYSTEM_MESSAGE, FIX_JSON_SYSTEM_MESSAGE
 from src.utils import OpenAILanguageModel, remove_nulls, get_request_body_params, get_object_shallow_mappings, \
@@ -170,6 +170,8 @@ class SmartValueGenerator:
         else:
             prompt += PARAMETER_REQUIREMENTS_PROMPT + '\n'.join(select_params.keys()) + "\n\n"
 
+        prompt += "Reminder:\n" + ENUM_EXAMPLE_CONSTRAINT_PROMPT + "\n"
+
         if is_request_body:
             prompt += "REQUEST_BODY VALUES:\n"
         else:
@@ -211,15 +213,20 @@ class SmartValueGenerator:
             for request_response in responses:
                 if request_response is not None:
                     prompt += f"PAST REQUEST BODY: {request_response.request.request_body}\n"
-                    prompt += f"RESPONSE: {request_response.response.text[:1000]}\n"
-                    prompt += f"STATUS CODE: {request_response.response.status_code}\n\n"
+                    prompt += f"STATUS CODE: {request_response.response.status_code}\n"
+                    prompt += f"RESPONSE: {request_response.response.text[:1000]}\n\n"
+
         else:
             prompt += get_informed_agent_params_prompt() + "\n"
             for request_response in responses:
                 if request_response is not None:
                     prompt += f"PAST PARAMETERS: {request_response.request.parameters}\n"
-                    prompt += f"RESPONSE: {request_response.response.text[:1000]}\n"
-                    prompt += f"STATUS CODE: {request_response.response.status_code}\n\n"
+                    prompt += f"STATUS CODE: {request_response.response.status_code}\n"
+                    prompt += f"RESPONSE: {request_response.response.text[:1000]}\n\n"
+
+        prompt += "Regardless of the past responses:"
+        prompt += ENUM_EXAMPLE_CONSTRAINT_PROMPT + "\n"
+
         if is_request_body:
             prompt += "REQUEST_BODY VALUES:\n"
         else:
