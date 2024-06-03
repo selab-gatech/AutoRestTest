@@ -121,7 +121,7 @@ class AutoRestTest:
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("BEGINNING Q-LEARNING...")
-        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=1800, mutation_rate=0.25)
+        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=1800, mutation_rate=0.2)
         db_q_table = os.path.join(os.path.dirname(__file__), f"src/data/q_tables/{spec_name}_q_table")
         with shelve.open(db_q_table) as db:
             if spec_name in db and self.use_cached_table:
