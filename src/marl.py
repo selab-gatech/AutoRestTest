@@ -188,7 +188,10 @@ class QLearning:
                 if parameter_name in parameters:
                     mutate_parameter_type = random.random() < parameter_type_mutate_rate
                     if parameter_properties.schema and mutate_parameter_type:
-                        parameters[parameter_name] = self.get_mutated_value(parameter_properties.schema.type)
+                        if parameter_properties.schema.type:
+                            parameters[parameter_name] = self.get_mutated_value(parameter_properties.schema.type)
+                        else:
+                            parameters[parameter_name] = random_generator()()
 
                     if parameters[parameter_name] is None:
                         parameters.pop(parameter_name, None)
@@ -197,7 +200,7 @@ class QLearning:
             for mime, body_properties in operation_properties.request_body.items():
                 mutate_body = random.random() < body_mutate_rate
                 if mime in body and mutate_body:
-                    if random.random() < 0.5:
+                    if random.random() < 0.5 and body_properties.type:
                         body[mime] = self.get_mutated_value(body_properties.type)
                     else:
                         body[mime] = randomize_object()
@@ -376,9 +379,9 @@ class QLearning:
                             self.successful_responses[operation_id] = {param: [] for param in response_params}
 
     def _construct_body_property(self, body_property, unconstructed_body):
-        if body_property.type == "object":
+        if body_property.properties or body_property.type == "object":
             return {prop: val for prop, val in unconstructed_body.items() if prop in body_property.properties}
-        elif body_property.type == "array":
+        elif body_property.items or body_property.type == "array":
             return [self._construct_body_property(body_property.items, unconstructed_body)]
         else:
             return None
@@ -431,24 +434,30 @@ class QLearning:
         if self.operation_graph.operation_nodes[operation_id].operation_properties.parameters:
             for parameter_name, parameter_properties in self.operation_graph.operation_nodes[operation_id].operation_properties.parameters.items():
                 if parameter_properties.schema:
-                    if random.random() < 0.75:
+                    if random.random() < 0.75 and parameter_properties.schema.type:
                         parameters[parameter_name] = default_assignments[parameter_properties.schema.type]
-                    else:
+                    elif parameter_properties.schema.type:
                         parameters[parameter_name] = identify_generator(parameter_properties.schema.type)()
+                    else:
+                        parameters[parameter_name] = random_generator()()
         body = {}
         if self.operation_graph.operation_nodes[operation_id].operation_properties.request_body:
             for mime_type, body_properties in self.operation_graph.operation_nodes[operation_id].operation_properties.request_body.items():
                 if body_properties.properties:
                     for prop in body_properties.properties:
-                        if random.random() < 0.75:
-                            body[mime_type] = {prop: default_assignments[body_properties.properties[prop].type] for prop in body_properties.properties}
+                        if random.random() < 0.75 and body_properties.properties[prop].type:
+                            body[mime_type] = {prop: default_assignments[body_properties.properties[prop].type]}
+                        elif body_properties.properties[prop].type:
+                            body[mime_type] = {prop: identify_generator(body_properties.properties[prop].type)()}
                         else:
-                            body[mime_type] = {prop: identify_generator(body_properties.properties[prop].type)() for prop in body_properties.properties}
+                            body[mime_type] = {prop: random_generator()()}
                 elif body_properties.items:
-                    if random.random() < 0.75:
+                    if random.random() < 0.75 and body_properties.items.type:
                         body[mime_type] = [default_assignments[body_properties.items.type]]
-                    else:
+                    elif body_properties.items.type:
                         body[mime_type] = [identify_generator(body_properties.items.type)()]
+                    else:
+                        body[mime_type] = [random_generator()()]
                 else:
                     if random.random() < 0.75 and body_properties.type:
                         body[mime_type] = default_assignments[body_properties.type]
