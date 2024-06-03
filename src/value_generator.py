@@ -17,7 +17,8 @@ from src.prompts.generator_prompts import (REQUEST_BODY_GEN_PROMPT,
                                            IDENTIFY_AUTHENTICATION_GEN_PROMPT, PARAMETER_NECESSITY_PROMPT,
                                            get_value_agent_body_prompt, get_value_agent_params_prompt, FIX_JSON_OBJ,
                                            INFORMED_VALUE_AGENT_PROMPT, get_informed_agent_body_prompt,
-                                           get_informed_agent_params_prompt, ENUM_EXAMPLE_CONSTRAINT_PROMPT)
+                                           get_informed_agent_params_prompt, ENUM_EXAMPLE_CONSTRAINT_PROMPT,
+                                           VALUE_AGENT_BODY_FEWSHOT_PROMPT, VALUE_AGENT_PARAMS_FEWSHOT_PROMPT)
 from src.prompts.system_prompts import PARAMETERS_GEN_SYSTEM_MESSAGE, REQUEST_BODY_GEN_SYSTEM_MESSAGE, \
     IDENTIFY_AUTHENTICATION_SYSTEM_MESSAGE, FIX_JSON_SYSTEM_MESSAGE
 from src.utils import OpenAILanguageModel, remove_nulls, get_request_body_params, get_object_shallow_mappings, \
@@ -162,7 +163,7 @@ class SmartValueGenerator:
         select_params = prompt_data.select_params
         is_request_body = prompt_data.is_request_body
 
-        prompt = f"{GEN_PROMPT}\n{FEWSHOT_PROMPT}\n"
+        prompt = f"{GEN_PROMPT}\n"
         prompt += template_gen_prompt(summary=self.summary, schema=schema)
 
         if necessary:
@@ -171,6 +172,11 @@ class SmartValueGenerator:
             prompt += PARAMETER_REQUIREMENTS_PROMPT + '\n'.join(select_params.keys()) + "\n\n"
 
         prompt += "Reminder:\n" + ENUM_EXAMPLE_CONSTRAINT_PROMPT + "\n"
+
+        if FEWSHOT_PROMPT:
+            prompt += "Here are some examples of creating values from specifications:\n"
+            prompt += FEWSHOT_PROMPT + "\n"
+            prompt += "SPECIFICATION:\n" + json.dumps(schema, indent=2) + "\n"
 
         if is_request_body:
             prompt += "REQUEST_BODY VALUES:\n"
@@ -205,8 +211,9 @@ class SmartValueGenerator:
         GEN_PROMPT = prompt_data.GEN_PROMPT
         schema = prompt_data.schema
         is_request_body = prompt_data.is_request_body
+        few_shot_prompt = prompt_data.FEWSHOT_PROMPT
 
-        prompt = f"{GEN_PROMPT}\n"
+        prompt = f"{GEN_PROMPT}\n\n"
         prompt += template_gen_prompt(summary=self.summary, schema=schema)
         if is_request_body:
             prompt += get_informed_agent_body_prompt() + "\n"
@@ -226,6 +233,11 @@ class SmartValueGenerator:
 
         prompt += "Regardless of the past responses:"
         prompt += ENUM_EXAMPLE_CONSTRAINT_PROMPT + "\n"
+
+        prompt += "Here are some examples of creating values from specifications:\n"
+        prompt += few_shot_prompt + "\n"
+
+        prompt += "SPECIFICATION:\n" + json.dumps(schema, indent=2) + "\n"
 
         if is_request_body:
             prompt += "REQUEST_BODY VALUES:\n"
@@ -300,14 +312,14 @@ class SmartValueGenerator:
     def _form_value_agent_prompt(self, schema: Dict, is_request_body: bool, num_values: int):
         if is_request_body:
             prompt_data = PromptData(GEN_PROMPT=get_value_agent_body_prompt(num_values),
-                                     FEWSHOT_PROMPT="",
+                                     FEWSHOT_PROMPT=VALUE_AGENT_BODY_FEWSHOT_PROMPT,
                                      schema=schema,
                                      select_params=self._isolate_nonreq_request_body(schema),
                                      is_request_body=is_request_body)
             return self._compose_parameter_gen_prompt(prompt_data, necessary=False)
         else:
             prompt_data = PromptData(GEN_PROMPT=get_value_agent_params_prompt(num_values),
-                                     FEWSHOT_PROMPT="",
+                                     FEWSHOT_PROMPT=VALUE_AGENT_PARAMS_FEWSHOT_PROMPT,
                                      schema=schema,
                                      select_params=self._isolate_nonreq_params(schema),
                                      is_request_body=is_request_body)
@@ -484,7 +496,7 @@ class SmartValueGenerator:
         request_body = {}
         for mime_type, schema in self.request_body.items():
             prompt_data = PromptData(GEN_PROMPT=get_value_agent_body_prompt(num_values),
-                                     FEWSHOT_PROMPT="",
+                                     FEWSHOT_PROMPT=VALUE_AGENT_BODY_FEWSHOT_PROMPT,
                                      schema=schema,
                                      select_params=self._isolate_nonreq_request_body(schema),
                                      is_request_body=True)
@@ -503,7 +515,7 @@ class SmartValueGenerator:
             return {}
 
         prompt_data = PromptData(GEN_PROMPT=get_value_agent_params_prompt(num_values),
-                                 FEWSHOT_PROMPT="",
+                                 FEWSHOT_PROMPT=VALUE_AGENT_PARAMS_FEWSHOT_PROMPT,
                                  schema=self.parameters,
                                  select_params=self._isolate_nonreq_params(self.parameters),
                                  is_request_body=False)

@@ -79,8 +79,8 @@ class AutoRestTest:
         self.local_test = local_test
         self.is_naive = is_naive
         _construct_db_dir()
-        self.use_cached_graph = False
-        self.use_cached_table = True
+        self.use_cached_graph = True
+        self.use_cached_table = False
         self.use_cached_values = True
         self.use_cached_headers = True
 

@@ -438,22 +438,24 @@ class QLearning:
         body = {}
         if self.operation_graph.operation_nodes[operation_id].operation_properties.request_body:
             for mime_type, body_properties in self.operation_graph.operation_nodes[operation_id].operation_properties.request_body.items():
-                if body_properties.type == "object" and body_properties.properties:
+                if body_properties.properties:
                     for prop in body_properties.properties:
                         if random.random() < 0.75:
                             body[mime_type] = {prop: default_assignments[body_properties.properties[prop].type] for prop in body_properties.properties}
                         else:
                             body[mime_type] = {prop: identify_generator(body_properties.properties[prop].type)() for prop in body_properties.properties}
-                elif body_properties.type == "array" and body_properties.items:
+                elif body_properties.items:
                     if random.random() < 0.75:
                         body[mime_type] = [default_assignments[body_properties.items.type]]
                     else:
                         body[mime_type] = [identify_generator(body_properties.items.type)()]
                 else:
-                    if random.random() < 0.75:
+                    if random.random() < 0.75 and body_properties.type:
                         body[mime_type] = default_assignments[body_properties.type]
-                    else:
+                    elif body_properties.type:
                         body[mime_type] = identify_generator(body_properties.type)()
+                    else:
+                        body[mime_type] = random_generator()()
         return parameters, body
 
     def select_exploration_agent(self):

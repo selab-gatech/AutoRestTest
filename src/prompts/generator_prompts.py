@@ -66,12 +66,175 @@ If the OpenAPI Specification includes examples in an example field or descriptio
 Do not solely rely on the given constraint values, and ensure you read the associated descriptions for maximum accuracy."""
 
 INFORMED_VALUE_AGENT_PROMPT = """
-Here is a list of [replace_type] that you generated values for, along with their server responses. Use whether the past values generated an error to ensure that your new generated values are compatible with the operation.
+To better inform your generation, here is a list of [replace_type] that you generated values for, along with their server responses. Use whether the past values generated an error to ensure that your new generated values are compatible with the operation.
+Status codes that indicate a successful operation are of the form 2XX. Status codes that indicate a failed operation are of the form 4XX or 5XX. Use the responses to determine if the values you generated were correct or incorrect. You only need to consider server responses that indicate problems with parameter values, and not anything else.
 """
 
+VALUE_AGENT_PARAMS_FEWSHOT_PROMPT = """
+EXAMPLE 1
+SPECIFICATION:
+{
+    "personId": {
+        "name": "personId",
+        "description": "The ID of the person. Must be in the form of their name and number. For example John123.", 
+        "schema": {
+            "type": "string"
+        }, 
+        "required": true
+    },
+}
+PARAMETER VALUES:
+{
+    "parameters": {
+        "personId": {
+            "value1": "John123",
+            "value2": "Jane456",
+            "value3": "Jack789",
+            "value4": "Bob101",
+            "value5": "Alice202"
+            "value6": "Sam777",
+            "value7": "Lily001",
+            "value8": "Tom999",
+            "value9": "Sara111",
+            "value10": "Mike123"
+        }
+    }
+}
+
+EXAMPLE 2
+SPECIFICATION:
+{
+    "language": {
+        "name": "language",
+        "description": "The language code of the text. Must be in the form of a language code like en-US or fr.",
+        "schema": {
+            "type": "string"
+        },
+        "required": true
+    },
+}
+PARAMETER VALUES:
+{
+    "parameters": {
+        "language": {
+            "value1": "en-US",
+            "value2": "fr",
+            "value3": "de",
+            "value4": "ca",
+            "value5": "es",
+            "value6": "en-GB",
+            "value7": "zh-CN",
+            "value8": "ar-DZ",
+            "value9": "zu",
+            "value10": "th"
+        }
+    }
+}
+"""
+
+VALUE_AGENT_BODY_FEWSHOT_PROMPT = """
+EXAMPLE 1
+SPECIFICATION:
+{
+    "properties": {
+        "personId": {
+            "type": "string",
+            "description": "The ID of the person. Must be in the form of their name and number. For example John123.",
+            "required": true
+            "min_length": 6,
+        }
+    }
+}
+REQUEST_BODY VALUES:
+{
+    "request_body": {
+        "request_body1": {
+            "personId": "John123"
+        },
+        "request_body2": {
+            "personId": "Jane456
+        },
+        "request_body3": {
+            "personId": "Jack789"
+        },
+        "request_body4": {
+            "personId": "Bob101"
+        },
+        "request_body5": {
+            "personId": "Alice202"
+        },
+        "request_body6": {
+            "personId": "Sam777"
+        },
+        "request_body7": {
+            "personId": "Lily001"
+        },
+        "request_body8": {
+            "personId": "Tom999"
+        },
+        "request_body9": {
+            "personId": "Sara111"
+        },
+        "request_body10": {
+            "personId": "Mike123"
+        }
+    }
+}
+
+EXAMPLE 2
+SPECIFICATION:
+{
+    "properties": {
+        "language": {
+            "type": "string",
+            "description": "The language code of the text. Must be in the form of a language code like en-US or fr.",
+            "required": true
+        }
+    }
+}
+REQUEST_BODY VALUES:
+{
+    "request_body": {
+        "request_body1": {
+            "language": "en-US"
+        },
+        "request_body2": {
+            "language": "fr"
+        },
+        "request_body3": {
+            "language": "de"
+        },
+        "request_body4": {
+            "language": "ca"
+        },
+        "request_body5": {
+            "language": "es"
+        },
+        "request_body6": {
+            "language": "en-GB"
+        },
+        "request_body7": {
+            "language": "zh-CN"
+        },
+        "request_body8": {
+            "language": "ar-DZ"
+        },
+        "request_body9": {
+            "language": "zu"
+        },
+        "request_body10": {
+            "language": "th"
+        }
+    }
+}
+"""
+
+
+
 ENUM_EXAMPLE_CONSTRAINT_PROMPT = """
+Review the provided original SPECIFICATION to generate values. Use the server responses to guide your decision-making process.
 You MUST generate values for all parameters and object properties. 
-You MUST include all example or enum values when provided with them in a field or description of each parameter or request body property in your generated values.
+You MUST include all examples or enum values when provided with them in a field or description of each parameter or request body property in your generated values.
 """
 
 #FEWSHOT_REQUEST_BODY_GEN_PROMPT = """
@@ -157,7 +320,7 @@ def template_gen_prompt(summary: str, schema: Dict) -> str:
         schema = json.dumps(schema, indent=2)
     except:
         schema = str(schema)
-    return f"SUMMARY: {summary}\nSPECIFICATION: {schema}\n"
+    return f"SUMMARY: {summary}\nSPECIFICATION:\n {schema}\n"
 
 def get_value_agent_body_prompt(num: int) -> str:
     return VALUE_AGENT_BODY_PROMPT.replace("[insert number]", str(num))
