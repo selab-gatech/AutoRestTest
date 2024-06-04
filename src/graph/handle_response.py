@@ -27,9 +27,9 @@ def configure_response_logging():
                         datefmt='%Y-%m-%d %H:%M:%S')
     logging.info("Logging started")
 
-warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
+#warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 load_dotenv() # load environmental vars for OpenAI API key
-configure_response_logging()
+#configure_response_logging()
 
 if TYPE_CHECKING:
     from src.generate_graph import OperationNode, OperationEdge

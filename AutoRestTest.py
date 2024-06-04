@@ -93,7 +93,7 @@ class AutoRestTest:
         return operation_graph
 
     def generate_graph(self, spec_name: str):
-        spec_path = f"{self.spec_dir}/{spec_name}.yaml"
+        spec_path = f"{self.spec_dir}{spec_name}.yaml"
         db_graph = os.path.join(os.path.dirname(__file__), f"src/data/graphs/{spec_name}_graph")
         print("CREATING GRAPH...")
         with shelve.open(db_graph) as db:
