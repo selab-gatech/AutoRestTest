@@ -73,18 +73,22 @@ class OperationGraph:
         similar_parameters = {}
         # recall that next_closest_similarities is a list matching params in operation to params in dependent_operation
         for next_closest_similarity in next_closest_similarities:
-            similar_parameters[next_closest_similarity[0]] = next_closest_similarity[1]
+            if next_closest_similarity[0] not in similar_parameters:
+                similar_parameters[next_closest_similarity[0]] = []
+            similar_parameters[next_closest_similarity[0]].append(next_closest_similarity[1])
+
         edge = OperationEdge(source=source_node, destination=destination_node, similar_parameters=similar_parameters)
         source_node.tentative_edges.append(edge)
         source_node.tentative_edges = heapq.nlargest(self.next_most_similar_count, source_node.tentative_edges,
                                                             key=lambda x: next(iter(x.similar_parameters.values())).similarity)  # small n so efficient
 
-    def update_operation_dependencies(self, operation_id: str, dependent_operation_id: str, parameters: Dict[str, List[SimilarityValue]], next_closest_similarities: List[Tuple[str, SimilarityValue]]):
+    def update_operation_dependencies(self, operation_id: str, dependent_operation_id: str, similar_parameters: Dict[str, List[SimilarityValue]], next_closest_similarities: List[Tuple[str, SimilarityValue]]):
         if operation_id not in self.operation_nodes:
             raise ValueError(f"Operation {operation_id} not found in the graph")
-        if len(parameters) > 0:
-            self.add_operation_edge(operation_id, dependent_operation_id, parameters)
-        if len(next_closest_similarities) > 0:
+        if len(similar_parameters) > 0:
+            self.add_operation_edge(operation_id, dependent_operation_id, similar_parameters)
+        # Only add tentative edges if there are no similar parameters
+        elif len(next_closest_similarities) > 0:
             # TODO: Update tentative edge handling for lists
             self.add_tentative_edge(operation_id, dependent_operation_id, next_closest_similarities)
 
@@ -116,6 +120,9 @@ class OperationGraph:
                 # Note: We consider responses from post/put requests as dependencies for get requests
                 parameter_similarities, next_closest_similarities = self.dependency_comparator.compare_cosine(operation_properties, dependent_operation_properties)
                 self.update_operation_dependencies(operation_id, dependent_operation_id, parameter_similarities, next_closest_similarities)
+            if self.operation_nodes[operation_id].tentative_edges and not self.operation_nodes[operation_id].outgoing_edges:
+                # Assign top tentative edges to outgoing edges if there are no similar parameters
+                self.operation_nodes[operation_id].outgoing_edges = self.operation_nodes[operation_id].tentative_edges
 
     def validate_graph(self):
         if not self.request_generator:

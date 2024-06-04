@@ -1,1 +1,0 @@
-{"message":"Argument validation error","description":"uri=/register","entityName":"userDTO","fieldErrors":[{"field":"phone","message":"The value shall not be empty"},{"field":"address","message":"The value shall not be empty"},{"field":"email","message":"The value shall not be empty"},{"field":"name","message":"The value shall not be empty"}]}

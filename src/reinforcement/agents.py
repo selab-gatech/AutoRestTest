@@ -16,7 +16,7 @@ class OperationAgent:
     def __init__(self, operation_graph, alpha=0.1, gamma=0.9, epsilon=0.1):
         self.alpha = alpha
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.epsilon = 0.7
         self.operation_graph = operation_graph
         self.q_table = {}
         # Note: State is 1 dimensional (constant) and action is operation selection
@@ -239,6 +239,16 @@ class ParameterAgent:
         if self.q_table[operation_id]['body']:
             self.q_table[operation_id]['body'][action.mime_type] = new_q_body
 
+    def number_of_zeros(self, operation_id):
+        zeros = 0
+        for param, value in self.q_table[operation_id]['params'].items():
+            if value == 0:
+                zeros += 1
+        for mime, value in self.q_table[operation_id]['body'].items():
+            if value == 0:
+                zeros += 1
+        return zeros
+
 @dataclass
 class ValueAction:
     param_mappings: Dict[str, Any]
@@ -329,6 +339,18 @@ class ValueAgent:
                     if mapping[0] == body:
                         mapping[1] = new_q
 
+    def number_of_zeros(self, operation_id):
+        zeros = 0
+        for param, param_mappings in self.q_table[operation_id]['params'].items():
+            for mapping in param_mappings:
+                if mapping[1] == 0:
+                    zeros += 1
+        for mime, body_mappings in self.q_table[operation_id]['body'].items():
+            for mapping in body_mappings:
+                if mapping[1] == 0:
+                    zeros += 1
+        return zeros
+
 
 class BodyObjAgent:
     def __init__(self, operation_graph: OperationGraph, alpha=0.1, gamma=0.9, epsilon=0.1):
@@ -383,6 +405,14 @@ class BodyObjAgent:
         new_q = current_q + self.alpha * (reward + self.gamma * best_next_q - current_q)
         self.q_table[operation_id][mime][action] = new_q
 
+    def number_of_zeros(self, operation_id):
+        zeros = 0
+        for mime, body_obj_mappings in self.q_table[operation_id].items():
+            for body_properties, value in body_obj_mappings.items():
+                if value == 0:
+                    zeros += 1
+        return zeros
+
 class DataSourceAgent:
     def __init__(self, operation_graph: OperationGraph, alpha=0.1, gamma=0.9, epsilon=0.1):
         self.q_table = {}
@@ -420,6 +450,13 @@ class DataSourceAgent:
         best_next_q = max(self.q_table[operation_id].values())
         new_q = current_q + self.alpha * (reward + self.gamma * best_next_q - current_q)
         self.q_table[operation_id][action] = new_q
+
+    def number_of_zeros(self, operation_id):
+        zeros = 0
+        for data_source, value in self.q_table[operation_id].items():
+            if value == 0:
+                zeros += 1
+        return zeros
 
 class DependencyAgent:
     def __init__(self, operation_graph: OperationGraph, alpha=0.1, gamma=0.9, epsilon=0.1):
@@ -591,6 +628,17 @@ class DependencyAgent:
                             updated_tables = True
                             print("New dependency discovered between operation {} and operation {} with parameter {} and response {}".format(operation_id, new_operation_response_id, param, new_property))
         return updated_tables
+
+    def number_of_zeros(self, operation_id):
+        zeros = 0
+        for location, param_values in self.q_table[operation_id].items():
+            for param, dependent_values in param_values.items():
+                for dependent_op, dependent_props in dependent_values.items():
+                    for dependent_location, dependent_params in dependent_props.items():
+                        for dependent_param, value in dependent_params.items():
+                            if value == 0:
+                                zeros += 1
+        return zeros
 
 
 

@@ -7,6 +7,7 @@ from collections import defaultdict
 from dataclasses import asdict
 from typing import Dict, List
 
+import numpy as np
 import requests
 import shelve
 
@@ -467,11 +468,34 @@ class QLearning:
                         body[mime_type] = random_generator()()
         return parameters, body
 
-    def select_exploration_agent(self):
-        # SELECT BETWEEN HEADER, (PARAMETER & BODY), (DATA_SOURCE & VALUE & DEPENDENCY)
-        #agent_options = ["HEADER", "PARAMETER & BODY", "DATA_SOURCE & VALUE & DEPENDENCY", "NONE", "ALL"]
-        agent_options = ["PARAMETER & BODY", "DATA_SOURCE & VALUE & DEPENDENCY", "NONE", "ALL"]
-        return random.choice(agent_options)
+    def select_exploration_agent(self, operation_id, start_time):
+
+        if time.time() - start_time < 30:
+            return "ALL" # Explore all options for the first 30 seconds; avoid updating tables until some base dependencies are established
+
+        agent_options = ["PARAMETER & BODY", "DATA_SOURCE", "VALUE", "DEPENDENCY", "NONE", "ALL"]
+
+        parameter_unexplored = self.parameter_agent.number_of_zeros(operation_id) + self.body_object_agent.number_of_zeros(operation_id)
+        data_source_unexplored = self.data_source_agent.number_of_zeros(operation_id)
+        value_unexplored = self.value_agent.number_of_zeros(operation_id)
+        dependency_unexplored = self.dependency_agent.number_of_zeros(operation_id)
+
+        baseline_probability = np.array([0.10, 0.10, 0.10, 0.10, 0.15, 0.15], dtype=np.float64) # Leaves 30% extra distribution
+        unexplored_tables = np.array([parameter_unexplored, data_source_unexplored, value_unexplored, dependency_unexplored], dtype=np.float64)
+
+        if np.sum(unexplored_tables) == 0:
+            select_probabilities = baseline_probability / np.sum(baseline_probability)
+        else:
+            unexplored_tables /= np.sum(unexplored_tables)
+            unexplored_tables *= 1.00 - np.sum(baseline_probability)
+            select_probabilities = baseline_probability.copy()
+            select_probabilities[:4] += unexplored_tables
+            select_probabilities /= np.sum(select_probabilities) # Normalize for good measure
+
+        print("SELECT PROBABILITIES: ", select_probabilities)
+
+        exploring_agent = np.random.choice(agent_options, p=select_probabilities)
+        return exploring_agent
 
     def execute_operations(self):
         start_time = time.time()
@@ -498,30 +522,25 @@ class QLearning:
             print(f"Operations not hit: {not_hit_operations}.")
             print("TIME REMAINING: ", self.time_duration - (time.time() - start_time))
 
-            exploring_agent = self.select_exploration_agent()
+            operation_id = self.operation_agent.get_action()
 
-            #operation_id = self.operation_agent.get_action()
-            operation_id = random.choice(list(self.operation_graph.operation_nodes.keys()))
-            #operation_id = "findByIdUsingGET_3"
+            exploring_agent = self.select_exploration_agent(operation_id, start_time)
 
-            if exploring_agent != "PARAMETER & BODY" and exploring_agent != "ALL" or exploring_agent == "NONE":
+            if exploring_agent != "PARAMETER & BODY" and exploring_agent != "ALL":
                 select_params = self.parameter_agent.get_best_action(operation_id)
             else:
                 select_params = self.parameter_agent.get_random_action(operation_id)
 
-            #if exploring_agent != "HEADER" or exploring_agent == "NONE":
-            #    select_header = self.header_agent.get_best_action(operation_id)
-            #else:
-            #    select_header = self.header_agent.get_random_action(operation_id)
             select_header = None
 
-            if time.time() - start_time > 15:
-                if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY" and exploring_agent != "ALL" or exploring_agent == "NONE":
-                    data_source = self.data_source_agent.get_best_action(operation_id)
-                else:
-                    data_source = self.data_source_agent.get_random_action(operation_id)
+            if exploring_agent == "VALUE":
+                data_source = "LLM"
+            elif exploring_agent == "DEPENDENCY":
+                data_source = "DEPENDENCY"
+            elif exploring_agent == "DATA_SOURCE" and exploring_agent != "ALL":
+                data_source = self.data_source_agent.get_best_action(operation_id)
             else:
-                data_source = "WAITING"
+                data_source = self.data_source_agent.get_random_action(operation_id)
 
             print("SENDING TO OPERATION: ", operation_id)
             print("EXPLORING AGENT: ", exploring_agent)
@@ -530,37 +549,21 @@ class QLearning:
             print("SELECTED BODY: ", select_params.mime_type)
 
             parameter_dependencies, request_body_dependencies, unconstructed_body, select_values = None, None, {}, None
-            if data_source == "WAITING":
-                # While waiting, 20% chance of using default
-                if random.random() < 0.2:
-                    param_mappings, body_mappings = self.generate_default_values(operation_id)
-                    parameters = self.get_mapping(select_params.req_params,
-                                                  param_mappings) if select_params.req_params else None
-                    body = self.get_mapping([select_params.mime_type],
-                                            body_mappings) if select_params.mime_type else None
-                # 80% chance of using LLM values
-                else:
-                    if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY" and exploring_agent != "ALL" or exploring_agent == "NONE":
-                        select_values = self.value_agent.get_best_action(operation_id)
-                    else:
-                        select_values = self.value_agent.get_random_action(operation_id)
-                    parameters = self.get_mapping(select_params.req_params,
-                                                  select_values.param_mappings) if select_params.req_params else None
-                    body = self.get_mapping([select_params.mime_type],
-                                            select_values.body_mappings) if select_params.mime_type else None
-            elif data_source == "LLM":
-                if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY" and exploring_agent != "ALL" or exploring_agent == "NONE":
+            if data_source == "LLM":
+                if exploring_agent != "VALUE" and exploring_agent != "ALL":
                     select_values = self.value_agent.get_best_action(operation_id)
                 else:
                     select_values = self.value_agent.get_random_action(operation_id)
                 parameters = self.get_mapping(select_params.req_params, select_values.param_mappings) if select_params.req_params else None
                 body = self.get_mapping([select_params.mime_type], select_values.body_mappings) if select_params.mime_type else None
+
             elif data_source == "DEFAULT":
                 param_mappings, body_mappings = self.generate_default_values(operation_id)
                 parameters = self.get_mapping(select_params.req_params, param_mappings) if select_params.req_params else None
                 body = self.get_mapping([select_params.mime_type], body_mappings) if select_params.mime_type else None
+
             elif data_source == "DEPENDENCY":
-                if exploring_agent != "DATA_SOURCE & VALUE & DEPENDENCY" and exploring_agent != "ALL" or exploring_agent == "NONE":
+                if exploring_agent != "DEPENDENCY" and exploring_agent != "ALL" or exploring_agent == "NONE":
                     parameter_dependencies, request_body_dependencies = self.dependency_agent.get_best_action(operation_id, self.successful_responses, self.successful_parameters, self.successful_bodies)
                     llm_select_values = self.value_agent.get_best_action(operation_id)
                 else:
@@ -625,11 +628,11 @@ class QLearning:
             header = {"Authorization": select_header} if select_header else None
 
             # Use body agent to select properties
-            all_select_properties = {}
-            if body and data_source != "WAITING":
+            select_body_properties = {}
+            if body:
                 for mime, body_properties in body.items():
                     if type(body_properties) == dict:
-                        if exploring_agent != "PARAMETER & BODY" and exploring_agent != "ALL" or exploring_agent == "NONE":
+                        if exploring_agent != "PARAMETER & BODY" and exploring_agent != "ALL":
                             select_properties = self.body_object_agent.get_best_action(operation_id, mime)
                         else:
                             select_properties = self.body_object_agent.get_random_action(operation_id, mime)
@@ -639,13 +642,13 @@ class QLearning:
                             body[mime] = new_bodies_properties
                         else:
                             body[mime] = None
-                        all_select_properties[mime] = select_properties
+                        select_body_properties[mime] = select_properties
 
             # Mutate operation values
             mutate_operation = random.random() < self.mutation_rate
             mutated_parameter_names = False
             if mutate_operation:
-                if random.random() < 0.5 or data_source == "WAITING":
+                if random.random() < 0.5:
                     # Use mutator
                     parameters, body, header, specific_method, mutated_parameter_names = self.mutate_values(self.operation_graph.operation_nodes[operation_id].operation_properties, parameters, body, header)
                     response = self.send_operation(
@@ -672,38 +675,35 @@ class QLearning:
                 if exploring_agent == "PARAMETER & BODY":
                     self.parameter_agent.update_q_table(operation_id, select_params, self.determine_parameter_response_reward(response))
                     # If body object agent is used, update the q-table
-                    if all_select_properties:
-                        for mime, select_properties in all_select_properties.items():
+                    if select_body_properties:
+                        for mime, select_properties in select_body_properties.items():
                             self.body_object_agent.update_q_table(operation_id, mime, select_properties,
                                                                   self.determine_good_response_reward(response))
 
-                #if exploring_agent == "HEADER":
-                #    self.header_agent.update_q_table(operation_id, select_header, self.determine_header_reward(response))
+                if exploring_agent == "DATA_SOURCE":
+                    self.data_source_agent.update_q_table(operation_id, data_source, self.determine_good_response_reward(response))
 
-                if exploring_agent == "DATA_SOURCE & VALUE & DEPENDENCY":
-                    # For the first few seconds, do not update data source table (to account for minimal filled dependencies)
-                    if data_source != "WAITING":
-                       self.data_source_agent.update_q_table(operation_id, data_source, self.determine_good_response_reward(response))
+                if exploring_agent == "VALUE":
+                    processed_value_action = ValueAction(param_mappings=parameters,
+                                                         body_mappings=select_values.body_mappings)
+                    self.value_agent.update_q_table(operation_id, processed_value_action,
+                                                    self.determine_value_response_reward(response))
 
-                    # Update dependency agent if dependency data source
-                    if data_source == "DEPENDENCY":
-                        used_dependent_params = {}
-                        if parameter_dependencies:
-                            for parameter in parameters:
-                                if parameter in select_params.req_params and parameter in parameter_dependencies:
-                                    used_dependent_params[parameter] = parameter_dependencies[parameter]
-                        used_dependent_body = {}
-                        if request_body_dependencies and unconstructed_body and select_params.mime_type in all_select_properties and all_select_properties[select_params.mime_type]:
-                            for body_param in unconstructed_body:
-                                if body_param in all_select_properties[select_params.mime_type] and body_param in request_body_dependencies:
-                                    used_dependent_body[body_param] = request_body_dependencies[body_param]
-                        self.dependency_agent.update_q_table(operation_id, used_dependent_params, used_dependent_body, self.determine_good_response_reward(response))
-
-                    # Update LLM value agent if LLM data source
-                    elif data_source == "LLM" and select_values is not None:
-                        processed_value_action = ValueAction(param_mappings=parameters, body_mappings=select_values.body_mappings)
-                        self.value_agent.update_q_table(operation_id, processed_value_action,
-                                                        self.determine_value_response_reward(response))
+                if exploring_agent == "DEPENDENCY":
+                    used_dependent_params = {}
+                    if parameter_dependencies:
+                        for parameter in parameters:
+                            if parameter in select_params.req_params and parameter in parameter_dependencies:
+                                used_dependent_params[parameter] = parameter_dependencies[parameter]
+                    used_dependent_body = {}
+                    if request_body_dependencies and unconstructed_body and select_params.mime_type in select_body_properties and \
+                            select_body_properties[select_params.mime_type]:
+                        for body_param in unconstructed_body:
+                            if body_param in select_body_properties[
+                                select_params.mime_type] and body_param in request_body_dependencies:
+                                used_dependent_body[body_param] = request_body_dependencies[body_param]
+                    self.dependency_agent.update_q_table(operation_id, used_dependent_params, used_dependent_body,
+                                                         self.determine_good_response_reward(response))
 
             # Update successful parameters to use for future operation dependencies
             if response is not None and response.ok and not mutated_parameter_names:
