@@ -470,17 +470,26 @@ class QLearning:
 
     def select_exploration_agent(self, operation_id, start_time):
 
-        if time.time() - start_time < 30:
-            return "ALL" # Explore all options for the first 30 seconds; avoid updating tables until some base dependencies are established
+        elapsed_time = time.time() - start_time
 
         agent_options = ["PARAMETER & BODY", "DATA_SOURCE", "VALUE", "DEPENDENCY", "NONE", "ALL"]
+
+        # Use exponential decay to allow for all agents to explore during initial time
+        all_exploring_base_probability = 0.15
+        all_exploring_decay_rate = 1/150
+        priority_exploring_space = 0.35
+        all_exploring_probability = all_exploring_base_probability + (1 - all_exploring_base_probability) * np.exp(-all_exploring_decay_rate * elapsed_time)
+        all_exploring_probability = min(all_exploring_probability, 1)
+        remaining_probability = 1 - all_exploring_probability
+        # Distribute some space for priority exploration
+        other_event_probability = (1 - priority_exploring_space) * remaining_probability / 5
 
         parameter_unexplored = self.parameter_agent.number_of_zeros(operation_id) + self.body_object_agent.number_of_zeros(operation_id)
         data_source_unexplored = self.data_source_agent.number_of_zeros(operation_id)
         value_unexplored = self.value_agent.number_of_zeros(operation_id)
         dependency_unexplored = self.dependency_agent.number_of_zeros(operation_id)
 
-        baseline_probability = np.array([0.10, 0.10, 0.10, 0.10, 0.15, 0.15], dtype=np.float64) # Leaves 30% extra distribution
+        baseline_probability = np.array([other_event_probability] * 5 + [all_exploring_probability], dtype=np.float64)
         unexplored_tables = np.array([parameter_unexplored, data_source_unexplored, value_unexplored, dependency_unexplored], dtype=np.float64)
 
         if np.sum(unexplored_tables) == 0:
@@ -491,8 +500,6 @@ class QLearning:
             select_probabilities = baseline_probability.copy()
             select_probabilities[:4] += unexplored_tables
             select_probabilities /= np.sum(select_probabilities) # Normalize for good measure
-
-        print("SELECT PROBABILITIES: ", select_probabilities)
 
         exploring_agent = np.random.choice(agent_options, p=select_probabilities)
         return exploring_agent
@@ -563,7 +570,7 @@ class QLearning:
                 body = self.get_mapping([select_params.mime_type], body_mappings) if select_params.mime_type else None
 
             elif data_source == "DEPENDENCY":
-                if exploring_agent != "DEPENDENCY" and exploring_agent != "ALL" or exploring_agent == "NONE":
+                if exploring_agent != "DEPENDENCY" and exploring_agent != "ALL":
                     parameter_dependencies, request_body_dependencies = self.dependency_agent.get_best_action(operation_id, self.successful_responses, self.successful_parameters, self.successful_bodies)
                     llm_select_values = self.value_agent.get_best_action(operation_id)
                 else:
