@@ -33,7 +33,6 @@ class Ablation4:
         self.operation_agent = OperationAgent(operation_graph, alpha, gamma, 0.4)
         self.header_agent = HeaderAgent(operation_graph, alpha, gamma, epsilon)
         self.parameter_agent = ParameterAgent(operation_graph, alpha, gamma, 0.4)
-        self.value_agent = ValueAgent(operation_graph, alpha, gamma, epsilon)
         self.body_object_agent = BodyObjAgent(operation_graph, alpha, gamma, epsilon)
         self.data_source_agent = DataSourceAgent(operation_graph, alpha, gamma, epsilon)
         self.time_duration = time_duration
@@ -48,15 +47,10 @@ class Ablation4:
         self._init_body_tracking()
         self._init_response_tracking()
 
-    def initialize_llm_agents(self):
-        #self.header_agent.initialize_q_table()
-        self.value_agent.initialize_q_table()
-
     def print_q_tables(self):
         print("OPERATION Q-TABLE: ", self.operation_agent.q_table)
         print("HEADER Q-TABLE: ", self.header_agent.q_table)
         print("PARAMETER Q-TABLE: ", self.parameter_agent.q_table)
-        print("VALUE Q-TABLE: ", self.value_agent.q_table)
 
     def get_mapping(self, select_params, select_values):
         if not select_params:
@@ -536,7 +530,7 @@ class Ablation4:
 
             # Use body agent to select properties
             all_select_properties = {}
-            if body and data_source != "WAITING":
+            if body:
                 for mime, body_properties in body.items():
                     if type(body_properties) == dict:
                         select_properties = self.body_object_agent.get_random_action(operation_id, mime)
