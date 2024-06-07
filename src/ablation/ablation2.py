@@ -497,8 +497,7 @@ class Ablation2:
             exploring_agent = "ALL"
 
             #operation_id = self.operation_agent.get_action()
-            operation_id = random.choice(list(self.operation_graph.operation_nodes.keys()))
-            #operation_id = "findByIdUsingGET_3"
+            operation_id = self.operation_agent.get_random_action()
 
             select_params = self.parameter_agent.get_random_action(operation_id)
 

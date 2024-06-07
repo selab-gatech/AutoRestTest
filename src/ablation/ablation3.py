@@ -501,9 +501,7 @@ class Ablation3:
 
             exploring_agent = self.select_exploration_agent()
 
-            #operation_id = self.operation_agent.get_action()
-            operation_id = random.choice(list(self.operation_graph.operation_nodes.keys()))
-            #operation_id = "findByIdUsingGET_3"
+            operation_id = self.operation_agent.get_random_action()
 
             if exploring_agent != "PARAMETER & BODY" and exploring_agent != "ALL" or exploring_agent == "NONE":
                 select_params = self.parameter_agent.get_best_action(operation_id)
