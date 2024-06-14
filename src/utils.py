@@ -12,6 +12,8 @@ from src.graph.specification_parser import ParameterProperties, SchemaProperties
 from src.prompts.generator_prompts import FIX_JSON_OBJ
 from src.prompts.system_prompts import DEFAULT_SYSTEM_MESSAGE, FIX_JSON_SYSTEM_MESSAGE
 
+from configurations import OPENAI_LLM_ENGINE
+
 load_dotenv()
 
 def remove_nulls(item):
@@ -136,7 +138,7 @@ def compose_json_fix_prompt(invalid_json_str: str):
     return prompt
 
 def attempt_fix_json(invalid_json_str: str):
-    language_model = OpenAILanguageModel(engine="gpt-4o",temperature=0.3)
+    language_model = OpenAILanguageModel(temperature=0.3)
     json_prompt = compose_json_fix_prompt(invalid_json_str)
     fixed_json = language_model.query(user_message=json_prompt, system_message=FIX_JSON_SYSTEM_MESSAGE,
                                            json_mode=True)
@@ -164,7 +166,7 @@ class OpenAILanguageModel:
     def get_cumulative_cost():
         return OpenAILanguageModel.cumulative_cost
 
-    def __init__(self, engine = "gpt-3.5-turbo-0125", temperature = 0.8, max_tokens = 4000):
+    def __init__(self, engine = OPENAI_LLM_ENGINE, temperature = 0.8, max_tokens = 4000):
         self.api_key = os.getenv("OPENAI_API_KEY")
         if self.api_key is None or self.api_key.strip() == "":
             raise ValueError("OPENAI API key is required for OpenAI language model, found None or empty string.")
@@ -213,13 +215,14 @@ class OpenAILanguageModel:
             )
 
         total_tokens = response.usage.total_tokens
-        OpenAILanguageModel.cumulative_cost += total_tokens * COST_PER_TOKEN[self.engine]
+        if self.engine in COST_PER_TOKEN:
+            OpenAILanguageModel.cumulative_cost += total_tokens * COST_PER_TOKEN[self.engine]
         result = response.choices[0].message.content.strip()
 
         OpenAILanguageModel.cache[cache_key] = result
         return result
 
-def _construct_db_dir():
+def construct_db_dir():
     db_path = os.path.join(os.path.dirname(__file__), "data/q_tables")
     if not os.path.exists(db_path):
         os.makedirs(db_path)

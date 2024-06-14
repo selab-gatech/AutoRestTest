@@ -11,7 +11,9 @@ from src.request_generator import RequestGenerator
 from dotenv import load_dotenv
 
 from src.graph.specification_parser import SpecificationParser
-from src.utils import OpenAILanguageModel, _construct_db_dir
+from src.utils import OpenAILanguageModel, construct_db_dir
+
+from configurations import SPECIFICATIONS_DIRECTORY, LOCAL_TEST, NAIVE, SPECIFICATION_NAME, USE_CACHED_GRAPH, USE_CACHED_TABLE, LEARNING_RATE, DISCOUNT_FACTOR, EXPLORATION_RATE, TIME_DURATION, MUTATION_RATE
 
 load_dotenv()
 
@@ -78,11 +80,9 @@ class AutoRestTest:
         self.spec_dir = spec_dir
         self.local_test = local_test
         self.is_naive = is_naive
-        _construct_db_dir()
-        self.use_cached_graph = False
-        self.use_cached_table = False
-        self.use_cached_values = True
-        self.use_cached_headers = True
+        construct_db_dir()
+        self.use_cached_graph = USE_CACHED_GRAPH
+        self.use_cached_table = USE_CACHED_TABLE
 
     def init_graph(self, spec_name: str, spec_path) -> OperationGraph:
         spec_parser = SpecificationParser(spec_path=spec_path, spec_name=spec_name)
@@ -98,12 +98,14 @@ class AutoRestTest:
         print("CREATING GRAPH...")
         with shelve.open(db_graph) as db:
             if spec_name in db and self.use_cached_graph:
+                print(f"Loading graph for {spec_name} from shelve.")
                 operation_graph = self.init_graph(spec_name, spec_path)
                 graph_properties = db[spec_name]
                 operation_graph.operation_edges = graph_properties["edges"]
                 operation_graph.operation_nodes = graph_properties["nodes"]
                 print(f"Loaded graph for {spec_name} from shelve.")
             else:
+                print(f"Initializing new graph for {spec_name}.")
                 operation_graph = self.init_graph(spec_name, spec_path)
                 operation_graph.create_graph()
                 graph_properties = {
@@ -121,29 +123,20 @@ class AutoRestTest:
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("BEGINNING Q-LEARNING...")
-        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.3, time_duration=1800, mutation_rate=0.25)
+        q_learning = QLearning(operation_graph, alpha=LEARNING_RATE, gamma=DISCOUNT_FACTOR, epsilon=EXPLORATION_RATE, time_duration=TIME_DURATION, mutation_rate=MUTATION_RATE)
         db_q_table = os.path.join(os.path.dirname(__file__), f"src/data/q_tables/{spec_name}_q_table")
         with shelve.open(db_q_table) as db:
             if spec_name in db and self.use_cached_table:
                 compiled_q_table = db[spec_name]
-                #if self.use_cached_headers:
-                #    q_learning.header_agent.q_table = compiled_q_table["header"]
-                #else:
-                #    q_learning.header_agent.initialize_q_table()
-                #    db[spec_name]["header"] = q_learning.header_agent.q_table
-                if self.use_cached_values:
-                    q_learning.value_agent.q_table = compiled_q_table["value"]
-                else:
-                    q_learning.value_agent.initialize_q_table()
-                    try:
-                        db[spec_name]["value"] = q_learning.value_agent.q_table
-                    except Exception as e:
-                        print("Error saving value agent to shelve.")
+                q_learning.value_agent.q_table = compiled_q_table["value"]
+                try:
+                    db[spec_name]["value"] = q_learning.value_agent.q_table
+                except Exception as e:
+                    print("Error saving value agent to shelve.")
                 print(f"Loaded Q-table for {spec_name} from shelve.")
             else:
                 q_learning.initialize_llm_agents()
                 compiled_q_table = {
-                #    "header": q_learning.header_agent.q_table,
                     "value": q_learning.value_agent.q_table
                 }
                 try:
@@ -161,12 +154,6 @@ class AutoRestTest:
         print("Q-LEARNING COMPLETED!!!")
         return q_learning
 
-    def override_header_agent_q_table(self, operation_graph: OperationGraph, spec_name: str):
-        q_learning = QLearning(operation_graph, alpha=0.1, gamma=0.9, epsilon=0.2, time_duration=1200)
-        with shelve.open(self.db_q_table) as db:
-            q_learning.header_agent.initialize_q_table()
-            db[spec_name]["header"] = q_learning.header_agent.q_table
-
     def print_performance(self):
         print("Total cost of the tool: $", OpenAILanguageModel.get_cumulative_cost())
 
@@ -180,18 +167,10 @@ class AutoRestTest:
         print("BEGINNING AUTO-REST-TEST...")
         operation_graph = self.generate_graph(spec_name)
         q_learning = self.perform_q_learning(operation_graph, spec_name)
-        #self.override_header_agent_q_table(operation_graph, spec_name)
         self.print_performance()
         output_q_table(q_learning, spec_name)
         print("AUTO-REST-TEST COMPLETED!!!")
 
 if __name__ == "__main__":
-    # example of running: python3 AutoRestTest.py one true -s genome-nexus
-    #spec_dir = "specs/original/oas"
-    spec_dir = "aratrl-openapi/"
-    args = parse_args()
-    auto_rest_test = AutoRestTest(spec_dir=spec_dir, local_test=args.local_test, is_naive=False)
-    if args.num_specs == "one":
-        auto_rest_test.run_single(args.spec_name)
-    else:
-        auto_rest_test.run_all()
+    auto_rest_test = AutoRestTest(spec_dir=SPECIFICATIONS_DIRECTORY, local_test=LOCAL_TEST, is_naive=NAIVE)
+    auto_rest_test.run_single(SPECIFICATION_NAME)

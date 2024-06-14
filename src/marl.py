@@ -15,7 +15,7 @@ from src.generate_graph import OperationGraph
 from src.graph.specification_parser import OperationProperties
 from src.reinforcement.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction, BodyObjAgent, \
     DataSourceAgent, DependencyAgent
-from src.utils import _construct_db_dir, construct_basic_token, get_object_shallow_mappings, get_body_params, \
+from src.utils import construct_db_dir, construct_basic_token, get_object_shallow_mappings, get_body_params, \
     get_response_params, get_response_param_mappings, remove_nulls
 from src.value_generator import identify_generator, randomize_string, random_generator, randomize_object
 
@@ -29,9 +29,9 @@ class QLearning:
         self.gamma = gamma
         self.epsilon = epsilon
         self.mutation_rate = mutation_rate
-        self.operation_agent = OperationAgent(operation_graph, alpha, gamma, 0.4)
+        self.operation_agent = OperationAgent(operation_graph, alpha, gamma, epsilon)
         self.header_agent = HeaderAgent(operation_graph, alpha, gamma, epsilon)
-        self.parameter_agent = ParameterAgent(operation_graph, alpha, gamma, 0.4)
+        self.parameter_agent = ParameterAgent(operation_graph, alpha, gamma, epsilon)
         self.value_agent = ValueAgent(operation_graph, alpha, gamma, epsilon)
         self.body_object_agent = BodyObjAgent(operation_graph, alpha, gamma, epsilon)
         self.data_source_agent = DataSourceAgent(operation_graph, alpha, gamma, epsilon)

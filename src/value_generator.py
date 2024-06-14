@@ -152,7 +152,7 @@ class SmartValueGenerator:
         self.parameters: Dict[str, Dict] = self.processed_operation.get("parameters")
         self.request_body: Dict[str, Dict] = self.processed_operation.get("request_body")
         self.summary: str = self.processed_operation.get("summary")
-        self.language_model = OpenAILanguageModel(engine=engine,temperature=temperature)
+        self.language_model = OpenAILanguageModel(temperature=temperature)
         self.request_body_reqs: Dict[str, Any] = requirements.request_body_requirements if requirements else {}
         self.parameters_reqs: Dict[str, Any] = requirements.parameter_requirements if requirements else {}
 

@@ -12,7 +12,7 @@ learning tables and graph edges.
 > An OpenAI API key is required to use the software. The key can be obtained 
 > from [OpenAI's API website](https://openai.com/index/openai-api/). The cost for software per execution is linearly 
 > dependent on the number of available operations with the API. For reference, when testing the average API with
-> ~15 operations, the cost was approximately $0.4. 
+> ~15 operations, the cost was approximately $0.1. 
 
 ## Installation
 
@@ -35,26 +35,27 @@ following configuration steps are completed for purposeful execution.
 
 ## Configuration
 
-There is a wide array of configuration options available within the codebase. 
+There is a wide array of configuration options available within the codebase. For convenience, the configuration options
+are easily accessible within the `configurations.py` file in the root directory. The file contains information
+regarding each of the parameters that can be altered. The following are additional instructions for each of the configuration choices.
+Note that the parameteres referenced in the following steps are found in the `configurations.py` file.
 
 #### 1. Specifying the API Directory
 
 If the user intends to use their own OpenAPI Specification files as described in the *Installation* section, 
-they can change the **spec_dir** variable within the `AutoRestTest.py` file to the name of the directory containing the
+they can change the **SPECIFICATION_DIRECTORY** variable within the `configurations.py` file to the name of the directory containing the
 added specifications.
 
 #### 2. Configuring the Reinforcement Learning Parameters
 
-The user can configure the reinforcement learning parameters, such as the learning rate (**alpha**), the discount factor (**gamma**), 
-and the epsilon-greedy exploration value (**epsilon**). These parameters are assigned when instantiating the `q_learning` 
-object in the `AutoRestTest.py` file. As default, the parameters are set to the following values:
+The user can configure the reinforcement learning parameters, such as the learning rate (**LEARNING_RATE**), the discount factor (**DISCOUNT_FACTOR**), 
+and the epsilon-greedy exploration value (**EXPLORATION_RATE**) used in Q-learning. As default, the parameters are set to the following values:
 - Learning Rate: 0.1
 - Discount Factor: 0.9
 - Epsilon: 0.3
 
 Instead of limiting the amount of episodes, the program limits the amount of reinforcement learning iterations using a 
-time-based approach. The default value is set to 10 minutes. This can be altered by changing the **time_limit** variable
-when instantiating the `q_learning` object. The units are in seconds.
+time-based approach. The default value is set to 10 minutes. This can be altered by changing the **TIME_DURATION** variable in the configurations file. The units are in seconds.
 
 > [!TIP]
 > The above steps alter the variables across all four agents used within the software. If the user desires to change
@@ -63,56 +64,38 @@ when instantiating the `q_learning` object. The units are in seconds.
 #### 3. Configuring the OpenAI Model
 
 If the user wants to reduce the cost of executing the software, they can change the OpenAI models used throughout 
-the program. The model is assigned when instantiating the `SmartValueGenerator` class throughout the codebase.
-The user can specify the **engine** variable to an appropriate model. By default, a combination of the **gpt-4o** and 
-**gpt-3.5-turbo-0125**  engines are used throughout, with their application tactically chosen based on the context.
+the program. The user can use the **OPENAI_LLM_ENGINE** variable to specify an appropriate model. By default, the **gpt-4o**
+model is selected given its high performance, cost-effectiveness, and high token limit.
 
 > [!WARNING]
-> The software heavily uses the **json_mode** of recent OpenAI API engines. If the user desires to change the model,
-> it is important to ensure that the model supports the mode.
+> The software heavily uses the **json_mode** from recent OpenAI API engines. If the user desires to change the model,
+> it is important to ensure that the model supports the mode. Additionally, the cost of execution is only provided
+> if the user uses the **gpt-4o** or **gpt-3.5-turbo-0125** models, which are both supported by the software.
 
 #### 4. Use of Cached Graphs and Reinforcement Learning Tables
 
 The software uses a caching mechanism to store the graph edges and reinforcement learning tables for each OpenAPI 
-Specification after generation. This is done to reduce the cost of execution and to speed up the process on repeated
-trials. The user can determine whether they want to use the cached graphs and tables by changing the **use_cache_graph**
-and **use_cache_table** variables in the `AutoRestTest.py` file. By default, both variables are set to **True**.
-
-> [!CAUTION]
-> When the **Header Agent** initializes its learned values table, it attempts to use any registration operations available
-> to then construct valid token headers. If the user attempts to use a cached table on a service running locally, the 
-> account registration may have reset, in which case the reforcement learning tables should be repeated. Otherwise, 
-> the Header agent will have redundant values. The graph construction is not affected by this.
+Specifications after generation. This is done to reduce the cost of execution and to speed up the process on repeated
+trials. The user can determine whether they want to use the cached graphs and tables by changing the **USE_CACHED_GRAPH**
+and **USE_CACHED_TABLE** variables. By default, both variables are set to **False**.
 
 ## Execution
 
 The software can be executed by running the `AutoRestTest.py` file from the root directory using the following command:
 ```
-python3 AutoRestTest.py <scope> <local> -s <service>
+python3 AutoRestTest.py
 ```
-We define the arguments as follows:
-
-***scope***: The scope of the testing. The user can choose between **one** or **all**. The **one** scope tests a single
-  OpenAPI Specification file as dictated by the "service" argument, while the **all** scope tests all the OpenAPI 
-Specification files in the directory specified in the *Installation* step.
-
-***local***: A boolean value that determines whether the service being tested is local or not. If the value is **true**, 
-   the software will query the URL specified in the OpenAPI Specification file. If the value is **false**, the
-software will use a specified URL for the service (used for reverse-proxy testing). The program used for determining the
-URL is in the `AutoRestTest.py` file in the `get_api_url()` function.
-For most use cases, assign **local** to **true**.
-
-***service***: The name of the OpenAPI Specification file to test. This argument is only used when the **scope** 
-argument is set to **one**. The user must specify the name of the file without the `.yaml` or `.json` extension. 
-For example, if the user wants to test the OpenAPI Specification file `genome-nexus.yaml`, the argument would be 
-`-s genome-nexus`.
+To specify the specification for execution, change the **SPECIFICATION_NAME** variable in the `configurations.py` file.
+The user is optionally able to change the **LOCAL_TEST** variable to select a proxy server for testing services. In this case,
+the user must implement the `get_api_url()` function in `AutoRestTest.py` to replace the default localhost URL with the proxy server.
+By default, the **LOCAL_TEST** variable is assigned to **True**.
 
 ## Results
 
 When instantiating the graph and table, the software will print updates on which step it is on. 
 When starting the reinforcement learning step, where the API is thoroughly tested, the software will consistently 
-print the occurrences of each operation status code. After the reinforcement learning step is complete, the software 
-will print the reinforcement learning tables updated with the learned values, and the cost of the complete execution
+print the occurrences of the found status codes, as well as the successful operations. After the reinforcement learning step is complete, the software 
+will output a series of information related to the reinforcement learning tables and operations processed, as well as the cost of the complete execution
 (the cost of the LLMs in USD).
 
 

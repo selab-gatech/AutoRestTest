@@ -16,7 +16,7 @@ from src.graph.specification_parser import OperationProperties, SpecificationPar
 from src.reinforcement.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction, BodyObjAgent, \
     DataSourceAgent, DependencyAgent
 from src.request_generator import RequestGenerator
-from src.utils import _construct_db_dir, construct_basic_token, get_object_shallow_mappings, get_body_params, \
+from src.utils import construct_db_dir, construct_basic_token, get_object_shallow_mappings, get_body_params, \
     get_response_params, get_response_param_mappings, remove_nulls
 from src.value_generator import identify_generator, randomize_string, random_generator, randomize_object
 

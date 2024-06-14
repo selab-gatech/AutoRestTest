@@ -16,7 +16,7 @@ class OperationAgent:
     def __init__(self, operation_graph, alpha=0.1, gamma=0.9, epsilon=0.1):
         self.alpha = alpha
         self.gamma = gamma
-        self.epsilon = 0.7
+        self.epsilon = epsilon
         self.operation_graph = operation_graph
         self.q_table = {}
         # Note: State is 1 dimensional (constant) and action is operation selection
