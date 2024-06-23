@@ -174,7 +174,7 @@ class AutoRestTest:
 
     def generate_graph(self, spec_name: str, ext: str):
         spec_path = f"{self.spec_dir}/{spec_name}{ext}"
-        db_graph = os.path.join(os.path.dirname(__file__), f"src/data/graphs/{spec_name}_graph")
+        db_graph = os.path.join(os.path.dirname(__file__), f"src/cache/graphs/{spec_name}")
         print("CREATING GRAPH...")
         with shelve.open(db_graph) as db:
 
@@ -215,7 +215,7 @@ class AutoRestTest:
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("BEGINNING Q-LEARNING...")
         q_learning = QLearning(operation_graph, alpha=LEARNING_RATE, gamma=DISCOUNT_FACTOR, epsilon=EXPLORATION_RATE, time_duration=TIME_DURATION, mutation_rate=MUTATION_RATE)
-        db_q_table = os.path.join(os.path.dirname(__file__), f"src/data/q_tables/{spec_name}_q_table")
+        db_q_table = os.path.join(os.path.dirname(__file__), f"src/cache/q_tables/{spec_name}")
 
         with shelve.open(db_q_table) as db:
             loaded_from_shelf = False

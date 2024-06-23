@@ -233,11 +233,11 @@ class OpenAILanguageModel:
         return result
 
 def construct_db_dir():
-    db_path = os.path.join(os.path.dirname(__file__), "data/q_tables")
+    db_path = os.path.join(os.path.dirname(__file__), "cache/q_tables")
     if not os.path.exists(db_path):
         os.makedirs(db_path)
 
-    db_path = os.path.join(os.path.dirname(__file__), "data/graphs")
+    db_path = os.path.join(os.path.dirname(__file__), "cache/graphs")
     if not os.path.exists(db_path):
         os.makedirs(db_path)
 
