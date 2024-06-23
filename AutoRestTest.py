@@ -11,7 +11,7 @@ from src.request_generator import RequestGenerator
 from dotenv import load_dotenv
 
 from src.graph.specification_parser import SpecificationParser
-from src.utils import OpenAILanguageModel, construct_db_dir
+from src.utils import OpenAILanguageModel, construct_db_dir, is_json_seriable
 
 from configurations import USE_CACHED_GRAPH, USE_CACHED_TABLE, \
     LEARNING_RATE, DISCOUNT_FACTOR, EXPLORATION_RATE, TIME_DURATION, MUTATION_RATE, SPECIFICATION_LOCATION, \
@@ -101,8 +101,12 @@ def output_errors(q_learning: QLearning, spec_name: str):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    seriable_errors = {}
+    for operation_idx, unique_errors in q_learning.unique_errors.items():
+        seriable_errors[operation_idx] = [error for error in unique_errors if is_json_seriable(error)]
+
     with open(f"{output_dir}/server_errors.json", "w") as f:
-        json.dump(q_learning.errors, f, indent=2)
+        json.dump(seriable_errors, f, indent=2)
 
 def output_operation_status_codes(q_learning: QLearning, spec_name: str):
     output_dir = os.path.join(os.path.dirname(__file__), f"data/{spec_name}")
@@ -127,15 +131,19 @@ def output_report(q_learning: QLearning, spec_name: str, spec_parser: Specificat
             if status_code // 100 == 2:
                 unique_processed_200s.add(operation_idx)
 
+    unique_errors = 0
+    for operation_idx in q_learning.unique_errors:
+        unique_errors += len(q_learning.unique_errors[operation_idx])
+
     report_content = {
         "Title": "AutoRestTest Report for " + title,
         "Duration": f"{q_learning.time_duration} seconds",
         "Status Code Distribution": dict(q_learning.responses),
         "Number of Total Operations": len(q_learning.operation_agent.q_table),
         "Number of Successfully Processed Operations": len(unique_processed_200s),
-        "Percentage of Successfully Processed Operations": str(round(len(unique_processed_200s) / len(q_learning.operation_agent.q_table) * 100, 2)) + "%",
-        "Number of Server Errors": len(q_learning.errors),
-        "Number of Unique Server Errors": len(set(q_learning.errors)),
+        "Percent of Successfully Processed Operations": str(round(len(unique_processed_200s) / len(q_learning.operation_agent.q_table) * 100, 2)) + "%",
+        "Number of Unique Server Errors": unique_errors,
+        "Operations with Server Errors": q_learning.errors,
     }
 
     with open(f"{output_dir}/report.json", "w") as f:

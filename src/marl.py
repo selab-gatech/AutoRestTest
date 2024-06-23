@@ -757,7 +757,6 @@ class QLearning:
                     data_signature = {
                         "parameters": parameters,
                         "body": body,
-                        "header": header,
                         "operation_id": operation_id
                     }
                     if operation_id not in self.unique_errors:
@@ -786,9 +785,9 @@ class QLearning:
         print(f"Status Code Counter: {dict(self.responses)}")
         print(f"Number of unique server errors: {unique_errors}")
         print(f"Number of uniquely successful operations: {len(unique_processed_200s)}")
-        print(f"Percentage of successful operations: {len(unique_processed_200s) / len(self.operation_graph.operation_nodes) * 100:.2f}%")
+        print(f"Percent of successful operations: {len(unique_processed_200s) / len(self.operation_graph.operation_nodes) * 100:.2f}%")
         print("Time remaining: ", self.time_duration - (time.time() - start_time))
-        print("Percentage of time elapsed: ", str(round((time.time() - start_time) / self.time_duration * 100, 2)) + "%")
+        print("Percent of time elapsed: ", str(round((time.time() - start_time) / self.time_duration * 100, 2)) + "%")
 
     def run(self):
         self.execute_operations()

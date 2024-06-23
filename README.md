@@ -92,11 +92,31 @@ By default, the **LOCAL_TEST** variable is assigned to **True**.
 
 ## Results
 
-When instantiating the graph and table, the software will print updates on which step it is on. 
-When starting the reinforcement learning step, where the API is thoroughly tested, the software will consistently 
-print the occurrences of the found status codes, as well as the successful operations. After the reinforcement learning step is complete, the software 
-will output a series of information related to the reinforcement learning tables and operations processed, as well as the cost of the complete execution
-(the cost of the LLMs in USD).
+Throughout AutoRestTest's execution, its terminal user interface (TUI) will provide the user with constant updates regarding
+the current step of the process. In addition, during request generation, the software will output information related to
+the amount of time elapsed, the number of successfully processed (2xx) operations, unique server errors (5xx), the time remaining, 
+and the distribution of all status codes. After request generation and reinforcement learning is completed, the software will output
+the cost of the program in USD (associated with the cost of using LLMs). 
+
+#### Report Generation and Data Files
+
+AutoRestTest will generate a series of files in the `data` directory within the root folder for easy access to execution results. 
+The following are the files generated:
+- `report.json`: Contains the compiled report of the API testing process, including key summary statistics and information.
+- `operation_status_codes.json`: Contains the distribution of status codes for each operation.
+- `q_tables.json`: Contains the completed Q-tables for each agent.
+- `server_errors.json`: Contains the unique server errors encountered during the testing process. Only JSON-seriable errors are stored.
+- `successful_parameters.json`: Contains the successful parameters for each operation.
+- `successful_responses.json`: Contains the successful responses for each operation.
+- `successful_bodies.json`: Contains the successful object request bodies for each operation.
+- `successful_primitives.json`: Contains the successful primitive request bodies for each operation.
+
+These files contain the necessary information for analysis into the success of AutoRestTest. 
+
+> [!NOTE]
+> The output files can grow in size according to the number of operations and the duration of execution. 
+> For example, the file containing successful responses can grow to be several **gigabytes** when executing for a long duration. 
+> It is recommended to clear the `data` directory when the files are no longer needed.
 
 
 

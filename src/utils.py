@@ -155,6 +155,13 @@ def encode_dictionary(dictionary) -> str:
     json_str = json.dumps(dictionary, sort_keys=True)
     return hashlib.sha256(json_str.encode()).hexdigest()
 
+def is_json_seriable(data):
+    try:
+        json.dumps(data)
+        return True
+    except:
+        return False
+
 # OpenAI available engines = ["gpt-3.5-turbo-0125", "gpt-4o"]
 
 COST_PER_TOKEN = {
