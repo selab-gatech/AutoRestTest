@@ -131,6 +131,12 @@ class SpecificationParser:
         """
         return self.resolving_parser.specification.get('servers')[0].get('url')
 
+    def get_api_title(self) -> str:
+        """
+        Extract the title of the API from the specification file.
+        """
+        return self.resolving_parser.specification.get('info', {}).get('title')
+
     def process_parameter_object_properties(self, properties: Dict) -> Dict[str, SchemaProperties]:
         """
         Process the properties of a parameter of type object to return a dictionary of all the properties and their

@@ -16,7 +16,7 @@ from src.graph.specification_parser import OperationProperties
 from src.reinforcement.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction, BodyObjAgent, \
     DataSourceAgent, DependencyAgent
 from src.utils import construct_db_dir, construct_basic_token, get_object_shallow_mappings, get_body_params, \
-    get_response_params, get_response_param_mappings, remove_nulls
+    get_response_params, get_response_param_mappings, remove_nulls, encode_dictionary
 from src.value_generator import identify_generator, randomize_string, random_generator, randomize_object
 
 
@@ -39,6 +39,8 @@ class QLearning:
         self.time_duration = time_duration
         self.responses = defaultdict(int)
 
+        self.errors = {}
+        self.unique_errors = {}
         self.successful_parameters = {}
         self.successful_bodies = {}
         self.successful_responses = {}
@@ -231,11 +233,6 @@ class QLearning:
         try:
             select_method = getattr(requests, http_method)
             full_url = self.api_url + endpoint_path
-            print("GENERATING REQUEST TO OPERATION: ", operation_properties.operation_id)
-            print("PARAMETERS: ", parameters)
-            print("BODY: ", body)
-            print("HEADER: ", header)
-            print("FULL URL: ", full_url)
             if body:
                 if not header:
                     header = {}
@@ -511,25 +508,9 @@ class QLearning:
 
         while time.time() - start_time < self.time_duration:
 
-            unique_processed_200s = set()
-            for operation_idx, status_codes in self.operation_response_counter.items():
-                for status_code in status_codes:
-                    if status_code // 100 == 2:
-                        unique_processed_200s.add(operation_idx)
-
-            not_hit_operations = set()
-            for operation_idx in self.operation_graph.operation_nodes.keys():
-                if operation_idx not in unique_processed_200s:
-                    not_hit_operations.add(operation_idx)
-
-            print("=========================================================================")
-            print(f"Responses: {dict(self.responses)}")
-            print(f"Total number of operations: {len(self.operation_graph.operation_nodes)}.")
-            print(f"Number of uniquely successful operations: {len(unique_processed_200s)}.")
-            print(f"Operations not hit: {not_hit_operations}.")
-            print("TIME REMAINING: ", self.time_duration - (time.time() - start_time))
-
             operation_id = self.operation_agent.get_action()
+
+            self.tui_output(start_time, operation_id)
 
             exploring_agent = self.select_exploration_agent(operation_id, start_time)
 
@@ -549,11 +530,11 @@ class QLearning:
             else:
                 data_source = self.data_source_agent.get_random_action(operation_id)
 
-            print("SENDING TO OPERATION: ", operation_id)
-            print("EXPLORING AGENT: ", exploring_agent)
-            print("DATA SOURCE: ", data_source)
-            print("SELECTED PARAMETERS: ", select_params.req_params)
-            print("SELECTED BODY: ", select_params.mime_type)
+            #print("SENDING TO OPERATION: ", operation_id)
+            #print("EXPLORING AGENT: ", exploring_agent)
+            #print("DATA SOURCE: ", data_source)
+            #print("SELECTED PARAMETERS: ", select_params.req_params)
+            #print("SELECTED BODY: ", select_params.mime_type)
 
             parameter_dependencies, request_body_dependencies, unconstructed_body, select_values = None, None, {}, None
             if data_source == "LLM":
@@ -577,8 +558,8 @@ class QLearning:
                     parameter_dependencies, request_body_dependencies = self.dependency_agent.get_random_action(operation_id, self.successful_responses, self.successful_parameters, self.successful_bodies)
                     llm_select_values = self.value_agent.get_best_action(operation_id)
 
-                print("PARAMETER DEPENDENCIES: ", parameter_dependencies)
-                print("BODY DEPENDENCIES: ", request_body_dependencies)
+                #print("PARAMETER DEPENDENCIES: ", parameter_dependencies)
+                #print("BODY DEPENDENCIES: ", request_body_dependencies)
 
                 llm_parameters = self.get_mapping(select_params.req_params,
                                               llm_select_values.param_mappings) if select_params.req_params else None
@@ -670,10 +651,10 @@ class QLearning:
             if response is None:
                 continue
 
-            if mutate_operation:
-                print("MUTATED OPERATION VALUES")
-            else:
-                print("NOT MUTATED OPERATION VALUES")
+            #if mutate_operation:
+            #    print("MUTATED OPERATION VALUES")
+            #else:
+            #    print("NOT MUTATED OPERATION VALUES")
 
             # Only update table when using table values (so not mutated)
             if not mutate_operation:
@@ -758,47 +739,57 @@ class QLearning:
                         elif response_content not in self.successful_primitives[operation_id]:
                             self.successful_primitives[operation_id].append(response_content)
 
-            if response is not None: self.responses[response.status_code] += 1
-            if response is not None and operation_id not in self.operation_response_counter: self.operation_response_counter[operation_id] = {response.status_code: 1}
-            elif response is not None and response.status_code not in self.operation_response_counter[operation_id]: self.operation_response_counter[operation_id][response.status_code] = 1
-            elif response is not None: self.operation_response_counter[operation_id][response.status_code] += 1
+            if response is not None:
+                self.responses[response.status_code] += 1
+                if operation_id not in self.operation_response_counter:
+                    self.operation_response_counter[operation_id] = {response.status_code: 1}
+                elif response.status_code not in self.operation_response_counter[operation_id]:
+                    self.operation_response_counter[operation_id][response.status_code] = 1
+                else:
+                    self.operation_response_counter[operation_id][response.status_code] += 1
 
-    def output_successes(self):
-        output_dir = os.path.join(os.path.dirname(__file__), "data/successful_values/success_params")
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        with open(f"{output_dir}/{self.operation_graph.spec_name}.json", "w") as f:
-            json.dump(self.successful_parameters, f, indent=2)
+                if 500 <= response.status_code < 600:
+                    if operation_id not in self.errors:
+                        self.errors[operation_id] = 1
+                    else:
+                        self.errors[operation_id] += 1
 
-        output_dir = os.path.join(os.path.dirname(__file__), "data/successful_values/success_bodies")
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        with open(f"{output_dir}/{self.operation_graph.spec_name}.json", "w") as f:
-            json.dump(self.successful_bodies, f, indent=2)
+                    data_signature = {
+                        "parameters": parameters,
+                        "body": body,
+                        "header": header,
+                        "operation_id": operation_id
+                    }
+                    if operation_id not in self.unique_errors:
+                        self.unique_errors[operation_id] = [data_signature]
+                    elif data_signature not in self.unique_errors[operation_id]:
+                        self.unique_errors[operation_id].append(data_signature)
 
-        output_dir = os.path.join(os.path.dirname(__file__), "data/successful_values/success_responses")
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        with open(f"{output_dir}/{self.operation_graph.spec_name}.json", "w") as f:
-            json.dump(self.successful_responses, f, indent=2)
+    def tui_output(self, start_time, operation_id):
 
-        output_dir = os.path.join(os.path.dirname(__file__), "data/successful_values/success_primitives")
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        with open(f"{output_dir}/{self.operation_graph.spec_name}.json", "w") as f:
-            json.dump(self.successful_primitives, f, indent=2)
+        unique_processed_200s = set()
+        for operation_idx, status_codes in self.operation_response_counter.items():
+            for status_code in status_codes:
+                if status_code // 100 == 2:
+                    unique_processed_200s.add(operation_idx)
+        not_hit_operations = set()
+        for operation_idx in self.operation_graph.operation_nodes.keys():
+            if operation_idx not in unique_processed_200s:
+                not_hit_operations.add(operation_idx)
 
-    def output_operation_response_counter(self):
-        output_dir = os.path.join(os.path.dirname(__file__), "data/operation_response_counter")
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        with open(f"{output_dir}/{self.operation_graph.spec_name}.json", "w") as f:
-            json.dump(self.operation_response_counter, f, indent=2)
+        unique_errors = 0
+        for operation_idx in self.unique_errors:
+            unique_errors += len(self.unique_errors[operation_idx])
+
+        print("=========================================================================")
+        print(f"Attempting operation: {operation_id}")
+        print(f"Status Code Counter: {dict(self.responses)}")
+        print(f"Number of unique server errors: {unique_errors}")
+        print(f"Number of uniquely successful operations: {len(unique_processed_200s)}")
+        print(f"Percentage of successful operations: {len(unique_processed_200s) / len(self.operation_graph.operation_nodes) * 100:.2f}%")
+        print("Time remaining: ", self.time_duration - (time.time() - start_time))
+        print("Percentage of time elapsed: ", str(round((time.time() - start_time) / self.time_duration * 100, 2)) + "%")
 
     def run(self):
         self.execute_operations()
-        self.output_successes()
-        self.output_operation_response_counter()
-
-        #self.print_q_tables()
-        print("COLLECTED RESPONSES: ", self.responses)
+        #print("COLLECTED RESPONSES: ", self.responses)

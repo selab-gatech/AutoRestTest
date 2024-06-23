@@ -151,6 +151,10 @@ def attempt_fix_json(invalid_json_str: str):
         print(f"Fixed JSON string: {fixed_json}")
         return {}
 
+def encode_dictionary(dictionary) -> str:
+    json_str = json.dumps(dictionary, sort_keys=True)
+    return hashlib.sha256(json_str.encode()).hexdigest()
+
 # OpenAI available engines = ["gpt-3.5-turbo-0125", "gpt-4o"]
 
 COST_PER_TOKEN = {
@@ -184,8 +188,7 @@ class OpenAILanguageModel:
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
         }
-        key_string = json.dumps(key_data, sort_keys=True)
-        return hashlib.sha256(key_string.encode('utf-8')).hexdigest()
+        return encode_dictionary(key_data)
 
     def query(self, user_message, system_message = DEFAULT_SYSTEM_MESSAGE, json_mode = False) -> str:
         cache_key = self._generate_cache_key(user_message, system_message, json_mode)
