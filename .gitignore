@@ -23,6 +23,7 @@ rest-gitlab/
 services/service_logs/
 src/data/
 data/
+src/cache/
 
 .env
 **/glove.6B.50d.w2v.txt

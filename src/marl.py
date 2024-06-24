@@ -11,6 +11,7 @@ import numpy as np
 import requests
 import shelve
 
+from configurations import ENABLE_HEADER_AGENT
 from src.generate_graph import OperationGraph
 from src.graph.specification_parser import OperationProperties
 from src.reinforcement.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction, BodyObjAgent, \
@@ -49,10 +50,6 @@ class QLearning:
         self._init_parameter_tracking()
         self._init_body_tracking()
         self._init_response_tracking()
-
-    def initialize_llm_agents(self):
-        #self.header_agent.initialize_q_table()
-        self.value_agent.initialize_q_table()
 
     def print_q_tables(self):
         print("OPERATION Q-TABLE: ", self.operation_agent.q_table)
@@ -469,7 +466,10 @@ class QLearning:
 
         elapsed_time = time.time() - start_time
 
-        agent_options = ["PARAMETER & BODY", "DATA_SOURCE", "VALUE", "DEPENDENCY", "NONE", "ALL"]
+        if ENABLE_HEADER_AGENT:
+            agent_options = ["PARAMETER & BODY", "DATA_SOURCE", "VALUE", "DEPENDENCY", "HEADER", "NONE", "ALL"]
+        else:
+            agent_options = ["PARAMETER & BODY", "DATA_SOURCE", "VALUE", "DEPENDENCY", "NONE", "ALL"]
 
         # Use exponential decay to allow for all agents to explore during initial time
         all_exploring_base_probability = 0.15
@@ -478,15 +478,16 @@ class QLearning:
         all_exploring_probability = all_exploring_base_probability + (1 - all_exploring_base_probability) * np.exp(-all_exploring_decay_rate * elapsed_time)
         all_exploring_probability = min(all_exploring_probability, 1)
         remaining_probability = 1 - all_exploring_probability
+        num_remaining = len(agent_options) - 1
         # Distribute some space for priority exploration
-        other_event_probability = (1 - priority_exploring_space) * remaining_probability / 5
+        other_event_probability = (1 - priority_exploring_space) * remaining_probability / num_remaining
 
         parameter_unexplored = self.parameter_agent.number_of_zeros(operation_id) + self.body_object_agent.number_of_zeros(operation_id)
         data_source_unexplored = self.data_source_agent.number_of_zeros(operation_id)
         value_unexplored = self.value_agent.number_of_zeros(operation_id)
         dependency_unexplored = self.dependency_agent.number_of_zeros(operation_id)
 
-        baseline_probability = np.array([other_event_probability] * 5 + [all_exploring_probability], dtype=np.float64)
+        baseline_probability = np.array([other_event_probability] * num_remaining + [all_exploring_probability], dtype=np.float64)
         unexplored_tables = np.array([parameter_unexplored, data_source_unexplored, value_unexplored, dependency_unexplored], dtype=np.float64)
 
         if np.sum(unexplored_tables) == 0:
@@ -519,7 +520,13 @@ class QLearning:
             else:
                 select_params = self.parameter_agent.get_random_action(operation_id)
 
-            select_header = None
+            if ENABLE_HEADER_AGENT:
+                if exploring_agent == "HEADER":
+                    select_header = self.header_agent.get_best_action(operation_id)
+                else:
+                    select_header = self.header_agent.get_random_action(operation_id)
+            else:
+                select_header = None
 
             if exploring_agent == "VALUE":
                 data_source = "LLM"
@@ -529,12 +536,6 @@ class QLearning:
                 data_source = self.data_source_agent.get_best_action(operation_id)
             else:
                 data_source = self.data_source_agent.get_random_action(operation_id)
-
-            #print("SENDING TO OPERATION: ", operation_id)
-            #print("EXPLORING AGENT: ", exploring_agent)
-            #print("DATA SOURCE: ", data_source)
-            #print("SELECTED PARAMETERS: ", select_params.req_params)
-            #print("SELECTED BODY: ", select_params.mime_type)
 
             parameter_dependencies, request_body_dependencies, unconstructed_body, select_values = None, None, {}, None
             if data_source == "LLM":
@@ -557,9 +558,6 @@ class QLearning:
                 else:
                     parameter_dependencies, request_body_dependencies = self.dependency_agent.get_random_action(operation_id, self.successful_responses, self.successful_parameters, self.successful_bodies)
                     llm_select_values = self.value_agent.get_best_action(operation_id)
-
-                #print("PARAMETER DEPENDENCIES: ", parameter_dependencies)
-                #print("BODY DEPENDENCIES: ", request_body_dependencies)
 
                 llm_parameters = self.get_mapping(select_params.req_params,
                                               llm_select_values.param_mappings) if select_params.req_params else None
@@ -651,11 +649,6 @@ class QLearning:
             if response is None:
                 continue
 
-            #if mutate_operation:
-            #    print("MUTATED OPERATION VALUES")
-            #else:
-            #    print("NOT MUTATED OPERATION VALUES")
-
             # Only update table when using table values (so not mutated)
             if not mutate_operation:
                 self.operation_agent.update_q_table(operation_id, self.determine_bad_response_reward(response))
@@ -676,6 +669,9 @@ class QLearning:
                                                          body_mappings=select_values.body_mappings)
                     self.value_agent.update_q_table(operation_id, processed_value_action,
                                                     self.determine_value_response_reward(response))
+
+                if exploring_agent == "HEADER":
+                    self.header_agent.update_q_table(operation_id, select_header, self.determine_header_reward(response))
 
                 if exploring_agent == "DEPENDENCY":
                     used_dependent_params = {}
@@ -786,7 +782,7 @@ class QLearning:
         print(f"Number of unique server errors: {unique_errors}")
         print(f"Number of uniquely successful operations: {len(unique_processed_200s)}")
         print(f"Percent of successful operations: {len(unique_processed_200s) / len(self.operation_graph.operation_nodes) * 100:.2f}%")
-        print("Time remaining: ", self.time_duration - (time.time() - start_time))
+        print("Time remaining: ", max(round(self.time_duration - (time.time() - start_time)),2), 0)
         print("Percent of time elapsed: ", str(round((time.time() - start_time) / self.time_duration * 100, 2)) + "%")
 
     def run(self):

@@ -15,7 +15,7 @@ from src.utils import OpenAILanguageModel, construct_db_dir, is_json_seriable
 
 from configurations import USE_CACHED_GRAPH, USE_CACHED_TABLE, \
     LEARNING_RATE, DISCOUNT_FACTOR, EXPLORATION_RATE, TIME_DURATION, MUTATION_RATE, SPECIFICATION_LOCATION, \
-    OPENAI_LLM_ENGINE
+    OPENAI_LLM_ENGINE, ENABLE_HEADER_AGENT
 
 load_dotenv()
 
@@ -42,6 +42,7 @@ def output_q_table(q_learning: QLearning, spec_name):
     operation_table = q_learning.operation_agent.q_table
     data_source_table = q_learning.data_source_agent.q_table
     dependency_table = q_learning.dependency_agent.q_table
+    header_table = q_learning.header_agent.q_table if q_learning.header_agent.q_table else "Disabled"
 
     simplified_param_table = {}
     for operation, operation_values in parameter_table.items():
@@ -62,7 +63,7 @@ def output_q_table(q_learning: QLearning, spec_name):
 
     compiled_q_table = {
         "OPERATION AGENT": operation_table,
-        #"HEADER AGENT": header_table,
+        "HEADER AGENT": header_table,
         "PARAMETER AGENT": simplified_param_table,
         "VALUE AGENT": value_table,
         "BODY OBJECT AGENT": simplified_body_table,
@@ -124,6 +125,7 @@ def output_report(q_learning: QLearning, spec_name: str, spec_parser: Specificat
         os.makedirs(output_dir)
 
     title = spec_parser.get_api_title() if spec_parser.get_api_title() else spec_name
+    title = f"'{title}' ({spec_name})"
 
     unique_processed_200s = set()
     for operation_idx, status_codes in q_learning.operation_response_counter.items():
@@ -189,6 +191,7 @@ class AutoRestTest:
                     operation_graph.operation_nodes = graph_properties["nodes"]
                     print(f"Loaded graph for {spec_name} from shelve.")
                     loaded_from_shelf = True
+
                 except Exception as e:
                     print("Error loading graph from shelve.")
                     loaded_from_shelf = False
@@ -218,33 +221,48 @@ class AutoRestTest:
         db_q_table = os.path.join(os.path.dirname(__file__), f"src/cache/q_tables/{spec_name}")
 
         with shelve.open(db_q_table) as db:
-            loaded_from_shelf = False
+            loaded_value_from_shelf = False
+            loaded_header_from_shelf = False
 
             if spec_name in db and self.use_cached_table:
                 compiled_q_table = db[spec_name]
-                q_learning.value_agent.q_table = compiled_q_table["value"]
 
                 try:
-                    db[spec_name]["value"] = q_learning.value_agent.q_table
-                    print(f"Loaded Q-table for {spec_name} from shelve.")
-                    loaded_from_shelf = True
+                    q_learning.value_agent.q_table = compiled_q_table["value"]
+                    print(f"Loaded value agent's Q-table for {spec_name} from shelve.")
+                    loaded_value_from_shelf = True
                 except Exception as e:
-                    print("Error saving value agent to shelve.")
-                    loaded_from_shelf = False
+                    print("Error loading value agent from shelve.")
+                    loaded_value_from_shelf = False
 
-            if not loaded_from_shelf:
-                q_learning.initialize_llm_agents()
+                if ENABLE_HEADER_AGENT:
+                    try:
+                        q_learning.header_agent.q_table = compiled_q_table["header"]
+                        print(f"Loaded header agent's Q-table for {spec_name} from shelve.")
+                        loaded_header_from_shelf = True if q_learning.header_agent.q_table else False
+                        # If the header agent is disabled, the Q-table will be None.
+                    except Exception as e:
+                        print("Error loading header agent from shelve.")
+                        loaded_header_from_shelf = False
 
-                compiled_q_table = {
-                    "value": q_learning.value_agent.q_table
+
+            if not loaded_value_from_shelf:
+                q_learning.value_agent.initialize_q_table()
+                print(f"Initialized new value agent Q-table for {spec_name}.")
+
+            if ENABLE_HEADER_AGENT and not loaded_header_from_shelf:
+                q_learning.header_agent.initialize_q_table()
+                print(f"Initialized new header agent Q-table for {spec_name}.")
+            elif not ENABLE_HEADER_AGENT:
+                q_learning.header_agent.q_table = None
+
+            try:
+                db[spec_name] = {
+                    "value": q_learning.value_agent.q_table,
+                    "header": q_learning.header_agent.q_table
                 }
-
-                try:
-                    db[spec_name] = compiled_q_table
-                except Exception as e:
-                    print("Error saving Q-table to shelve.")
-
-                print(f"Initialized new Q-tables for {spec_name}.")
+            except Exception as e:
+                print("Error saving Q-tables to shelve.")
 
         q_learning.parameter_agent.initialize_q_table()
         q_learning.operation_agent.initialize_q_table()
@@ -252,12 +270,14 @@ class AutoRestTest:
         q_learning.dependency_agent.initialize_q_table()
         q_learning.data_source_agent.initialize_q_table()
         output_q_table(q_learning, spec_name)
+        print("Q-TABLES INITIALIZED...")
+
         q_learning.run()
         print("Q-LEARNING COMPLETED!!!")
         return q_learning
 
     def print_performance(self):
-        print("Total cost of the tool: $", OpenAILanguageModel.get_cumulative_cost())
+        print("Total cost of the tool: $", round(OpenAILanguageModel.get_cumulative_cost(), 2))
 
     def run_all(self):
         for spec in os.listdir(self.spec_dir):

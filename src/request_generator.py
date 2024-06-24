@@ -283,7 +283,7 @@ class RequestGenerator:
 
         curr_tokens = []
         start_time = time.time()
-        while time.time() - start_time < 25 and len(curr_tokens) < 5:
+        while time.time() - start_time < 30 and len(curr_tokens) < 5:
             # get best action
             required_params = get_required_params(operation_node.operation_properties.parameters)
             best_params = (None, -np.inf)
