@@ -79,16 +79,34 @@ Specifications after generation. This is done to reduce the cost of execution an
 trials. The user can determine whether they want to use the cached graphs and tables by changing the **USE_CACHED_GRAPH**
 and **USE_CACHED_TABLE** variables. By default, both variables are set to **False**.
 
+### 5. Optional Header Agent
+
+AutoRestTest contains an optional Header agent responsible for testing the API with different authentication headers. Due to difficulties 
+of different authentication flows, the Header agent is only able to use Basic Authentication. By default, the agent is disabled.
+
+> [!CAUTION]
+> The Header agent Q-table should be rerun when executing services with local databases that refresh, as the user
+> credentials may become invalid.
+
 ## Execution
 
 The software can be executed by running the `AutoRestTest.py` file from the root directory using the following command:
 ```
 python3 AutoRestTest.py
 ```
-To specify the specification for execution, change the **SPECIFICATION_NAME** variable in the `configurations.py` file.
-The user is optionally able to change the **LOCAL_TEST** variable to select a proxy server for testing services. In this case,
-the user must implement the `get_api_url()` function in `AutoRestTest.py` to replace the default localhost URL with the proxy server.
-By default, the **LOCAL_TEST** variable is assigned to **True**.
+To indicate the specification for execution, change the **SPECIFICATION_LOCATION** variable in the `configurations.py` file.
+
+### Docker Execution
+
+For ease of use, the software can be executed using Docker. The user can apply the following commands from the 
+root directory sequentially to execute AutoRestTest using the pre-built Docker image:
+
+```
+docker build -t autoresttest .
+docker run -it autoresttest
+```
+
+Ensure that the `configurations.py` file is configured correctly before executing the software.
 
 ## Results
 
@@ -117,6 +135,7 @@ These files contain the necessary information for analysis into the success of A
 > The output files can grow in size according to the number of operations and the duration of execution. 
 > For example, the file containing successful responses can grow to be several **gigabytes** when executing for a long duration. 
 > It is recommended to clear the `data` directory when the files are no longer needed.
+
 
 
 

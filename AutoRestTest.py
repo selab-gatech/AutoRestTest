@@ -137,9 +137,12 @@ def output_report(q_learning: QLearning, spec_name: str, spec_parser: Specificat
     for operation_idx in q_learning.unique_errors:
         unique_errors += len(q_learning.unique_errors[operation_idx])
 
+    total_requests = sum(q_learning.responses.values())
+
     report_content = {
         "Title": "AutoRestTest Report for " + title,
         "Duration": f"{q_learning.time_duration} seconds",
+        "Total Requests Sent": total_requests,
         "Status Code Distribution": dict(q_learning.responses),
         "Number of Total Operations": len(q_learning.operation_agent.q_table),
         "Number of Successfully Processed Operations": len(unique_processed_200s),
