@@ -146,7 +146,7 @@ def output_report(q_learning: QLearning, spec_name: str, spec_parser: Specificat
         "Status Code Distribution": dict(q_learning.responses),
         "Number of Total Operations": len(q_learning.operation_agent.q_table),
         "Number of Successfully Processed Operations": len(unique_processed_200s),
-        "Percent of Successfully Processed Operations": str(round(len(unique_processed_200s) / len(q_learning.operation_agent.q_table) * 100, 2)) + "%",
+        "Percentage of Successfully Processed Operations": str(round(len(unique_processed_200s) / len(q_learning.operation_agent.q_table) * 100, 2)) + "%",
         "Number of Unique Server Errors": unique_errors,
         "Operations with Server Errors": q_learning.errors,
     }
@@ -180,7 +180,7 @@ class AutoRestTest:
     def generate_graph(self, spec_name: str, ext: str):
         spec_path = f"{self.spec_dir}/{spec_name}{ext}"
         db_graph = os.path.join(os.path.dirname(__file__), f"src/cache/graphs/{spec_name}")
-        print("CREATING GRAPH...")
+        print("CREATING SEMANTIC OPERATION DEPENDECY GRAPH...")
         with shelve.open(db_graph) as db:
 
             loaded_from_shelf = False
@@ -219,7 +219,7 @@ class AutoRestTest:
         return operation_graph
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
-        print("BEGINNING Q-LEARNING...")
+        print("INITIATING Q-TABLES...")
         q_learning = QLearning(operation_graph, alpha=LEARNING_RATE, gamma=DISCOUNT_FACTOR, epsilon=EXPLORATION_RATE, time_duration=TIME_DURATION, mutation_rate=MUTATION_RATE)
         db_q_table = os.path.join(os.path.dirname(__file__), f"src/cache/q_tables/{spec_name}")
 
@@ -228,6 +228,8 @@ class AutoRestTest:
             loaded_header_from_shelf = False
 
             if spec_name in db and self.use_cached_table:
+                print(f"Loading Q-tables for {spec_name} from shelve.")
+
                 compiled_q_table = db[spec_name]
 
                 try:
@@ -275,6 +277,7 @@ class AutoRestTest:
         output_q_table(q_learning, spec_name)
         print("Q-TABLES INITIALIZED...")
 
+        print("BEGINNING Q-LEARNING...")
         q_learning.run()
         print("Q-LEARNING COMPLETED!!!")
         return q_learning

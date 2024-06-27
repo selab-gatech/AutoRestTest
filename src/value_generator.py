@@ -7,6 +7,7 @@ import requests
 from dataclasses import dataclass, field, asdict
 from typing import Any, AnyStr, Dict, TYPE_CHECKING, Optional, List
 
+from configurations import DEFAULT_TEMPERATURE
 from src.prompts.generator_prompts import (REQUEST_BODY_GEN_PROMPT,
                                            FEWSHOT_REQUEST_BODY_GEN_PROMPT,
                                            PARAMETERS_GEN_PROMPT,
@@ -146,7 +147,7 @@ class PromptData:
     failed_mappings: Dict = field(default_factory=dict)
 
 class SmartValueGenerator:
-    def __init__(self, operation_properties: OperationProperties, requirements: 'RequestRequirements' = None, engine="gpt-4o", temperature=0.7):
+    def __init__(self, operation_properties: OperationProperties, requirements: 'RequestRequirements' = None, engine="gpt-4o", temperature=DEFAULT_TEMPERATURE):
         self.operation_properties: OperationProperties = operation_properties
         self.processed_operation = remove_nulls(asdict(operation_properties))
         self.parameters: Dict[str, Dict] = self.processed_operation.get("parameters")

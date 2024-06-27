@@ -22,10 +22,10 @@ class OperationAgent:
         # Note: State is 1 dimensional (constant) and action is operation selection
 
     def initialize_q_table(self):
-        print("Initiating Operation Agent Q-Table")
+        #print("Initiating Operation Agent Q-Table")
         operation_ids = self.operation_graph.operation_nodes.keys()
         self.q_table = {operation_id: 0 for operation_id in operation_ids}
-        print("Initiated Operation Agent Q-Table")
+        #print("Initiated Operation Agent Q-Table")
 
     def get_action(self):
         """
@@ -71,7 +71,7 @@ class HeaderAgent:
         request_generator = self.operation_graph.request_generator
         token_list = []
 
-        print("Initiating Header Agent Q-Table")
+        #print("Initiating Header Agent Q-Table")
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
             token_info = request_generator.get_auth_info(operation_node, 5)
             for token in token_info:
@@ -83,7 +83,7 @@ class HeaderAgent:
             for i in range(min(9, len(token_list))):
                 self.q_table[operation_id].append([token_list[i],0])
             self.q_table[operation_id].append([None,0])
-        print("Initiated Header Agent Q-Table")
+        #print("Initiated Header Agent Q-Table")
 
     def get_action(self, operation_id):
         """
@@ -137,7 +137,7 @@ class ParameterAgent:
         self.epsilon = epsilon
 
     def initialize_q_table(self):
-        print("Initiating Parameter Agent Q-Table")
+        #print("Initiating Parameter Agent Q-Table")
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
             if operation_id not in self.q_table:
                 self.q_table[operation_id] = {'params': {}, 'body': {}}
@@ -150,7 +150,7 @@ class ParameterAgent:
             self.q_table[operation_id]['params']["None"] = 0
             self.q_table[operation_id]['body']["None"] = 0
             # NOTE: Moved function of request body parameter agent to select combinations of mime types
-        print("Initiated Parameter Agent Q-Table")
+        #print("Initiated Parameter Agent Q-Table")
 
     def get_action(self, operation_id) -> ParameterAction:
         """
@@ -266,11 +266,11 @@ class ValueAgent:
         responses = defaultdict(list)
         visited = set()
         request_generator = self.operation_graph.request_generator
-        print("Initiating Value Agent Q-Table")
+        #print("Initiating Value Agent Q-Table")
         for operation_id, operation_node in self.operation_graph.operation_nodes.items():
             if operation_id not in visited:
                 request_generator.value_depth_traversal(operation_node, self.q_table, responses, visited)
-        print("Initiated Value Agent Q-Table")
+        #print("Initiated Value Agent Q-Table")
 
     def get_action(self, operation_id):
         if random.uniform(0, 1) < self.epsilon:

@@ -259,7 +259,7 @@ class RequestGenerator:
         else:
             param_q_table['body'] = {key: 0 for key in body_properties}
 
-        value_generator = SmartValueGenerator(operation_properties=operation_node.operation_properties, temperature=0.7)
+        value_generator = SmartValueGenerator(operation_properties=operation_node.operation_properties)
         failed_responses = []
         for i in range(3):
             response = self.create_and_send_request(operation_node, allow_retry=True, permitted_retries=1)
@@ -351,7 +351,7 @@ class RequestGenerator:
     def find_query_auth_mappings(self, operation_node, query_param_auth, token_info, is_query):
         print("Attempting to query for: " + operation_node.operation_id)
         #response = self.create_and_send_request(operation_node, requirement=requirement, allow_retry=True)
-        value_generator = SmartValueGenerator(operation_properties=operation_node.operation_properties, temperature=0.7)
+        value_generator = SmartValueGenerator(operation_properties=operation_node.operation_properties)
         parameters, request_body = value_generator.generate_parameters(necessary=True), value_generator.generate_request_body(necessary=True)
         response = self.send_operation_request(RequestData(
             endpoint_path=operation_node.operation_properties.endpoint_path,
@@ -593,7 +593,7 @@ class RequestGenerator:
                     possible_responses.append(response)
                 #elif response and response.response and response.response.ok:
                 #    responses[curr_node.operation_id].append(response)
-            value_generator = SmartValueGenerator(operation_properties=curr_node.operation_properties, temperature=0.7)
+            value_generator = SmartValueGenerator(operation_properties=curr_node.operation_properties)
             if possible_responses:
                 parameters, request_body = (
                     value_generator.generate_informed_value_agent_params(num_values=desired_size - lowest_occurrences, responses=possible_responses),

@@ -12,7 +12,7 @@ from src.graph.specification_parser import ParameterProperties, SchemaProperties
 from src.prompts.generator_prompts import FIX_JSON_OBJ
 from src.prompts.system_prompts import DEFAULT_SYSTEM_MESSAGE, FIX_JSON_SYSTEM_MESSAGE
 
-from configurations import OPENAI_LLM_ENGINE
+from configurations import OPENAI_LLM_ENGINE, DEFAULT_TEMPERATURE
 
 load_dotenv()
 
@@ -164,9 +164,24 @@ def is_json_seriable(data):
 
 # OpenAI available engines = ["gpt-3.5-turbo-0125", "gpt-4o"]
 
-COST_PER_TOKEN = {
+INPUT_COST_PER_TOKEN = {
     "gpt-3.5-turbo-0125": 0.5*10**-6,
-    "gpt-4o": 5*10**-6
+    "gpt-3.5-turbo": 0.5*10**-6,
+    "gpt-4o": 5*10**-6,
+    "gpt-4o-2024-05-13": 5*10**-6,
+    "gpt-3.5-turbo-instruct": 1.5*10**-6,
+    "gpt-4-turbo": 10**-6,
+    "gpt-4-turbo-2024-04-09": 10**-6,
+}
+
+OUTPUT_COST_PER_TOKEN = {
+    "gpt-3.5-turbo-0125": 1.5*10**-6,
+    "gpt-3.5-turbo": 1.5*10**-6,
+    "gpt-4o": 15*10**-6,
+    "gpt-4o-2024-05-13": 15*10**-6,
+    "gpt-3.5-turbo-instruct": 2*10**-6,
+    "gpt-4-turbo": 30**-6,
+    "gpt-4-turbo-2024-04-09": 30**-6,
 }
 
 class OpenAILanguageModel:
@@ -177,7 +192,7 @@ class OpenAILanguageModel:
     def get_cumulative_cost():
         return OpenAILanguageModel.cumulative_cost
 
-    def __init__(self, engine = OPENAI_LLM_ENGINE, temperature = 0.8, max_tokens = 4000):
+    def __init__(self, engine = OPENAI_LLM_ENGINE, temperature = DEFAULT_TEMPERATURE, max_tokens = 4000):
         self.api_key = os.getenv("OPENAI_API_KEY")
         if self.api_key is None or self.api_key.strip() == "":
             raise ValueError("OPENAI API key is required for OpenAI language model, found None or empty string.")
@@ -224,9 +239,12 @@ class OpenAILanguageModel:
                 temperature=self.temperature
             )
 
-        total_tokens = response.usage.total_tokens
-        if self.engine in COST_PER_TOKEN:
-            OpenAILanguageModel.cumulative_cost += total_tokens * COST_PER_TOKEN[self.engine]
+        input_tokens = response.usage.prompt_tokens if hasattr(response.usage, "prompt_tokens") else 0
+        output_tokens = response.usage.completion_tokens if hasattr(response.usage, "completion_tokens") else 0
+        if self.engine in INPUT_COST_PER_TOKEN:
+            OpenAILanguageModel.cumulative_cost += input_tokens * INPUT_COST_PER_TOKEN[self.engine]
+        if self.engine in OUTPUT_COST_PER_TOKEN:
+            OpenAILanguageModel.cumulative_cost += output_tokens * OUTPUT_COST_PER_TOKEN[self.engine]
         result = response.choices[0].message.content.strip()
 
         OpenAILanguageModel.cache[cache_key] = result

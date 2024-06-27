@@ -68,9 +68,8 @@ the program. The user can use the **OPENAI_LLM_ENGINE** variable to specify an a
 model is selected given its high performance, cost-effectiveness, and high token limit.
 
 > [!WARNING]
-> The software heavily uses the **json_mode** from recent OpenAI API engines. If the user desires to change the model,
-> it is important to ensure that the model supports the mode. Additionally, the cost of execution is only provided
-> if the user uses the **gpt-4o** or **gpt-3.5-turbo-0125** models, which are both supported by the software.
+> The software heavily uses the **JSON mode** from recent OpenAI API engines. All GPT 3.5-Turbo, 4-Turbo, and 4o engines support the JSON mode. 
+> Additionally, the cost of execution is only provided for the most recent versions of the listed OpenAI engines.
 
 #### 4. Use of Cached Graphs and Reinforcement Learning Tables
 
@@ -110,7 +109,7 @@ Ensure that the `configurations.py` file is configured correctly before executin
 
 ## Results
 
-Throughout AutoRestTest's execution, its terminal user interface (TUI) will provide the user with constant updates regarding
+Throughout AutoRestTest's execution, its command line interface (CLI) will provide the user with constant updates regarding
 the current step of the process. In addition, during request generation, the software will output information related to
 the amount of time elapsed, the number of successfully processed (2xx) operations, unique server errors (5xx), the time remaining, 
 and the distribution of all status codes. After request generation and reinforcement learning is completed, the software will output

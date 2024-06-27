@@ -176,7 +176,10 @@ class QLearning:
 
         if mutate_token:
             random_token_params = {"username": randomize_string(), "password": randomize_string()}
-            header = {"Authorization": construct_basic_token(random_token_params)}
+            if ENABLE_HEADER_AGENT and header and random.random() < 0.5:
+                header = None
+            else:
+                header = {"Authorization": construct_basic_token(random_token_params)}
 
         mutated_parameter_names = False
         if random.random() < mutate_parameter_completely:
@@ -473,7 +476,8 @@ class QLearning:
 
         # Use exponential decay to allow for all agents to explore during initial time
         all_exploring_base_probability = 0.15
-        all_exploring_decay_rate = 1/150
+        # all_exploring_decay_rate = 1/150
+        all_exploring_decay_rate = (-1 * 0.2 * self.time_duration) / (np.log(0.05)) # 0.1 is the desired probability at 20% of the time duration
         priority_exploring_space = 0.35
         all_exploring_probability = all_exploring_base_probability + (1 - all_exploring_base_probability) * np.exp(-all_exploring_decay_rate * elapsed_time)
         all_exploring_probability = min(all_exploring_probability, 1)
@@ -780,10 +784,10 @@ class QLearning:
         print(f"Attempting operation: {operation_id}")
         print(f"Status Code Counter: {dict(self.responses)}")
         print(f"Number of unique server errors: {unique_errors}")
-        print(f"Number of uniquely successful operations: {len(unique_processed_200s)}")
-        print(f"Percent of successful operations: {len(unique_processed_200s) / len(self.operation_graph.operation_nodes) * 100:.2f}%")
-        print("Time remaining: ", max(round(self.time_duration - (time.time() - start_time)),2), 0)
-        print("Percent of time elapsed: ", str(round((time.time() - start_time) / self.time_duration * 100, 2)) + "%")
+        print(f"Number of successful operations: {len(unique_processed_200s)}")
+        print(f"Percentage of successful operations: {len(unique_processed_200s) / len(self.operation_graph.operation_nodes) * 100:.2f}%")
+        print("Time remaining: ", max(round(self.time_duration - (time.time() - start_time), 3), 0))
+        print("Percentage of time elapsed: ", str(round((time.time() - start_time) / self.time_duration * 100, 2)) + "%")
 
     def run(self):
         self.execute_operations()
