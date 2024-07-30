@@ -4,6 +4,9 @@ import json
 from typing import Iterable, Dict, List, Any, Optional, Tuple, Set
 import itertools
 
+from gensim.downloader import load
+import numpy as np
+
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
@@ -249,6 +252,29 @@ class OpenAILanguageModel:
 
         OpenAILanguageModel.cache[cache_key] = result
         return result
+
+class EmbeddingModel:
+    def __init__(self):
+        self.model = load("glove-wiki-gigaword-50")
+        self.threshold = 0.8
+
+    def encode_sentence_or_word(self, thing: str):
+        words = thing.split(" ")
+        word_vectors = [self.model[word] for word in words if word in self.model]
+        return np.mean(word_vectors, axis=0) if word_vectors else None
+
+    @staticmethod
+    def handle_word_cases(parameter):
+        reconstructed_parameter = []
+        for index, char in enumerate(parameter):
+            if char.isalpha():
+                if char.isupper() and index != 0:
+                    reconstructed_parameter.append(" " + char.lower())
+                elif char == "_" or char == "-":
+                    reconstructed_parameter.append(" ")
+                else:
+                    reconstructed_parameter.append(char)
+        return "".join(reconstructed_parameter)
 
 def construct_db_dir():
     db_path = os.path.join(os.path.dirname(__file__), "cache/q_tables")

@@ -10,6 +10,8 @@ from gensim.downloader import load
 from scipy.spatial.distance import cosine
 
 from src.graph.specification_parser import OperationProperties, SchemaProperties
+from src.utils import EmbeddingModel
+
 
 @dataclass
 class SimilarityValue:
@@ -25,62 +27,44 @@ class SimilarityValue:
         }
 
 class OperationDependencyComparator:
-    def __init__(self):
-        self.model = load("glove-wiki-gigaword-50")
+    def __init__(self, model: EmbeddingModel):
+        self.model = model
         self.threshold = 0.8
 
-    @staticmethod
-    def handle_parameter_cases(parameter):
-        reconstructed_parameter = []
-        for index, char in enumerate(parameter):
-            if char.isalpha():
-                if char.isupper() and index != 0:
-                    reconstructed_parameter.append(" " + char.lower())
-                elif char == "_" or char == "-":
-                    reconstructed_parameter.append(" ")
-                else:
-                    reconstructed_parameter.append(char)
-        return "".join(reconstructed_parameter)
-
-    @staticmethod
-    def get_parameter_list(operation: OperationProperties) -> List[Dict[str,str]]:
+    def get_parameter_list(self, operation: OperationProperties) -> List[Dict[str,str]]:
         if operation.parameters is None:
             return []
-        return [{OperationDependencyComparator.handle_parameter_cases(parameter): parameter}
+        return [{self.model.handle_word_cases(parameter): parameter}
                 for parameter, parameter_details in operation.parameters.items()]
 
-    @staticmethod
-    def handle_response_params(response: SchemaProperties, response_params: List[Dict[str,str]]) -> None:
+    def handle_response_params(self, response: SchemaProperties, response_params: List[Dict[str,str]]) -> None:
         if response.properties:
             for item, item_details in response.properties.items():
-                if {OperationDependencyComparator.handle_parameter_cases(item): item} not in response_params:
-                    response_params.append({OperationDependencyComparator.handle_parameter_cases(item): item})
-                OperationDependencyComparator.handle_response_params(item_details, response_params)
+                if {self.model.handle_word_cases(item): item} not in response_params:
+                    response_params.append({self.model.handle_word_cases(item): item})
+                self.handle_response_params(item_details, response_params)
         elif response.items:
-            OperationDependencyComparator.handle_response_params(response.items, response_params)
+            self.handle_response_params(response.items, response_params)
         else:
             return
 
-    @staticmethod
-    def handle_body_params(body: SchemaProperties) -> List[Dict[str,str]]:
+    def handle_body_params(self, body: SchemaProperties) -> List[Dict[str,str]]:
         object_params = []
         if body.properties:
-            object_params = [{OperationDependencyComparator.handle_parameter_cases(item): item} for item, item_details in body.properties.items()]
+            object_params = [{self.model.handle_word_cases(item): item} for item, item_details in body.properties.items()]
         elif body.items:
-            object_params = OperationDependencyComparator.handle_body_params(body.items)
+            object_params = self.handle_body_params(body.items)
         return object_params
 
-    @staticmethod
-    def get_request_body_list(operation: OperationProperties) -> List[Dict[str,str]]:
+    def get_request_body_list(self, operation: OperationProperties) -> List[Dict[str,str]]:
         if operation.request_body is None:
             return []
         request_body_list = []
         for request_body_type, request_body_properties in operation.request_body.items():
-            request_body_list += OperationDependencyComparator.handle_body_params(request_body_properties)
+            request_body_list += self.handle_body_params(request_body_properties)
         return request_body_list
 
-    @staticmethod
-    def get_response_list(operation: OperationProperties) -> List[Dict[str,str]]:
+    def get_response_list(self,operation: OperationProperties) -> List[Dict[str,str]]:
         if operation.responses is None:
             return []
         response_list = []
@@ -88,14 +72,9 @@ class OperationDependencyComparator:
             if status_code and status_code[0] == "2" and response_properties.content:
                 for response, response_details in response_properties.content.items():
                     curr_responses = []
-                    OperationDependencyComparator.handle_response_params(response_details, curr_responses)
+                    self.handle_response_params(response_details, curr_responses)
                     response_list += curr_responses
         return response_list
-
-    def encode_sentence_or_word(self, thing: str):
-        words = thing.split(" ")
-        word_vectors = [self.model[word] for word in words if word in self.model]
-        return np.mean(word_vectors, axis=0) if word_vectors else None
 
     def cosine_similarity(self, operation1_vals: List[Dict[str,str]], operation2_vals: List[Dict[str,str]], in_value: str = None) -> Dict[str, List[SimilarityValue]]:
         """
@@ -107,8 +86,8 @@ class OperationDependencyComparator:
                 param_param_similarity[parameter] = []
                 for dependency_pairing in operation2_vals:
                     for processed_dependency, dependency in dependency_pairing.items():
-                        param_embedding = self.encode_sentence_or_word(processed_parameter)
-                        dependency_embedding = self.encode_sentence_or_word(processed_dependency)
+                        param_embedding = self.model.encode_sentence_or_word(processed_parameter)
+                        dependency_embedding = self.model.encode_sentence_or_word(processed_dependency)
                         if param_embedding is not None and dependency_embedding is not None:
                             similarity = 1 - cosine(param_embedding, dependency_embedding)
                             param_param_similarity[parameter].append(SimilarityValue(
