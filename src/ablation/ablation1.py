@@ -700,7 +700,7 @@ class Ablation1:
                                         self.successful_responses[operation_id][response_prop].append(response_val)
                             else:
                                 self.successful_responses[operation_id][response_prop] = response_vals
-                                if self.dependency_agent.dynamic_responses(operation_id, response_prop) and "DEPENDENCY" not in self.data_source_agent.available_data_sources:
+                                if self.dependency_agent.add_undocumented_responses(operation_id, response_prop) and "DEPENDENCY" not in self.data_source_agent.available_data_sources:
                                     self.data_source_agent.initialize_dependency_source()
 
                     else:

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, AnyStr, TYPE_CHECKING
 
 import numpy as np
 import random
@@ -9,7 +9,10 @@ from scipy.spatial.distance import cosine
 
 from src.generate_graph import OperationGraph
 from src.utils import get_combinations, get_param_combinations, \
-    construct_basic_token, get_required_params, get_required_body_params
+    construct_basic_token, get_required_params, get_required_body_params, get_body_params
+
+if TYPE_CHECKING:
+    from src.marl import QLearning
 
 
 class OperationAgent:
@@ -479,6 +482,8 @@ class DependencyAgent:
                         dependent_parameter = similarity.dependent_val
                         destination = edge.destination.operation_id
 
+                        # Note: Body should be nested
+
                         if processed_in_val[0] == "query" and parameter not in self.q_table[operation_id]['params']:
                             self.q_table[operation_id]['params'][parameter] = {}
                         elif processed_in_val[0] == "body" and parameter not in self.q_table[operation_id]['body']:
@@ -505,10 +510,10 @@ class DependencyAgent:
                             elif processed_in_val[1] == "response":
                                 self.q_table[operation_id]['body'][parameter][destination]["response"][dependent_parameter] = 0
 
-    def get_action(self, operation_id) -> Tuple[Dict, Dict]:
-        if random.uniform(0, 1) < self.epsilon:
-            return self.get_random_action(operation_id)
-        return self.get_best_action(operation_id)
+    # def get_action(self, operation_id, qlearning) -> Tuple[AnyStr, Tuple[Dict, Dict]]:
+    #     if random.uniform(0, 1) < self.epsilon:
+    #         return "EXPLORE", self.get_random_action(operation_id)
+    #     return self.get_best_action(operation_id)
 
     def get_best_action(self, operation_id, successful_responses, successful_params, successful_body):
         best_params = {}
@@ -539,9 +544,21 @@ class DependencyAgent:
                             best_dependent = {"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location}
             best_body[param] = best_dependent
 
-        return best_params, best_body
+        return "BEST", best_params, best_body
 
-    def get_random_action(self, operation_id, successful_responses, successful_params, successful_body):
+    def get_random_action(self, operation_id, qlearning):
+
+        successful_responses = qlearning.successful_responses
+        successful_params = qlearning.successful_parameters
+        successful_body = qlearning.successful_bodies
+
+        has_success = any(
+            status_code // 100 == 2 for status_codes in qlearning.operation_response_counter.values() for status_code in
+            status_codes)
+
+        if random.random() < 0.3 and has_success:
+            return self.assign_random_dependency_from_successful(operation_id, qlearning)
+
         random_params = {}
         for param, dependent_ops in self.q_table[operation_id]['params'].items():
             random_dependencies = []
@@ -570,7 +587,7 @@ class DependencyAgent:
                             random_dependencies.append({"dependent_val": dependent_param, "dependent_operation": dependent_op, "value": value, "in_value": location})
             random_body[param] = random.choice(random_dependencies) if random_dependencies else {"dependent_val": None, "dependent_operation": None, "value": 0, "in_value": None}
 
-        return random_params, random_body
+        return "EXPLORE", random_params, random_body
 
     def update_q_table(self, operation_id, dependent_params, dependent_body, reward):
         if dependent_params:
@@ -607,7 +624,7 @@ class DependencyAgent:
                         if dependent_param == dependent["dependent_val"]:
                             self.q_table[operation_id]['body'][param][dependent["dependent_operation"]][location][dependent_param] = new_q
 
-    def dynamic_responses(self, new_operation_response_id, new_property):
+    def add_undocumented_responses(self, new_operation_response_id, new_property):
         updated_tables = False
         dependency_comparator = self.operation_graph.dependency_comparator
         for operation_id, operation_props in self.q_table.items():
@@ -628,6 +645,64 @@ class DependencyAgent:
                             updated_tables = True
                             print("New dependency discovered between operation {} and operation {} with parameter {} and response {}".format(operation_id, new_operation_response_id, param, new_property))
         return updated_tables
+
+    def add_new_dependency(self, operation_id, param_location, operation_param, dependent_operation_id, dependent_location, dependent_param):
+        if operation_param not in self.q_table[operation_id][param_location]:
+            self.q_table[operation_id][param_location][operation_param] = {}
+        if dependent_operation_id not in self.q_table[operation_id][param_location][operation_param]:
+            self.q_table[operation_id][param_location][operation_param][dependent_operation_id] = {"params": {}, "body": {}, "response": {}}
+        if dependent_param not in self.q_table[operation_id][param_location][operation_param][dependent_operation_id][dependent_location]:
+            self.q_table[operation_id][param_location][operation_param][dependent_operation_id][dependent_location][dependent_param] = 0
+        print("New dependency discovered between operation {} and operation {} with operation parameter {} and dependent parameter {}".format(operation_id, dependent_operation_id, operation_param, dependent_param))
+
+
+    # Get a random value from the successful operations to test dependencies
+    def assign_random_dependency_from_successful(self, operation_id, qlearning: 'QLearning'):
+        possible_options = []
+
+        for operation_idx, operation_parameters in qlearning.successful_parameters.items():
+            if operation_idx == operation_id:
+                continue
+            for parameter_name, parameter_values in operation_parameters.items():
+                for parameter_value in parameter_values:
+                    possible_options.append({"dependent_val": parameter_name, "dependent_operation": operation_idx,
+                                             "value": parameter_value, "in_value": "params"})
+
+        for operation_idx, operation_body_parms in qlearning.successful_bodies.items():
+            if operation_idx == operation_id:
+                continue
+            for body_name, body_values in operation_body_parms.items():
+                for body_value in body_values:
+                    possible_options.append(
+                        {"dependent_val": body_name, "dependent_operation": operation_idx, "value": body_value,
+                         "in_value": "body"})
+
+        for operation_idx, operation_responses in qlearning.successful_responses.items():
+            if operation_idx == operation_id:
+                continue
+            for response_name, response_values in operation_responses.items():
+                for response_value in response_values:
+                    possible_options.append({"dependent_val": response_name, "dependent_operation": operation_idx,
+                                             "value": response_value, "in_value": "response"})
+
+        if not possible_options:
+            return "RANDOM", {}, {}
+
+        parameter_dependency_assignment = {}
+        if qlearning.operation_graph.operation_nodes[operation_id].operation_properties.parameters:
+            for parameter_name, parameter_properties in qlearning.operation_graph.operation_nodes[
+                operation_id].operation_properties.parameters.items():
+                if parameter_properties.schema:
+                    parameter_dependency_assignment[parameter_name] = random.choice(possible_options)
+
+        body_dependency_assignment = {}
+        if qlearning.operation_graph.operation_nodes[operation_id].operation_properties.request_body:
+            for mime, body_properties in qlearning.operation_graph.operation_nodes[operation_id].operation_properties.request_body.items():
+                possible_body_params = get_body_params(body_properties)
+                for prop in possible_body_params:
+                    body_dependency_assignment[prop] = random.choice(possible_options)
+
+        return "RANDOM", parameter_dependency_assignment, body_dependency_assignment
 
     def number_of_zeros(self, operation_id):
         zeros = 0
