@@ -916,7 +916,7 @@ def execute_ablation_1(spec_dir, spec_name, duration):
 
 if __name__ == "__main__":
     spec_dir = "../../aratrl-openapi/"
-    spec_name = "market2"
+    spec_name = "project"
     duration = 1800
     execute_ablation_1(spec_dir, spec_name, duration)
 

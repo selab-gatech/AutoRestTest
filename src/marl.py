@@ -597,12 +597,12 @@ class QLearning:
             elif data_source == "DEPENDENCY":
                 dependency_type, parameter_dependencies, request_body_dependencies = self.dependency_agent.get_action(operation_id, self)
 
-                llm_select_values = self.value_agent.get_best_action(operation_id)
+                supplement_select_values = self.value_agent.get_best_action(operation_id)
 
-                llm_parameters = self.get_mapping(select_params.req_params,
-                                              llm_select_values.param_mappings) if select_params.req_params else None
-                llm_body = self.get_mapping([select_params.mime_type],
-                                        llm_select_values.body_mappings) if select_params.mime_type else None
+                supplement_parameters = self.get_mapping(select_params.req_params,
+                                              supplement_select_values.param_mappings) if select_params.req_params else None
+                supplement_body = self.get_mapping([select_params.mime_type],
+                                        supplement_select_values.body_mappings) if select_params.mime_type else None
 
                 parameters = {}
                 if select_params.req_params:
@@ -621,7 +621,7 @@ class QLearning:
                                     parameters[parameter] = random.choice(self.successful_responses[dependency["dependent_operation"]][dependency["dependent_val"]])
                     for param in select_params.req_params:
                         if param not in parameters or not parameters[param]:
-                            parameters[param] = llm_parameters[param] if llm_parameters and param in llm_parameters else random_generator()()
+                            parameters[param] = supplement_parameters[param] if supplement_parameters and param in supplement_parameters else random_generator()()
 
                 body = {}
                 if select_params.mime_type and select_params.mime_type in self.operation_graph.operation_nodes[operation_id].operation_properties.request_body:
@@ -641,11 +641,11 @@ class QLearning:
                                 if self.successful_responses[dependency["dependent_operation"]][dependency["dependent_val"]]:
                                     unconstructed_body[body_property] = random.choice(self.successful_responses[dependency["dependent_operation"]][dependency["dependent_val"]])
 
-                    deconstructed_llm_body = self._deconstruct_body(llm_body[select_params.mime_type]) if llm_body and select_params.mime_type in llm_body else None
-                    if deconstructed_llm_body:
+                    deconstructed_supplement_body = self._deconstruct_body(supplement_body[select_params.mime_type]) if supplement_body and select_params.mime_type in supplement_body else None
+                    if deconstructed_supplement_body:
                         for prop in possible_body_properties:
                             if prop not in unconstructed_body:
-                                unconstructed_body[prop] = deconstructed_llm_body[prop] if prop in deconstructed_llm_body else random_generator()()
+                                unconstructed_body[prop] = deconstructed_supplement_body[prop] if prop in deconstructed_supplement_body else random_generator()()
                     body = {select_params.mime_type: self._construct_body(unconstructed_body, operation_id, select_params.mime_type)}
             else:
                 parameters = None

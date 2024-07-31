@@ -731,7 +731,8 @@ def perform_q_learning_ablation_4(operation_graph: OperationGraph, spec_name, du
     q_learning.parameter_agent.initialize_q_table()
     q_learning.operation_agent.initialize_q_table()
     q_learning.body_object_agent.initialize_q_table()
-    q_learning.data_source_agent.available_data_sources.remove("LLM", "DEPENDENCY")
+    q_learning.data_source_agent.available_data_sources.remove("LLM")
+    q_learning.data_source_agent.available_data_sources.remove("DEPENDENCY")
     q_learning.data_source_agent.initialize_q_table()
     print("Starting Q-learning!")
     q_learning.run()
@@ -753,7 +754,7 @@ def execute_ablation_4(spec_dir, spec_name, duration):
 
 if __name__ == "__main__":
     spec_dir = "../../aratrl-openapi/"
-    spec_name = "market2"
+    spec_name = "project"
     duration = 1800
     execute_ablation_4(spec_dir, spec_name, duration)
 
