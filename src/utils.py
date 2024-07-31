@@ -11,7 +11,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 
-from src.graph.specification_parser import ParameterProperties, SchemaProperties
+from src.graph.specification_parser import ParameterProperties, SchemaProperties, SpecificationParser
 from src.prompts.generator_prompts import FIX_JSON_OBJ
 from src.prompts.system_prompts import DEFAULT_SYSTEM_MESSAGE, FIX_JSON_SYSTEM_MESSAGE
 
@@ -292,3 +292,11 @@ def construct_basic_token(token):
     encoded_bytes = base64.b64encode(token_str.encode("utf-8"))
     encoded_str = encoded_bytes.decode("utf-8")
     return f"Basic {encoded_str}"
+
+
+def get_api_url(spec_parser: SpecificationParser, local_test: bool):
+    api_url = spec_parser.get_api_url()
+    if not local_test:
+        api_url = api_url.replace("localhost", os.getenv("EC2_ADDRESS"))
+        api_url = api_url.replace(":9", ":8")
+    return api_url

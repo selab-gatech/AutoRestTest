@@ -19,10 +19,10 @@ USE_CACHED_TABLE = True # Specifies whether to use the cached Q-table for the Va
 # The following variables are responsible for the Q-learning agent configurations.
 LEARNING_RATE = 0.1 # The learning rate for the Q-learning agent.
 DISCOUNT_FACTOR = 0.9 # The discount factor for the Q-learning agent.
-EXPLORATION_RATE = 0.7 # The exploration rate specifically for the Operation Agent. The remaining agents use a joint probability distribution.
+EXPLORATION_RATE = 0.1 # The exploration rate using the epsilon-greedy policy.
 
 # The following variables are responsible for the request generation configurations.
-TIME_DURATION = 120 # The time duration for the request generation process.
+TIME_DURATION = 1200 # The time duration for the request generation process.
 MUTATION_RATE = 0.2 # The mutation rate for the request generation process.
 
 

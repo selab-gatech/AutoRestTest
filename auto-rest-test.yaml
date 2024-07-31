@@ -16,7 +16,7 @@ dependencies:
   - openai=1.30.3
   - bs4=4.12.3
   - python-dotenv=1.0.1
-  - pytorch=2.3.1
+ # - pytorch=2.3.1
   - pip:
       - prance==23.6.21.0
       - openapi-spec-validator==0.7.1

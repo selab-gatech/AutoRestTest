@@ -30,12 +30,12 @@ class QLearning:
         self.gamma = gamma
         self.epsilon = epsilon
         self.mutation_rate = mutation_rate
-        self.operation_agent = OperationAgent(operation_graph, alpha, gamma, epsilon)
+        self.operation_agent = OperationAgent(operation_graph, alpha, gamma, 0.7)
         self.header_agent = HeaderAgent(operation_graph, alpha, gamma, epsilon)
         self.parameter_agent = ParameterAgent(operation_graph, alpha, gamma, epsilon)
         self.value_agent = ValueAgent(operation_graph, alpha, gamma, epsilon)
         self.body_object_agent = BodyObjAgent(operation_graph, alpha, gamma, epsilon)
-        self.data_source_agent = DataSourceAgent(operation_graph, alpha, gamma, epsilon)
+        self.data_source_agent = DataSourceAgent(operation_graph, alpha, gamma, 0.7)
         self.dependency_agent = DependencyAgent(operation_graph, alpha, gamma, epsilon)
         self.time_duration = time_duration
         self.responses = defaultdict(int)
@@ -522,6 +522,8 @@ class QLearning:
 
     def select_exploration_agent(self, operation_id, start_time):
 
+        # DEPRECATED: Using value decomposition idea for Q-value updating
+
         elapsed_time = time.time() - start_time
 
         if ENABLE_HEADER_AGENT:
@@ -572,41 +574,20 @@ class QLearning:
 
             self.tui_output(start_time, operation_id)
 
-            # Address multi-agent credit assignment problem through centralized exploration selection
-            exploring_agent = self.select_exploration_agent(operation_id, start_time)
-
-            # Determine selected parameters
-            if exploring_agent == "PARAMETER & BODY" or exploring_agent == "ALL":
-                select_params = self.parameter_agent.get_random_action(operation_id)
-            else:
-                select_params = self.parameter_agent.get_best_action(operation_id)
+            select_params = self.parameter_agent.get_action(operation_id)
 
             # Determine header
             if ENABLE_HEADER_AGENT:
-                if exploring_agent == "HEADER" or exploring_agent == "ALL":
-                    select_header = self.header_agent.get_random_action(operation_id)
-                else:
-                    select_header = self.header_agent.get_best_action(operation_id)
+                select_header = self.header_agent.get_action(operation_id)
             else:
                 select_header = None
 
-            # Determine data source
-            if exploring_agent == "VALUE":
-                data_source = "LLM"
-            elif exploring_agent == "DEPENDENCY":
-                data_source = "DEPENDENCY"
-            elif exploring_agent == "DATA_SOURCE" or exploring_agent == "ALL":
-                data_source = self.data_source_agent.get_random_action(operation_id)
-            else:
-                data_source = self.data_source_agent.get_random_action(operation_id)
+            data_source = self.data_source_agent.get_action(operation_id)
 
             # Determine value assignments
             parameter_dependencies, request_body_dependencies, unconstructed_body, select_values, dependency_type = None, None, {}, None, None
             if data_source == "LLM":
-                if exploring_agent == "VALUE" or exploring_agent == "ALL":
-                    select_values = self.value_agent.get_random_action(operation_id)
-                else:
-                    select_values = self.value_agent.get_best_action(operation_id)
+                select_values = self.value_agent.get_action(operation_id)
                 parameters = self.get_mapping(select_params.req_params, select_values.param_mappings) if select_params.req_params else None
                 body = self.get_mapping([select_params.mime_type], select_values.body_mappings) if select_params.mime_type else None
             elif data_source == "DEFAULT":
@@ -614,10 +595,7 @@ class QLearning:
                 parameters = self.get_mapping(select_params.req_params, param_mappings) if select_params.req_params else None
                 body = self.get_mapping([select_params.mime_type], body_mappings) if select_params.mime_type else None
             elif data_source == "DEPENDENCY":
-                if exploring_agent == "DEPENDENCY" or exploring_agent == "ALL":
-                    dependency_type, parameter_dependencies, request_body_dependencies = self.dependency_agent.get_random_action(operation_id, self)
-                else:
-                    dependency_type, parameter_dependencies, request_body_dependencies = self.dependency_agent.get_best_action(operation_id, self.successful_responses, self.successful_parameters, self.successful_bodies)
+                dependency_type, parameter_dependencies, request_body_dependencies = self.dependency_agent.get_action(operation_id, self)
 
                 llm_select_values = self.value_agent.get_best_action(operation_id)
 
@@ -681,10 +659,7 @@ class QLearning:
             if body:
                 for mime, body_properties in body.items():
                     if type(body_properties) == dict:
-                        if exploring_agent == "PARAMETER & BODY" or exploring_agent == "ALL":
-                            select_properties = self.body_object_agent.get_random_action(operation_id, mime)
-                        else:
-                            select_properties = self.body_object_agent.get_best_action(operation_id, mime)
+                        select_properties = self.body_object_agent.get_action(operation_id, mime)
                         deconstructed_body = self._deconstruct_body(body_properties)
                         if select_properties:
                             new_bodies_properties = {prop: deconstructed_body[prop] for prop in deconstructed_body if prop in select_properties}
@@ -726,27 +701,30 @@ class QLearning:
             if not mutate_operation:
                 self.operation_agent.update_q_table(operation_id, self.determine_bad_response_reward(response))
 
-                if exploring_agent == "PARAMETER & BODY":
-                    self.parameter_agent.update_q_table(operation_id, select_params, self.determine_parameter_response_reward(response))
-                    # If body object agent is used, update the q-table
-                    if select_body_properties:
-                        for mime, select_properties in select_body_properties.items():
-                            self.body_object_agent.update_q_table(operation_id, mime, select_properties,
-                                                                  self.determine_good_response_reward(response))
+                curr_Q_param, curr_Q_mime = self.parameter_agent.get_Q_curr(operation_id, select_params)
+                next_Q_param, next_Q_mime = self.parameter_agent.get_Q_next(operation_id)
+                curr_Q_body, next_Q_body = 0, 0
+                if select_body_properties:
+                    for mime, select_properties in select_body_properties.items():
+                        curr_Q_body += self.body_object_agent.get_Q_curr(operation_id, mime, select_properties)
+                        next_Q_body += self.body_object_agent.get_Q_next(operation_id, mime)
 
-                if exploring_agent == "DATA_SOURCE":
-                    self.data_source_agent.update_q_table(operation_id, data_source, self.determine_good_response_reward(response))
+                curr_Q_data = self.data_source_agent.get_Q_curr(operation_id, data_source)
+                next_Q_data = self.data_source_agent.get_Q_next(operation_id)
 
-                if exploring_agent == "VALUE":
+                curr_Q_header, next_Q_header = 0, 0
+                if ENABLE_HEADER_AGENT:
+                    curr_Q_header += self.header_agent.get_Q_curr(operation_id, select_header)
+                    next_Q_header += self.header_agent.get_Q_next(operation_id)
+
+                processed_value_action, used_dependent_params, used_dependent_body = None, None, None
+                curr_Q_value_params, curr_Q_value_body, next_Q_value_params, next_Q_value_body, curr_Q_dependency_params, curr_Q_dependency_body, next_Q_dependency_params, next_Q_dependency_body = [], [], [], [], [], [], [], []
+                if data_source == "LLM":
                     processed_value_action = ValueAction(param_mappings=parameters,
                                                          body_mappings=select_values.body_mappings)
-                    self.value_agent.update_q_table(operation_id, processed_value_action,
-                                                    self.determine_value_response_reward(response))
-
-                if exploring_agent == "HEADER":
-                    self.header_agent.update_q_table(operation_id, select_header, self.determine_header_reward(response))
-
-                if exploring_agent == "DEPENDENCY" and (dependency_type == "EXPLORE" or dependency_type == "BEST"):
+                    curr_Q_value_params, curr_Q_value_body = self.value_agent.get_Q_curr(operation_id, processed_value_action)
+                    next_Q_value_params, next_Q_value_body = self.value_agent.get_Q_next(operation_id, processed_value_action)
+                elif data_source == "DEPENDENCY" and (dependency_type == "EXPLORE" or dependency_type == "BEST"):
                     used_dependent_params = {}
                     if parameter_dependencies:
                         for parameter in parameters:
@@ -759,9 +737,9 @@ class QLearning:
                             if body_param in select_body_properties[
                                 select_params.mime_type] and body_param in request_body_dependencies:
                                 used_dependent_body[body_param] = request_body_dependencies[body_param]
-                    self.dependency_agent.update_q_table(operation_id, used_dependent_params, used_dependent_body,
-                                                         self.determine_good_response_reward(response))
-                elif exploring_agent == "DEPENDENCY" and dependency_type == "RANDOM":
+                    curr_Q_dependency_params, curr_Q_dependency_body = self.dependency_agent.get_Q_curr(operation_id, used_dependent_params, used_dependent_body)
+                    next_Q_dependency_params, next_Q_dependency_body = self.dependency_agent.get_Q_next(operation_id, used_dependent_params, used_dependent_body)
+                elif data_source == "DEPENDENCY" and dependency_type == "RANDOM":
                     if not 200 <= response.status_code < 300:
                         continue
                     if parameter_dependencies:
@@ -776,6 +754,28 @@ class QLearning:
                             dependency_location = dependency_info["in_value"]
                             dependent_val = dependency_info["dependent_val"]
                             self.dependency_agent.add_new_dependency(operation_id, "body", body_param, dependent_operation, dependency_location, dependent_val)
+
+                # Calculate combined error through value decomposition
+                Q_target = next_Q_data + next_Q_param + next_Q_mime + next_Q_body + next_Q_header + sum(next_Q_value_params) + sum(next_Q_value_body) + sum(next_Q_dependency_params) + sum(next_Q_dependency_body)
+                Q_curr = curr_Q_data + curr_Q_param + curr_Q_mime + curr_Q_body + curr_Q_header + sum(curr_Q_value_params) + sum(curr_Q_value_body) + sum(curr_Q_dependency_params) + sum(curr_Q_dependency_body)
+                td_error = self.determine_good_response_reward(response) + self.gamma * Q_target - Q_curr
+
+                # Update Q-tables
+                self.parameter_agent.update_Q_item(operation_id, select_params, td_error)
+                if select_body_properties:
+                    for mime, select_properties in select_body_properties.items():
+                        self.body_object_agent.update_Q_item(operation_id, mime, select_properties, td_error)
+
+                self.data_source_agent.update_Q_item(operation_id, data_source, td_error)
+
+                if ENABLE_HEADER_AGENT:
+                    self.header_agent.update_Q_item(operation_id, select_header, td_error)
+
+                if data_source == "LLM":
+                    self.value_agent.update_Q_item(operation_id, processed_value_action, td_error)
+
+                elif data_source == "DEPENDENCY" and (dependency_type == "EXPLORE" or dependency_type == "BEST"):
+                    self.dependency_agent.update_Q_item(operation_id, used_dependent_params, used_dependent_body, td_error)
 
             # Update successful parameters to use for future operation dependencies
             if response is not None and response.ok and not mutated_parameter_names:
@@ -875,4 +875,3 @@ class QLearning:
 
     def run(self):
         self.execute_operations()
-        #print("COLLECTED RESPONSES: ", self.responses)

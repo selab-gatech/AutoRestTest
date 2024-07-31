@@ -4,27 +4,19 @@ import os
 import shelve
 
 from src.generate_graph import OperationGraph
-from src.graph.similarity_comparator import OperationDependencyComparator
 from src.marl import QLearning
 from src.request_generator import RequestGenerator
 
 from dotenv import load_dotenv
 
 from src.graph.specification_parser import SpecificationParser
-from src.utils import OpenAILanguageModel, construct_db_dir, is_json_seriable, EmbeddingModel
+from src.utils import OpenAILanguageModel, construct_db_dir, is_json_seriable, EmbeddingModel, get_api_url
 
 from configurations import USE_CACHED_GRAPH, USE_CACHED_TABLE, \
     LEARNING_RATE, DISCOUNT_FACTOR, EXPLORATION_RATE, TIME_DURATION, MUTATION_RATE, SPECIFICATION_LOCATION, \
-    OPENAI_LLM_ENGINE, ENABLE_HEADER_AGENT
+    ENABLE_HEADER_AGENT
 
 load_dotenv()
-
-def get_api_url(spec_parser: SpecificationParser, local_test: bool):
-    api_url = spec_parser.get_api_url()
-    if not local_test:
-        api_url = api_url.replace("localhost", os.getenv("EC2_ADDRESS"))
-        api_url = api_url.replace(":9", ":8")
-    return api_url
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Generate requests based on API specification.')

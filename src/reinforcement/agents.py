@@ -88,6 +88,24 @@ class HeaderAgent:
             self.q_table[operation_id].append([None,0])
         #print("Initiated Header Agent Q-Table")
 
+    def get_Q_next(self, operation_id):
+        best_next_q = -np.inf
+        for mapping in self.q_table[operation_id]:
+            best_next_q = max(best_next_q, mapping[1])
+        return best_next_q
+
+    def get_Q_curr(self, operation_id, token):
+        current_q = 0
+        for mapping in self.q_table[operation_id]:
+            if mapping[0] == token:
+                current_q = mapping[1]
+        return current_q
+
+    def update_Q_item(self, operation_id, token, td_error):
+        for mapping in self.q_table[operation_id]:
+            if mapping[0] == token:
+                mapping[1] += self.alpha * td_error
+
     def get_action(self, operation_id):
         """
         Get the next action based on the Q-table
@@ -210,9 +228,29 @@ class ParameterAgent:
 
         return ParameterAction(req_params=best_params, mime_type=best_body)
 
-        #best_body: Tuple = max(((mime, param, value) for mime, mime_params in self.q_table[operation_id]['body'].items()
-        #                        for param, value in mime_params.items()), key=lambda x: x[2]) if self.q_table[operation_id]['body'] else (None, None, 0)
-        #return ParameterAction(req_params=best_params[0], req_body=best_body[1], mime_type=best_body[0])
+    def get_Q_next(self, operation_id):
+        best_next_q_params = max(self.q_table[operation_id]['params'].values()) if self.q_table[operation_id]['params'] else 0
+        best_next_q_body = max(self.q_table[operation_id]['body'].values()) if self.q_table[operation_id]['body'] else 0
+        return best_next_q_params, best_next_q_body
+
+    def get_Q_curr(self, operation_id, action):
+        if action.req_params is None:
+            action.req_params = "None"
+        if action.mime_type is None:
+            action.mime_type = "None"
+        current_q_params = self.q_table[operation_id]['params'][action.req_params] if self.q_table[operation_id]['params'] else 0
+        current_q_body = self.q_table[operation_id]['body'][action.mime_type] if self.q_table[operation_id]['body'] else 0
+        return current_q_params, current_q_body
+
+    def update_Q_item(self, operation_id, action, td_error):
+        if action.req_params is None:
+            action.req_params = "None"
+        if action.mime_type is None:
+            action.mime_type = "None"
+        if self.q_table[operation_id]['params']:
+            self.q_table[operation_id]['params'][action.req_params] += self.alpha * td_error
+        if self.q_table[operation_id]['body']:
+            self.q_table[operation_id]['body'][action.mime_type] += self.alpha * td_error
 
     def update_q_table(self, operation_id, action, reward):
         """
@@ -342,6 +380,61 @@ class ValueAgent:
                     if mapping[0] == body:
                         mapping[1] = new_q
 
+    def get_Q_next(self, operation_id, filtered_action):
+        best_Q_next_params = []
+        best_Q_next_body = []
+
+        if filtered_action.param_mappings:
+            best_next_q = -np.inf
+            for param, value in filtered_action.param_mappings.items():
+                for mapping in self.q_table[operation_id]['params'][param]:
+                    best_next_q = max(best_next_q, mapping[1])
+                best_Q_next_params.append(best_next_q)
+
+        if filtered_action.body_mappings:
+            best_next_q = -np.inf
+            for mime, body in filtered_action.body_mappings.items():
+                for mapping in self.q_table[operation_id]['body'][mime]:
+                    best_next_q = max(best_next_q, mapping[1])
+                best_Q_next_body.append(best_next_q)
+
+        return best_Q_next_params, best_Q_next_body
+
+    def get_Q_curr(self, operation_id, filtered_action):
+        current_Q_params = []
+        current_Q_body = []
+
+        if filtered_action.param_mappings:
+            for param, value in filtered_action.param_mappings.items():
+                current_q = 0
+                for mapping in self.q_table[operation_id]['params'][param]:
+                    if mapping[0] == value:
+                        current_q = mapping[1]
+                current_Q_params.append(current_q)
+
+        if filtered_action.body_mappings:
+            for mime, body in filtered_action.body_mappings.items():
+                current_q = 0
+                for mapping in self.q_table[operation_id]['body'][mime]:
+                    if mapping[0] == body:
+                        current_q = mapping[1]
+                current_Q_body.append(current_q)
+
+        return current_Q_params, current_Q_body
+
+    def update_Q_item(self, operation_id, action, td_error):
+        if action.param_mappings:
+            for param, value in action.param_mappings.items():
+                for mapping in self.q_table[operation_id]['params'][param]:
+                    if mapping[0] == value:
+                        mapping[1] += self.alpha * td_error
+
+        if action.body_mappings:
+            for mime, body in action.body_mappings.items():
+                for mapping in self.q_table[operation_id]['body'][mime]:
+                    if mapping[0] == body:
+                        mapping[1] += self.alpha * td_error
+
     def number_of_zeros(self, operation_id):
         zeros = 0
         for param, param_mappings in self.q_table[operation_id]['params'].items():
@@ -408,6 +501,21 @@ class BodyObjAgent:
         new_q = current_q + self.alpha * (reward + self.gamma * best_next_q - current_q)
         self.q_table[operation_id][mime][action] = new_q
 
+    def get_Q_next(self, operation_id, mime):
+        best_next_q = max(self.q_table[operation_id][mime].values()) if self.q_table[operation_id][mime] else 0
+        return best_next_q
+
+    def get_Q_curr(self, operation_id, mime, action):
+        if action is None:
+            action = "None"
+        current_q = self.q_table[operation_id][mime][action] if self.q_table[operation_id][mime] else 0
+        return current_q
+
+    def update_Q_item(self, operation_id, mime, action, td_error):
+        if action is None:
+            action = "None"
+        self.q_table[operation_id][mime][action] += self.alpha * td_error
+
     def number_of_zeros(self, operation_id):
         zeros = 0
         for mime, body_obj_mappings in self.q_table[operation_id].items():
@@ -453,6 +561,17 @@ class DataSourceAgent:
         best_next_q = max(self.q_table[operation_id].values())
         new_q = current_q + self.alpha * (reward + self.gamma * best_next_q - current_q)
         self.q_table[operation_id][action] = new_q
+
+    def get_Q_next(self, operation_id):
+        best_next_q = max(self.q_table[operation_id].values())
+        return best_next_q
+
+    def get_Q_curr(self, operation_id, action):
+        current_q = self.q_table[operation_id][action]
+        return current_q
+
+    def update_Q_item(self, operation_id, action, td_error):
+        self.q_table[operation_id][action] += self.alpha * td_error
 
     def number_of_zeros(self, operation_id):
         zeros = 0
@@ -510,10 +629,10 @@ class DependencyAgent:
                             elif processed_in_val[1] == "response":
                                 self.q_table[operation_id]['body'][parameter][destination]["response"][dependent_parameter] = 0
 
-    # def get_action(self, operation_id, qlearning) -> Tuple[AnyStr, Tuple[Dict, Dict]]:
-    #     if random.uniform(0, 1) < self.epsilon:
-    #         return "EXPLORE", self.get_random_action(operation_id)
-    #     return self.get_best_action(operation_id)
+    def get_action(self, operation_id, qlearning):
+        if random.uniform(0, 1) < self.epsilon:
+            return self.get_random_action(operation_id, qlearning)
+        return self.get_best_action(operation_id, qlearning.successful_responses, qlearning.successful_parameters, qlearning.successful_bodies)
 
     def get_best_action(self, operation_id, successful_responses, successful_params, successful_body):
         best_params = {}
@@ -623,6 +742,79 @@ class DependencyAgent:
                     for dependent_param, value in dependent_params.items():
                         if dependent_param == dependent["dependent_val"]:
                             self.q_table[operation_id]['body'][param][dependent["dependent_operation"]][location][dependent_param] = new_q
+
+    def get_Q_next(self, operation_id, dependent_params, dependent_body):
+        best_next_q_params = []
+        best_next_q_body = []
+
+        if dependent_params:
+            for param, dependent in dependent_params.items():
+                best_next_q = -np.inf
+                if not dependent["dependent_operation"]:
+                    continue
+                for location, dependent_params in self.q_table[operation_id]['params'][param][dependent["dependent_operation"]].items():
+                    for dependent_param, value in dependent_params.items():
+                        best_next_q = max(best_next_q, value)
+                best_next_q_params.append(best_next_q)
+
+        if dependent_body:
+            for param, dependent in dependent_body.items():
+                best_next_q = -np.inf
+                if not dependent["dependent_operation"]:
+                    continue
+                for location, dependent_params in self.q_table[operation_id]['body'][param][dependent["dependent_operation"]].items():
+                    for dependent_param, value in dependent_params.items():
+                        best_next_q = max(best_next_q, value)
+                best_next_q_body.append(best_next_q)
+
+        return best_next_q_params, best_next_q_body
+
+    def get_Q_curr(self, operation_id, dependent_params, dependent_body):
+        current_Q_params = []
+        current_Q_body = []
+
+        if dependent_params:
+            for param, dependent in dependent_params.items():
+                current_q = 0
+                if not dependent["dependent_operation"]:
+                    continue
+                for location, dependent_params in self.q_table[operation_id]['params'][param][dependent["dependent_operation"]].items():
+                    for dependent_param, value in dependent_params.items():
+                        if dependent_param == dependent["dependent_val"]:
+                            current_q = value
+                current_Q_params.append(current_q)
+
+        if dependent_body:
+            for param, dependent in dependent_body.items():
+                current_q = 0
+                if not dependent["dependent_operation"]:
+                    continue
+                for location, dependent_params in self.q_table[operation_id]['body'][param][dependent["dependent_operation"]].items():
+                    for dependent_param, value in dependent_params.items():
+                        if dependent_param == dependent["dependent_val"]:
+                            current_q = value
+                current_Q_body.append(current_q)
+
+        return current_Q_params, current_Q_body
+
+    def update_Q_item(self, operation_id, dependent_params, dependent_body, td_error):
+        if dependent_params:
+            for param, dependent in dependent_params.items():
+                if not dependent["dependent_operation"]:
+                    continue
+                for location, dependent_params in self.q_table[operation_id]['params'][param][dependent["dependent_operation"]].items():
+                    for dependent_param, value in dependent_params.items():
+                        if dependent_param == dependent["dependent_val"]:
+                            self.q_table[operation_id]['params'][param][dependent["dependent_operation"]][location][dependent_param] += self.alpha * td_error
+
+        if dependent_body:
+            for param, dependent in dependent_body.items():
+                if not dependent["dependent_operation"]:
+                    continue
+                for location, dependent_params in self.q_table[operation_id]['body'][param][dependent["dependent_operation"]].items():
+                    for dependent_param, value in dependent_params.items():
+                        if dependent_param == dependent["dependent_val"]:
+                            self.q_table[operation_id]['body'][param][dependent["dependent_operation"]][location][dependent_param] += self.alpha * td_error
 
     def add_undocumented_responses(self, new_operation_response_id, new_property):
         updated_tables = False
