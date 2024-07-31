@@ -574,7 +574,6 @@ class QLearning:
 
             # Address multi-agent credit assignment problem through centralized exploration selection
             exploring_agent = self.select_exploration_agent(operation_id, start_time)
-            exploring_agent = "DEPENDENCY"
 
             # Determine selected parameters
             if exploring_agent == "PARAMETER & BODY" or exploring_agent == "ALL":

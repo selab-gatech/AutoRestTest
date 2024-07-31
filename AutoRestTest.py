@@ -11,7 +11,7 @@ from src.request_generator import RequestGenerator
 from dotenv import load_dotenv
 
 from src.graph.specification_parser import SpecificationParser
-from src.utils import OpenAILanguageModel, construct_db_dir, is_json_seriable
+from src.utils import OpenAILanguageModel, construct_db_dir, is_json_seriable, EmbeddingModel
 
 from configurations import USE_CACHED_GRAPH, USE_CACHED_TABLE, \
     LEARNING_RATE, DISCOUNT_FACTOR, EXPLORATION_RATE, TIME_DURATION, MUTATION_RATE, SPECIFICATION_LOCATION, \
@@ -169,15 +169,15 @@ class AutoRestTest:
         self.use_cached_graph = USE_CACHED_GRAPH
         self.use_cached_table = USE_CACHED_TABLE
 
-    def init_graph(self, spec_name: str, spec_path) -> OperationGraph:
+    def init_graph(self, spec_name: str, spec_path: str, embedding_model: EmbeddingModel) -> OperationGraph:
         spec_parser = SpecificationParser(spec_path=spec_path, spec_name=spec_name)
         api_url = get_api_url(spec_parser, self.local_test)
-        operation_graph = OperationGraph(spec_path=spec_path, spec_name=spec_name, spec_parser=spec_parser)
+        operation_graph = OperationGraph(spec_path=spec_path, spec_name=spec_name, spec_parser=spec_parser, embedding_model=embedding_model)
         request_generator = RequestGenerator(operation_graph=operation_graph, api_url=api_url, is_naive=self.is_naive)
         operation_graph.assign_request_generator(request_generator)
         return operation_graph
 
-    def generate_graph(self, spec_name: str, ext: str):
+    def generate_graph(self, spec_name: str, ext: str, embedding_model: EmbeddingModel):
         spec_path = f"{self.spec_dir}/{spec_name}{ext}"
         db_graph = os.path.join(os.path.dirname(__file__), f"src/cache/graphs/{spec_name}")
         print("CREATING SEMANTIC OPERATION DEPENDECY GRAPH...")
@@ -186,7 +186,7 @@ class AutoRestTest:
             loaded_from_shelf = False
             if spec_name in db and self.use_cached_graph:
                 print(f"Loading graph for {spec_name} from shelve.")
-                operation_graph = self.init_graph(spec_name, spec_path)
+                operation_graph = self.init_graph(spec_name, spec_path, embedding_model)
 
                 try:
                     graph_properties = db[spec_name]
@@ -201,7 +201,7 @@ class AutoRestTest:
 
             if not loaded_from_shelf:
                 print(f"Initializing new graph for {spec_name}.")
-                operation_graph = self.init_graph(spec_name, spec_path)
+                operation_graph = self.init_graph(spec_name, spec_path, embedding_model)
                 operation_graph.create_graph()
 
                 graph_properties = {
@@ -220,7 +220,8 @@ class AutoRestTest:
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("INITIATING Q-TABLES...")
-        q_learning = QLearning(operation_graph, alpha=LEARNING_RATE, gamma=DISCOUNT_FACTOR, epsilon=EXPLORATION_RATE, time_duration=TIME_DURATION, mutation_rate=MUTATION_RATE)
+        q_learning = QLearning(operation_graph, alpha=LEARNING_RATE, gamma=DISCOUNT_FACTOR, epsilon=EXPLORATION_RATE,
+                               time_duration=TIME_DURATION, mutation_rate=MUTATION_RATE)
         db_q_table = os.path.join(os.path.dirname(__file__), f"src/cache/q_tables/{spec_name}")
 
         with shelve.open(db_q_table) as db:
@@ -293,7 +294,8 @@ class AutoRestTest:
 
     def run_single(self, spec_name: str, ext: str):
         print("BEGINNING AUTO-REST-TEST...")
-        operation_graph = self.generate_graph(spec_name, ext)
+        embedding_model = EmbeddingModel()
+        operation_graph = self.generate_graph(spec_name, ext, embedding_model)
         q_learning = self.perform_q_learning(operation_graph, spec_name)
         self.print_performance()
         output_q_table(q_learning, spec_name)

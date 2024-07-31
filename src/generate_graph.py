@@ -5,6 +5,8 @@ from typing import List, Dict, Tuple, Optional
 from src.request_generator import RequestGenerator
 from src.graph.specification_parser import OperationProperties, SpecificationParser
 from src.graph.similarity_comparator import OperationDependencyComparator, SimilarityValue
+from src.utils import EmbeddingModel
+
 
 class OperationNode:
     def __init__(self, operation_properties: OperationProperties):
@@ -22,7 +24,7 @@ class OperationEdge:
         self.similar_parameters: Dict[str, List[SimilarityValue]] = similar_parameters # have parameters as the key (similarity value has response param and in_value)
 
 class OperationGraph:
-    def __init__(self, spec_path, spec_name=None, spec_parser: SpecificationParser = None):
+    def __init__(self, spec_path, spec_name=None, spec_parser: SpecificationParser = None, embedding_model=None):
         self.spec_path = spec_path
         self.spec_name = spec_name
         self.spec_parser = spec_parser
@@ -30,7 +32,8 @@ class OperationGraph:
         self.operation_nodes: Dict[str, OperationNode] = {}
         self.operation_edges: List[OperationEdge] = []
         self.next_most_similar_count = 3
-        self.dependency_comparator = OperationDependencyComparator()
+        self.embedding_model: EmbeddingModel = embedding_model
+        self.dependency_comparator = OperationDependencyComparator(model=embedding_model)
 
     def print_graph(self):
         for operation_id, operation_node in self.operation_nodes.items():

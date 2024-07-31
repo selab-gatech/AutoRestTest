@@ -627,13 +627,14 @@ class DependencyAgent:
     def add_undocumented_responses(self, new_operation_response_id, new_property):
         updated_tables = False
         dependency_comparator = self.operation_graph.dependency_comparator
+        embedding_model = self.operation_graph.embedding_model
         for operation_id, operation_props in self.q_table.items():
             for location, param_values in operation_props.items():
                 for param, dependent_values in param_values.items():
-                    processed_param = dependency_comparator.handle_parameter_cases(param)
-                    processed_response = dependency_comparator.handle_parameter_cases(new_property)
-                    param_embedding = dependency_comparator.encode_sentence_or_word(processed_param)
-                    response_embedding = dependency_comparator.encode_sentence_or_word(processed_response)
+                    processed_param = embedding_model.handle_word_cases(param)
+                    processed_response = embedding_model.handle_word_cases(new_property)
+                    param_embedding = embedding_model.encode_sentence_or_word(processed_param)
+                    response_embedding = embedding_model.encode_sentence_or_word(processed_response)
                     if param_embedding is not None and response_embedding is not None:
                         similarity = 1 - cosine(param_embedding, response_embedding)
                         if similarity > dependency_comparator.threshold:
