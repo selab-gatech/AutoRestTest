@@ -35,7 +35,7 @@ class OperationAgent:
         Get the next action based on the Q-table
         :return: operation_id for next action
         """
-        if random.uniform(0, 1) < self.epsilon:
+        if random.random() < self.epsilon:
             return self.get_random_action()
         return self.get_best_action()
 
@@ -111,7 +111,7 @@ class HeaderAgent:
         Get the next action based on the Q-table
         :return: operation_id for next action
         """
-        if random.uniform(0, 1) < self.epsilon:
+        if random.random() < self.epsilon:
             return self.get_random_action(operation_id)
         return self.get_best_action(operation_id)
 
@@ -179,7 +179,7 @@ class ParameterAgent:
         :param operation_id:
         :return:
         """
-        if random.uniform(0, 1) < self.epsilon:
+        if random.random() < self.epsilon:
             return self.get_random_action(operation_id)
         return self.get_best_action(operation_id)
 
@@ -314,7 +314,7 @@ class ValueAgent:
         #print("Initiated Value Agent Q-Table")
 
     def get_action(self, operation_id):
-        if random.uniform(0, 1) < self.epsilon:
+        if random.random() < self.epsilon:
             return self.get_random_action(operation_id)
         return self.get_best_action(operation_id)
 
@@ -469,7 +469,7 @@ class BodyObjAgent:
                         self.q_table[operation_id][mime]["None"] = 0
 
     def get_action(self, operation_id, mime):
-        if random.uniform(0, 1) < self.epsilon:
+        if random.random() < self.epsilon:
             return self.get_random_action(operation_id, mime)
         return self.get_best_action(operation_id, mime)
 
@@ -545,7 +545,7 @@ class DataSourceAgent:
             self.available_data_sources.append("DEPENDENCY")
 
     def get_action(self, operation_id):
-        if random.uniform(0, 1) < self.epsilon:
+        if random.random() < self.epsilon:
             return self.get_random_action(operation_id)
         return self.get_best_action(operation_id)
 
@@ -630,11 +630,23 @@ class DependencyAgent:
                                 self.q_table[operation_id]['body'][parameter][destination]["response"][dependent_parameter] = 0
 
     def get_action(self, operation_id, qlearning):
-        if random.uniform(0, 1) < self.epsilon:
-            return self.get_random_action(operation_id, qlearning)
-        return self.get_best_action(operation_id, qlearning.successful_responses, qlearning.successful_parameters, qlearning.successful_bodies)
+        has_success = any(
+            status_code // 100 == 2 for status_codes in qlearning.operation_response_counter.values() for status_code in
+            status_codes)
 
-    def get_best_action(self, operation_id, successful_responses, successful_params, successful_body):
+        if random.random() < self.epsilon:
+            if has_success and random.random() < 0.3:
+                return self.assign_random_dependency_from_successful(operation_id, qlearning)
+            return self.get_random_action(operation_id, qlearning)
+
+        return self.get_best_action(operation_id, qlearning)
+
+    def get_best_action(self, operation_id, qlearning):
+        successful_responses = qlearning.successful_responses
+        successful_params = qlearning.successful_parameters
+        successful_body = qlearning.successful_bodies
+
+
         best_params = {}
         for param, dependent_ops in self.q_table[operation_id]['params'].items():
             best_dependent = {"dependent_val": None, "dependent_operation": None, "value": -np.inf, "in_value": None}
@@ -670,13 +682,6 @@ class DependencyAgent:
         successful_responses = qlearning.successful_responses
         successful_params = qlearning.successful_parameters
         successful_body = qlearning.successful_bodies
-
-        has_success = any(
-            status_code // 100 == 2 for status_codes in qlearning.operation_response_counter.values() for status_code in
-            status_codes)
-
-        if random.random() < 0.3 and has_success:
-            return self.assign_random_dependency_from_successful(operation_id, qlearning)
 
         random_params = {}
         for param, dependent_ops in self.q_table[operation_id]['params'].items():

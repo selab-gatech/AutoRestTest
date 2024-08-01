@@ -796,7 +796,7 @@ def perform_q_learning_ablation_3(operation_graph: OperationGraph, spec_name, du
 
 def execute_ablation_3(spec_dir, spec_name, duration):
     """
-    Perform ablation study 3: Remove similarity operation dependency graph
+    Perform ablation study 3: Remove Similarity Operation Dependency Graph (SODG) completely.
     Note: Ablation only works with yaml input files and with the header agent disabled in configurations.
     Runtime duration and specification location should be configured in the main method here.
     The remaining configurations (learning rate, etc...) are taken from the configurations.py file.

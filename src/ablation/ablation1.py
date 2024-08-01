@@ -903,7 +903,7 @@ def perform_q_learning_ablation_1(operation_graph: OperationGraph, spec_name, du
 
 def execute_ablation_1(spec_dir, spec_name, duration):
     """
-    Perform ablation study 1: Remove LLM data source
+    Perform ablation study 1: Remove LLM data source.
     Note: Ablation only works with yaml input files and with the header agent disabled in configurations.
     Runtime duration and specification location should be configured in the main method here.
     The remaining configurations (learning rate, etc...) are taken from the configurations.py file.

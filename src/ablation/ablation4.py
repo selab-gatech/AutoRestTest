@@ -593,10 +593,67 @@ class Ablation4:
 
             # Determine value assignments
             parameter_dependencies, request_body_dependencies, unconstructed_body, select_values, dependency_type = None, None, {}, None, None
-            if data_source == "DEFAULT":
+            if data_source == "LLM":
+                select_values = self.value_agent.get_action(operation_id)
+                parameters = self.get_mapping(select_params.req_params, select_values.param_mappings) if select_params.req_params else None
+                body = self.get_mapping([select_params.mime_type], select_values.body_mappings) if select_params.mime_type else None
+            elif data_source == "DEFAULT":
                 param_mappings, body_mappings = self.generate_default_values(operation_id)
                 parameters = self.get_mapping(select_params.req_params, param_mappings) if select_params.req_params else None
                 body = self.get_mapping([select_params.mime_type], body_mappings) if select_params.mime_type else None
+            elif data_source == "DEPENDENCY":
+                dependency_type, parameter_dependencies, request_body_dependencies = self.dependency_agent.get_random_action(operation_id, self)
+
+                supplement_select_values = self.value_agent.get_best_action(operation_id)
+
+                supplement_parameters = self.get_mapping(select_params.req_params,
+                                              supplement_select_values.param_mappings) if select_params.req_params else None
+                supplement_body = self.get_mapping([select_params.mime_type],
+                                        supplement_select_values.body_mappings) if select_params.mime_type else None
+
+                parameters = {}
+                if select_params.req_params:
+                    for parameter, dependency in parameter_dependencies.items():
+                        if parameter in select_params.req_params:
+                            if dependency["in_value"] == "params" and dependency["dependent_operation"] in self.successful_parameters and dependency["dependent_val"] in self.successful_parameters[dependency["dependent_operation"]]:
+                                if self.successful_parameters[dependency["dependent_operation"]][dependency["dependent_val"]]:
+                                    parameters[parameter] = random.choice(self.successful_parameters[dependency["dependent_operation"]][dependency["dependent_val"]])
+
+                            elif dependency["in_value"] == "body" and dependency["dependent_operation"] in self.successful_bodies and dependency["dependent_val"] in self.successful_bodies[dependency["dependent_operation"]]:
+                                if self.successful_bodies[dependency["dependent_operation"]][dependency["dependent_val"]]:
+                                    parameters[parameter] = random.choice(self.successful_bodies[dependency["dependent_operation"]][dependency["dependent_val"]])
+
+                            elif dependency["in_value"] == "response" and dependency["dependent_operation"] in self.successful_responses and dependency["dependent_val"] in self.successful_responses[dependency["dependent_operation"]]:
+                                if self.successful_responses[dependency["dependent_operation"]][dependency["dependent_val"]]:
+                                    parameters[parameter] = random.choice(self.successful_responses[dependency["dependent_operation"]][dependency["dependent_val"]])
+                    for param in select_params.req_params:
+                        if param not in parameters or not parameters[param]:
+                            parameters[param] = supplement_parameters[param] if supplement_parameters and param in supplement_parameters else random_generator()()
+
+                body = {}
+                if select_params.mime_type and select_params.mime_type in self.operation_graph.operation_nodes[operation_id].operation_properties.request_body:
+                    unconstructed_body = {}
+                    possible_body_properties = get_body_params(self.operation_graph.operation_nodes[operation_id].operation_properties.request_body[select_params.mime_type])
+                    for body_property, dependency in request_body_dependencies.items():
+                        if body_property in possible_body_properties:
+                            if dependency["in_value"] == "params" and dependency["dependent_operation"] in self.successful_parameters and dependency["dependent_val"] in self.successful_parameters[dependency["dependent_operation"]]:
+                                if self.successful_parameters[dependency["dependent_operation"]][dependency["dependent_val"]]:
+                                    unconstructed_body[body_property] = random.choice(self.successful_parameters[dependency["dependent_operation"]][dependency["dependent_val"]])
+
+                            elif dependency["in_value"] == "body" and dependency["dependent_operation"] in self.successful_bodies and dependency["dependent_val"] in self.successful_bodies[dependency["dependent_operation"]]:
+                                if self.successful_bodies[dependency["dependent_operation"]][dependency["dependent_val"]]:
+                                    unconstructed_body[body_property] = random.choice(self.successful_bodies[dependency["dependent_operation"]][dependency["dependent_val"]])
+
+                            elif dependency["in_value"] == "response" and dependency["dependent_operation"] in self.successful_responses and dependency["dependent_val"] in self.successful_responses[dependency["dependent_operation"]]:
+                                if self.successful_responses[dependency["dependent_operation"]][dependency["dependent_val"]]:
+                                    unconstructed_body[body_property] = random.choice(self.successful_responses[dependency["dependent_operation"]][dependency["dependent_val"]])
+
+                    deconstructed_supplement_body = self._deconstruct_body(supplement_body[select_params.mime_type]) if supplement_body and select_params.mime_type in supplement_body else None
+                    if deconstructed_supplement_body:
+                        for prop in possible_body_properties:
+                            if prop not in unconstructed_body:
+                                unconstructed_body[prop] = deconstructed_supplement_body[prop] if prop in deconstructed_supplement_body else random_generator()()
+                    body = {select_params.mime_type: self._construct_body(unconstructed_body, operation_id, select_params.mime_type)}
             else:
                 parameters = None
                 body = None
@@ -624,7 +681,7 @@ class Ablation4:
             operation_props = self.operation_graph.operation_nodes[operation_id].operation_properties
             if mutate_operation:
                 avail_primitives = len(self.successful_primitives.values())
-                use_mutator = random.random() < 1
+                use_mutator = random.random() < 1 or (avail_primitives == 0 and operation_id not in complete_body_mappings)
                 specific_method = None
 
                 if use_mutator:
@@ -638,6 +695,86 @@ class Ablation4:
             # If invalid response do not process
             if response is None:
                 continue
+
+            # Only update table when using table values (so not mutated)
+            if not mutate_operation:
+                self.operation_agent.update_q_table(operation_id, self.determine_bad_response_reward(response))
+
+                curr_Q_param, curr_Q_mime = self.parameter_agent.get_Q_curr(operation_id, select_params)
+                next_Q_param, next_Q_mime = self.parameter_agent.get_Q_next(operation_id)
+                curr_Q_body, next_Q_body = 0, 0
+                if select_body_properties:
+                    for mime, select_properties in select_body_properties.items():
+                        curr_Q_body += self.body_object_agent.get_Q_curr(operation_id, mime, select_properties)
+                        next_Q_body += self.body_object_agent.get_Q_next(operation_id, mime)
+
+                curr_Q_data = self.data_source_agent.get_Q_curr(operation_id, data_source)
+                next_Q_data = self.data_source_agent.get_Q_next(operation_id)
+
+                curr_Q_header, next_Q_header = 0, 0
+                if ENABLE_HEADER_AGENT:
+                    curr_Q_header += self.header_agent.get_Q_curr(operation_id, select_header)
+                    next_Q_header += self.header_agent.get_Q_next(operation_id)
+
+                processed_value_action, used_dependent_params, used_dependent_body = None, None, None
+                curr_Q_value_params, curr_Q_value_body, next_Q_value_params, next_Q_value_body, curr_Q_dependency_params, curr_Q_dependency_body, next_Q_dependency_params, next_Q_dependency_body = [], [], [], [], [], [], [], []
+                if data_source == "LLM":
+                    processed_value_action = ValueAction(param_mappings=parameters,
+                                                         body_mappings=select_values.body_mappings)
+                    curr_Q_value_params, curr_Q_value_body = self.value_agent.get_Q_curr(operation_id, processed_value_action)
+                    next_Q_value_params, next_Q_value_body = self.value_agent.get_Q_next(operation_id, processed_value_action)
+                elif data_source == "DEPENDENCY" and (dependency_type == "EXPLORE" or dependency_type == "BEST"):
+                    used_dependent_params = {}
+                    if parameter_dependencies:
+                        for parameter in parameters:
+                            if parameter in select_params.req_params and parameter in parameter_dependencies:
+                                used_dependent_params[parameter] = parameter_dependencies[parameter]
+                    used_dependent_body = {}
+                    if request_body_dependencies and unconstructed_body and select_params.mime_type in select_body_properties and \
+                            select_body_properties[select_params.mime_type]:
+                        for body_param in unconstructed_body:
+                            if body_param in select_body_properties[
+                                select_params.mime_type] and body_param in request_body_dependencies:
+                                used_dependent_body[body_param] = request_body_dependencies[body_param]
+                    curr_Q_dependency_params, curr_Q_dependency_body = self.dependency_agent.get_Q_curr(operation_id, used_dependent_params, used_dependent_body)
+                    next_Q_dependency_params, next_Q_dependency_body = self.dependency_agent.get_Q_next(operation_id, used_dependent_params, used_dependent_body)
+                elif data_source == "DEPENDENCY" and dependency_type == "RANDOM":
+                    if not 200 <= response.status_code < 300:
+                        continue
+                    if parameter_dependencies:
+                        for parameter, dependency_info in parameter_dependencies.items():
+                            dependent_operation = dependency_info["dependent_operation"]
+                            dependency_location = dependency_info["in_value"]
+                            dependent_val = dependency_info["dependent_val"]
+                            self.dependency_agent.add_new_dependency(operation_id, "params", parameter, dependent_operation, dependency_location, dependent_val)
+                    if request_body_dependencies:
+                        for body_param, dependency_info in request_body_dependencies.items():
+                            dependent_operation = dependency_info["dependent_operation"]
+                            dependency_location = dependency_info["in_value"]
+                            dependent_val = dependency_info["dependent_val"]
+                            self.dependency_agent.add_new_dependency(operation_id, "body", body_param, dependent_operation, dependency_location, dependent_val)
+
+                # Calculate combined error through value decomposition
+                Q_target = next_Q_data + next_Q_param + next_Q_mime + next_Q_body + next_Q_header + sum(next_Q_value_params) + sum(next_Q_value_body) + sum(next_Q_dependency_params) + sum(next_Q_dependency_body)
+                Q_curr = curr_Q_data + curr_Q_param + curr_Q_mime + curr_Q_body + curr_Q_header + sum(curr_Q_value_params) + sum(curr_Q_value_body) + sum(curr_Q_dependency_params) + sum(curr_Q_dependency_body)
+                td_error = self.determine_good_response_reward(response) + self.gamma * Q_target - Q_curr
+
+                # Update Q-tables
+                self.parameter_agent.update_Q_item(operation_id, select_params, td_error)
+                if select_body_properties:
+                    for mime, select_properties in select_body_properties.items():
+                        self.body_object_agent.update_Q_item(operation_id, mime, select_properties, td_error)
+
+                self.data_source_agent.update_Q_item(operation_id, data_source, td_error)
+
+                if ENABLE_HEADER_AGENT:
+                    self.header_agent.update_Q_item(operation_id, select_header, td_error)
+
+                if data_source == "LLM":
+                    self.value_agent.update_Q_item(operation_id, processed_value_action, td_error)
+
+                elif data_source == "DEPENDENCY" and (dependency_type == "EXPLORE" or dependency_type == "BEST"):
+                    self.dependency_agent.update_Q_item(operation_id, used_dependent_params, used_dependent_body, td_error)
 
             # Update successful parameters to use for future operation dependencies
             if response is not None and response.ok and not mutated_parameter_names:
@@ -653,6 +790,37 @@ class Ablation4:
                             for prop_name, prop_val in deconstructed_body.items():
                                 if prop_name in self.successful_bodies[operation_id] and prop_val not in self.successful_bodies[operation_id][prop_name]:
                                     self.successful_bodies[operation_id][prop_name].append(prop_val)
+                if response.content and self.successful_responses[operation_id] is not None:
+                    try:
+                        response_content = json.loads(response.content)
+                    except json.JSONDecodeError:
+                        print("Error decoding JSON response content")
+                        print("Response content: ", response.content)
+                        response_content = None
+
+                    deconstructed_response: Dict[str, List] = {}
+                    self._deconstruct_response(response_content, deconstructed_response)
+
+                    if deconstructed_response:
+                        for response_prop, response_vals in deconstructed_response.items():
+                            if response_prop in self.successful_responses[operation_id]:
+                                for response_val in response_vals:
+                                    if response_val not in self.successful_responses[operation_id][response_prop]:
+                                        self.successful_responses[operation_id][response_prop].append(response_val)
+                            else:
+                                self.successful_responses[operation_id][response_prop] = response_vals
+                                if self.dependency_agent.add_undocumented_responses(operation_id, response_prop) and "DEPENDENCY" not in self.data_source_agent.available_data_sources:
+                                    self.data_source_agent.initialize_dependency_source()
+
+                    else:
+                        if operation_id not in self.successful_primitives:
+                            self.successful_primitives[operation_id] = []
+                        if isinstance(response_content, list):
+                            for item in response_content:
+                                if item not in self.successful_primitives[operation_id]:
+                                    self.successful_primitives[operation_id].append(item)
+                        elif response_content not in self.successful_primitives[operation_id]:
+                            self.successful_primitives[operation_id].append(response_content)
 
             if response is not None:
                 self.responses[response.status_code] += 1
@@ -707,7 +875,6 @@ class Ablation4:
     def run(self):
         self.execute_operations()
 
-
 def init_graph_ablation_4(spec_name: str, spec_path, embedding_model) -> OperationGraph:
     spec_parser = SpecificationParser(spec_path=spec_path, spec_name=spec_name)
     api_url = get_api_url(spec_parser, local_test=True)
@@ -728,12 +895,17 @@ def perform_q_learning_ablation_4(operation_graph: OperationGraph, spec_name, du
     print("Initializing agents!")
     q_learning = Ablation4(operation_graph, alpha=LEARNING_RATE, gamma=DISCOUNT_FACTOR, epsilon=EXPLORATION_RATE,
                            time_duration=duration, mutation_rate=MUTATION_RATE)
+    with shelve.open(f"../cache/q_tables/{spec_name}") as db:
+        if spec_name in db:
+            compiled_q_table = db[spec_name]
+            q_learning.value_agent.q_table = compiled_q_table["value"]
+        else:
+            q_learning.value_agent.initialize_q_table()
     q_learning.parameter_agent.initialize_q_table()
     q_learning.operation_agent.initialize_q_table()
     q_learning.body_object_agent.initialize_q_table()
-    q_learning.data_source_agent.available_data_sources.remove("LLM")
-    q_learning.data_source_agent.available_data_sources.remove("DEPENDENCY")
     q_learning.data_source_agent.initialize_q_table()
+    q_learning.dependency_agent.initialize_q_table()
     print("Starting Q-learning!")
     q_learning.run()
     print("Q-learning complete!")
@@ -741,7 +913,7 @@ def perform_q_learning_ablation_4(operation_graph: OperationGraph, spec_name, du
 
 def execute_ablation_4(spec_dir, spec_name, duration):
     """
-    Perform ablation study 1: Remove LLM data source, temporal difference learning, and Semantic Operation Dependency Graph.
+    Perform ablation study 4: Using random edges from the graph to determine dependencies.
     Note: Ablation only works with yaml input files and with the header agent disabled in configurations.
     Runtime duration and specification location should be configured in the main method here.
     The remaining configurations (learning rate, etc...) are taken from the configurations.py file.
@@ -757,5 +929,3 @@ if __name__ == "__main__":
     spec_name = "project"
     duration = 1800
     execute_ablation_4(spec_dir, spec_name, duration)
-
-
