@@ -1,7 +1,7 @@
 # Description: This file contains the configurations for AutoRestTest.
 # Change the values for the variables as described in the README.
 
-SPECIFICATION_LOCATION = "aratrl-openapi/project.yaml" # The location of the Specification file relative to the root directory.
+SPECIFICATION_LOCATION = "specs/original/oas/ohsome.yaml" # The location of the Specification file relative to the root directory.
 # Note: Only .yaml and .json files are supported. The Specification file must be in the OpenAPI 3.0 format.
 
 OPENAI_LLM_ENGINE = "gpt-4o-mini" # The OpenAI language model engine to use for the value agent generation.
@@ -17,9 +17,10 @@ USE_CACHED_TABLE = True # Specifies whether to use the cached Q-table for the Va
 # Note: Assign the caching to False if you have made changes to the graph construction or table generation for the changes to take effect.
 
 # The following variables are responsible for the Q-learning agent configurations.
-LEARNING_RATE = 0.1 # The learning rate for the Q-learning agent.
-DISCOUNT_FACTOR = 0.9 # The discount factor for the Q-learning agent.
-EXPLORATION_RATE = 0.1 # The exploration rate using the epsilon-greedy policy.
+LEARNING_RATE = 0.1 # The learning rate (alpha) for the Q-learning agent.
+DISCOUNT_FACTOR = 0.9 # The discount factor (gamma) for the Q-learning agent.
+MAX_EXPLORATION = 1 # The maximum exploration rate (epsilon) for the Q-learning agent action selection.
+# Note: Epsilon-decay is implemented in the Q-learning agent such that the exploration rate decreases over time to 0.1.
 
 # The following variables are responsible for the request generation configurations.
 TIME_DURATION = 1200 # The time duration for the request generation process.

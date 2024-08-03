@@ -13,7 +13,7 @@ from src.graph.specification_parser import SpecificationParser
 from src.utils import OpenAILanguageModel, construct_db_dir, is_json_seriable, EmbeddingModel, get_api_url
 
 from configurations import USE_CACHED_GRAPH, USE_CACHED_TABLE, \
-    LEARNING_RATE, DISCOUNT_FACTOR, EXPLORATION_RATE, TIME_DURATION, MUTATION_RATE, SPECIFICATION_LOCATION, \
+    LEARNING_RATE, DISCOUNT_FACTOR, MAX_EXPLORATION, TIME_DURATION, MUTATION_RATE, SPECIFICATION_LOCATION, \
     ENABLE_HEADER_AGENT
 
 load_dotenv()
@@ -212,9 +212,22 @@ class AutoRestTest:
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
         print("INITIATING Q-TABLES...")
-        q_learning = QLearning(operation_graph, alpha=LEARNING_RATE, gamma=DISCOUNT_FACTOR, epsilon=EXPLORATION_RATE,
+        q_learning = QLearning(operation_graph, alpha=LEARNING_RATE, gamma=DISCOUNT_FACTOR, epsilon=MAX_EXPLORATION,
                                time_duration=TIME_DURATION, mutation_rate=MUTATION_RATE)
         db_q_table = os.path.join(os.path.dirname(__file__), f"src/cache/q_tables/{spec_name}")
+
+        q_learning.operation_agent.initialize_q_table()
+        print("Initialized operation agent Q-table for {spec_name}.")
+        q_learning.parameter_agent.initialize_q_table()
+        print("Initialized parameter agent Q-table for {spec_name}.")
+        q_learning.body_object_agent.initialize_q_table()
+        print("Initialized body object agent Q-table for {spec_name}.")
+        q_learning.dependency_agent.initialize_q_table()
+        print("Initialized dependency agent Q-table for {spec_name}.")
+        q_learning.data_source_agent.initialize_q_table()
+        print("Initialized data source agent Q-table for {spec_name}.")
+
+        output_q_table(q_learning, spec_name)
 
         with shelve.open(db_q_table) as db:
             loaded_value_from_shelf = False
@@ -262,11 +275,6 @@ class AutoRestTest:
             except Exception as e:
                 print("Error saving Q-tables to shelve.")
 
-        q_learning.parameter_agent.initialize_q_table()
-        q_learning.operation_agent.initialize_q_table()
-        q_learning.body_object_agent.initialize_q_table()
-        q_learning.dependency_agent.initialize_q_table()
-        q_learning.data_source_agent.initialize_q_table()
         output_q_table(q_learning, spec_name)
         print("Q-TABLES INITIALIZED...")
 

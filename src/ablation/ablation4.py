@@ -17,7 +17,7 @@ import sys
 root_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.append(root_directory)
 
-from configurations import ENABLE_HEADER_AGENT, LEARNING_RATE, DISCOUNT_FACTOR, EXPLORATION_RATE, MUTATION_RATE
+from configurations import ENABLE_HEADER_AGENT, LEARNING_RATE, DISCOUNT_FACTOR, MAX_EXPLORATION, MUTATION_RATE
 from src.generate_graph import OperationGraph
 from src.graph.specification_parser import OperationProperties, SpecificationParser
 from src.reinforcement.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction, BodyObjAgent, \
@@ -893,7 +893,7 @@ def generate_graph_ablation_4(spec_dir, spec_name, embedding_model):
 
 def perform_q_learning_ablation_4(operation_graph: OperationGraph, spec_name, duration):
     print("Initializing agents!")
-    q_learning = Ablation4(operation_graph, alpha=LEARNING_RATE, gamma=DISCOUNT_FACTOR, epsilon=EXPLORATION_RATE,
+    q_learning = Ablation4(operation_graph, alpha=LEARNING_RATE, gamma=DISCOUNT_FACTOR, epsilon=MAX_EXPLORATION,
                            time_duration=duration, mutation_rate=MUTATION_RATE)
     with shelve.open(f"../cache/q_tables/{spec_name}") as db:
         if spec_name in db:

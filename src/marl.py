@@ -563,12 +563,25 @@ class QLearning:
         exploring_agent = np.random.choice(agent_options, p=select_probabilities)
         return exploring_agent
 
+    def epsilon_decay(self, epsilon_decay_rate):
+        self.parameter_agent.epsilon = max(0.1, self.parameter_agent.epsilon - epsilon_decay_rate)
+        self.value_agent.epsilon = max(0.1, self.value_agent.epsilon - epsilon_decay_rate)
+        self.dependency_agent.epsilon = max(0.1, self.dependency_agent.epsilon - epsilon_decay_rate)
+        self.body_object_agent.epsilon = max(0.1, self.body_object_agent.epsilon - epsilon_decay_rate)
+        self.header_agent.epsilon = max(0.1, self.header_agent.epsilon - epsilon_decay_rate)
+
     def execute_operations(self):
+
         start_time = time.time()
 
         complete_body_mappings = self.determine_complete_body_mappings()
 
+        # Goal: Decay epsilon to 0.1 at 70% of the time duration
+        target_epsilon = 0.1
+        epsilon_decay_rate = (self.epsilon - target_epsilon) / (self.time_duration * 0.7) if target_epsilon < self.epsilon else 0
+
         while time.time() - start_time < self.time_duration:
+            self.epsilon_decay(epsilon_decay_rate)
 
             operation_id = self.operation_agent.get_action()
 
