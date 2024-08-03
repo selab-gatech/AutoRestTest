@@ -217,15 +217,15 @@ class AutoRestTest:
         db_q_table = os.path.join(os.path.dirname(__file__), f"src/cache/q_tables/{spec_name}")
 
         q_learning.operation_agent.initialize_q_table()
-        print("Initialized operation agent Q-table for {spec_name}.")
+        print("Initialized operation agent Q-table.")
         q_learning.parameter_agent.initialize_q_table()
-        print("Initialized parameter agent Q-table for {spec_name}.")
+        print("Initialized parameter agent Q-table.")
         q_learning.body_object_agent.initialize_q_table()
-        print("Initialized body object agent Q-table for {spec_name}.")
+        print("Initialized body object agent Q-table.")
         q_learning.dependency_agent.initialize_q_table()
-        print("Initialized dependency agent Q-table for {spec_name}.")
+        print("Initialized dependency agent Q-table.")
         q_learning.data_source_agent.initialize_q_table()
-        print("Initialized data source agent Q-table for {spec_name}.")
+        print("Initialized data source agent Q-table.")
 
         output_q_table(q_learning, spec_name)
 
@@ -240,7 +240,7 @@ class AutoRestTest:
 
                 try:
                     q_learning.value_agent.q_table = compiled_q_table["value"]
-                    print(f"Loaded value agent's Q-table for {spec_name} from shelve.")
+                    print(f"Initialized value agent's Q-table for {spec_name} from shelve.")
                     loaded_value_from_shelf = True
                 except Exception as e:
                     print("Error loading value agent from shelve.")
@@ -249,7 +249,7 @@ class AutoRestTest:
                 if ENABLE_HEADER_AGENT:
                     try:
                         q_learning.header_agent.q_table = compiled_q_table["header"]
-                        print(f"Loaded header agent's Q-table for {spec_name} from shelve.")
+                        print(f"Initialized header agent's Q-table for {spec_name} from shelve.")
                         loaded_header_from_shelf = True if q_learning.header_agent.q_table else False
                         # If the header agent is disabled, the Q-table will be None.
                     except Exception as e:

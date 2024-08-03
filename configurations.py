@@ -1,8 +1,9 @@
 # Description: This file contains the configurations for AutoRestTest.
 # Change the values for the variables as described in the README.
 
-SPECIFICATION_LOCATION = "specs/original/oas/ohsome.yaml" # The location of the Specification file relative to the root directory.
+SPECIFICATION_LOCATION = "aratrl-openapi/project.yaml" # The location of the Specification file relative to the root directory.
 # Note: Only .yaml and .json files are supported. The Specification file must be in the OpenAPI 3.0 format.
+# The file extension must be specified in the path (e.g., .yaml or .json).
 
 OPENAI_LLM_ENGINE = "gpt-4o-mini" # The OpenAI language model engine to use for the value agent generation.
 DEFAULT_TEMPERATURE = 0.7 # The default temperature for the OpenAI language model.
