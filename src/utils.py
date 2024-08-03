@@ -30,7 +30,8 @@ def remove_nulls(item):
         return item
 
 def get_param_combinations(operation_parameters: Dict[str, ParameterProperties]) -> List[Tuple[str]]:
-    return get_combinations(get_params(operation_parameters))
+    param_list = get_params(operation_parameters)
+    return get_combinations(param_list)
 
 def get_body_combinations(operation_body: Dict[str, SchemaProperties]) -> Dict[str, List[Tuple[str]]]:
     return {k: get_combinations(v) for k, v in get_request_body_params(operation_body).items()}
@@ -40,8 +41,25 @@ def get_body_object_combinations(body_schema: SchemaProperties) -> List[Tuple[st
 
 def get_combinations(arr) -> List[Tuple]:
     combinations = []
-    for i in range(1, len(arr)+1):
-        combinations.extend(list(itertools.combinations(arr, i)))
+    max_size = 10
+    # Empirically determined - 16 is max number before size grows too large, 10 is a good balance for ensuring proper storage (> 21k)
+
+    if len(arr) >= max_size:
+        for i in range(0, len(arr)-max_size):
+            subset = arr[i:i+max_size]
+            combinations.extend(itertools.chain.from_iterable(
+                itertools.combinations(subset, j) for j in range(1, max_size + 1)
+            ))
+            print(combinations)
+        for size in range(max_size+1, len(arr)+1):
+            for i in range(0, len(arr)-size+1):
+                subset = arr[i:i+size]
+                combinations.extend([tuple(subset)])
+    else:
+        combinations.extend(itertools.chain.from_iterable(
+            itertools.combinations(arr, i) for i in range(1, len(arr) + 1)
+        ))
+
     return combinations
 
 def get_params(operation_parameters: Dict[str, ParameterProperties]) -> List[str]:
