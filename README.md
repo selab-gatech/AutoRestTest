@@ -5,7 +5,7 @@
 theory, Large Language Models (LLMs), and multi-agent reinforcement learning (MARL) to parse the OpenAPI Specification
 and create enhanced comprehensive test cases.
 
-Watch this [demonstration video](https://www.youtube.com/watch?v=VVus2W8rap8) of AutoRestTest to see how it solves complex problems in automated REST API testing, its configuration, and execution outputs.
+Watch this [demonstration video](https://www.youtube.com/watch?v=VVus2W8rap8) of AutoRestTest to learn how it solves complex challenges in automated REST API testing, as well as its configuration, execution steps, and output.
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=VVus2W8rap8">
