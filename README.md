@@ -64,12 +64,12 @@ time-based approach. The default value is set to 10 minutes. This can be altered
 #### 3. Configuring the OpenAI Model
 
 If the user wants to reduce the cost of executing the software, they can change the OpenAI models used throughout 
-the program. The user can use the **OPENAI_LLM_ENGINE** variable to specify an appropriate model. By default, the **gpt-4o**
+the program. The user can use the **OPENAI_LLM_ENGINE** variable to specify an appropriate model. By default, the **gpt-4o-mini**
 model is selected given its high performance, cost-effectiveness, and high token limit.
 
 > [!WARNING]
-> The software heavily uses the **JSON mode** from recent OpenAI API engines. All GPT 3.5-Turbo, 4-Turbo, and 4o engines support the JSON mode. 
-> Additionally, the cost of execution is only provided for the most recent versions of the listed OpenAI engines.
+> The software heavily uses the **JSON mode** from recent OpenAI API engines. All GPT 3.5-Turbo, 4-Turbo, 4o, and o1 engines support the JSON mode. 
+> Additionally, the cost of execution is only provided for the most recent versions of the 4o, 4o-mini, o1 and o1-mini engines.
 
 #### 4. Use of Cached Graphs and Reinforcement Learning Tables
 

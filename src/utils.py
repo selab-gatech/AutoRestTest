@@ -183,26 +183,20 @@ def is_json_seriable(data):
     except:
         return False
 
-# OpenAI available engines = ["gpt-3.5-turbo-0125", "gpt-4o"]
+# Pricing for OpenAI API usage as of January 18, 2025
 
 INPUT_COST_PER_TOKEN = {
-    "gpt-3.5-turbo-0125": 0.5*10**-6,
-    "gpt-3.5-turbo": 0.5*10**-6,
-    "gpt-4o": 5*10**-6,
-    "gpt-4o-2024-05-13": 5*10**-6,
-    "gpt-3.5-turbo-instruct": 1.5*10**-6,
-    "gpt-4-turbo": 10**-6,
-    "gpt-4-turbo-2024-04-09": 10**-6,
+    "gpt-4o": 2.5e-6,
+    "gpt-4o-mini": 0.15e-6,
+    "o1": 15e-6,
+    "o1-mini": 3e-6
 }
 
 OUTPUT_COST_PER_TOKEN = {
-    "gpt-3.5-turbo-0125": 1.5*10**-6,
-    "gpt-3.5-turbo": 1.5*10**-6,
-    "gpt-4o": 15*10**-6,
-    "gpt-4o-2024-05-13": 15*10**-6,
-    "gpt-3.5-turbo-instruct": 2*10**-6,
-    "gpt-4-turbo": 30**-6,
-    "gpt-4-turbo-2024-04-09": 30**-6,
+    "gpt-4o": 10e-6,
+    "gpt-4o-mini": 0.6e-6,
+    "o1": 60e-6,
+    "o1-mini": 12e-6
 }
 
 class OpenAILanguageModel:

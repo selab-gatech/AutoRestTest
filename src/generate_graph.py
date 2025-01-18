@@ -105,15 +105,6 @@ class OperationGraph:
                 self.operation_edges.remove(edge)
                 return
 
-    def remove_tentative_edge(self, operation_id: str, dependent_operation_id: str):
-        if operation_id not in self.operation_nodes:
-            raise ValueError(f"Operation {operation_id} not found in the graph")
-        source_node = self.operation_nodes[operation_id]
-        for edge in source_node.tentative_edges:
-            if edge.destination.operation_id == dependent_operation_id:
-                source_node.tentative_edges.remove(edge)
-                return
-
     def determine_dependencies(self, operations):
         for operation_id, operation_properties in operations.items():
             for dependent_operation_id, dependent_operation_properties in operations.items():
@@ -127,47 +118,6 @@ class OperationGraph:
                 # Assign top tentative edges to outgoing edges if there are no similar parameters
                 self.operation_nodes[operation_id].outgoing_edges = self.operation_nodes[operation_id].tentative_edges
 
-    def validate_graph(self):
-        if not self.request_generator:
-            raise ValueError("Request generator not assigned to the operation graph")
-        self.request_generator.perform_all_requests()
-
-    def print_cliques(self):
-        cliques = self.generate_cliques()
-        all_cliques = "ALL CLIQUES: \n"
-        for clique in cliques:
-            clique_str = ""
-            for node in clique:
-                clique_str += f"{node.operation_id}, "
-            all_cliques += f"[{clique_str[:-2]}]\n"
-        print(all_cliques)
-
-    def generate_cliques(self):
-        # NOTE: THIS IS NOT FUNCTIONAL FOR DIRECTED GRAPHS: NOT USED IDEA
-        def bron_kerbosch(current_clique, potential_nodes, excluded_nodes, cliques):
-            if not potential_nodes and not excluded_nodes:
-                cliques.append(current_clique)
-                return
-            for node in list(potential_nodes):
-                adjacent_nodes = set()
-                for operation_edge in self.operation_nodes[node.operation_id].outgoing_edges:
-                    adjacent_nodes.add(operation_edge.destination)
-                bron_kerbosch(
-                    current_clique.union([node]),
-                    potential_nodes.intersection(adjacent_nodes),
-                    excluded_nodes.intersection(adjacent_nodes),
-                    cliques
-                )
-                potential_nodes.remove(node)
-                excluded_nodes.add(node)
-
-        def find_cliques():
-            cliques = []
-            bron_kerbosch(set(), set(self.operation_nodes.values()), set(), cliques)
-            return cliques
-
-        return find_cliques()
-
     def create_graph(self, auto_validate=True):
         operations: Dict[str, OperationProperties] = self.spec_parser.parse_specification()
         print("PARSED SPECIFICATION!!!")
@@ -175,9 +125,6 @@ class OperationGraph:
             self.add_operation_node(operation_properties)
         self.determine_dependencies(operations)
         print("COMPLETED COSINE SIMILARITY!!!")
-        #self.print_edges()
-        #if auto_validate:
-        #    self.validate_graph()
 
 
 if __name__ == "__main__":

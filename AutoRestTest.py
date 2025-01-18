@@ -10,11 +10,11 @@ from src.request_generator import RequestGenerator
 from dotenv import load_dotenv
 
 from src.graph.specification_parser import SpecificationParser
-from src.utils import OpenAILanguageModel, construct_db_dir, is_json_seriable, EmbeddingModel, get_api_url
+from src.utils import OpenAILanguageModel, construct_db_dir, is_json_seriable, EmbeddingModel, get_api_url, INPUT_COST_PER_TOKEN
 
 from configurations import USE_CACHED_GRAPH, USE_CACHED_TABLE, \
     LEARNING_RATE, DISCOUNT_FACTOR, MAX_EXPLORATION, TIME_DURATION, MUTATION_RATE, SPECIFICATION_LOCATION, \
-    ENABLE_HEADER_AGENT
+    ENABLE_HEADER_AGENT, OPENAI_LLM_ENGINE
 
 load_dotenv()
 
@@ -284,7 +284,10 @@ class AutoRestTest:
         return q_learning
 
     def print_performance(self):
-        print("Total cost of the tool: $", round(OpenAILanguageModel.get_cumulative_cost(), 2))
+        if OPENAI_LLM_ENGINE in INPUT_COST_PER_TOKEN:
+            print("Total cost of the tool: $", round(OpenAILanguageModel.get_cumulative_cost(), 2))
+        else:
+            print("Price tracking is not available for the selected OpenAI engine.")
 
     def run_all(self):
         for spec in os.listdir(self.spec_dir):
