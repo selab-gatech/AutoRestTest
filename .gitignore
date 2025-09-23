@@ -2,7 +2,7 @@
 .github/
 .gradle/
 .vscode/
-.DS_Store/
+**/.DS_Store
 .hypothesis/
 
 venv/
@@ -26,6 +26,9 @@ data/
 src/cache/
 
 .env
+**/cache/
+**/data/
+**/.venv/
 **/glove.6B.50d.w2v.txt
 **/config.py
 test.json
@@ -41,4 +44,3 @@ org.jacoco.*
 jacoco_*
 *LOG_PATH*
 test.py
-.DS_Store
