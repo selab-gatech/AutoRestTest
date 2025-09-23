@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "autoresttest"
+version = "0.1.0"
+description = "AutoRestTest"
+readme = "README.md"
+packages = [{ include = "autoresttest", from = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+
+# Runtime dependencies
+scikit-learn = "1.5.0"
+numpy = "1.25.2"
+scipy = "1.10.1"
+gensim = "4.3.2"
+openai = "1.30.3"
+beautifulsoup4 = "4.12.3"
+python-dotenv = "1.0.1"
+prance = "23.6.21.0"
+openapi-spec-validator = "0.7.1"
+
+[tool.poetry.scripts]
+autoresttest = "autoresttest.autoresttest:main"
+
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"

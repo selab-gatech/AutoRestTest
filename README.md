@@ -7,6 +7,10 @@ and create enhanced comprehensive test cases.
 
 Watch this [demonstration video](https://www.youtube.com/watch?v=VVus2W8rap8) of AutoRestTest to learn how it solves complex challenges in automated REST API testing, as well as its configuration, execution steps, and output.
 
+> [!NOTE]
+> Following the release of the demonstration video, the code base has been refactored.
+> Refer to this `README.md` for the most current setup and execution details.
+
 <p align="center">
   <a href="https://www.youtube.com/watch?v=VVus2W8rap8">
     <img src="https://img.youtube.com/vi/VVus2W8rap8/0.jpg" alt="Watch the video">
@@ -24,15 +28,19 @@ learning tables and graph edges.
 
 ## Installation
 
-The following are the steps to install the *AutoRestTest* software:
-1. Clone the Github repository.
-2. Install the required dependencies:
-   - Either use `requirements.txt` to install the dependencies or the Conda environment file `auto-rest-test.yml`
-3. Create a `.env` file in the root directory and add the following environmental variable:
-   - `OPENAI_API_KEY = '<YOUR_API_KEY>'` 
+We recommend using Poetry with `pyproject.toml` for dependency management and scripts. A `poetry.lock` file pins exact versions.
 
-> [!TIP]
-> For compatability across different operating systems, it is recommended to use the Conda environment file
+Steps:
+1. Clone the repository.
+2. Ensure Python 3.10.x is available (project targets `>=3.10,<3.11`).
+3. Install dependencies with Poetry (uses `poetry.lock` if present):
+   - `poetry install`
+4. Create a `.env` file in the project root and add:
+   - `OPENAI_API_KEY='<YOUR_API_KEY>'`
+
+Alternatives (provided but not recommended):
+- `pip install -r requirements.txt`
+- `conda env create -f autoresttest.yaml`
 
 Optionally, if the user wants to test specific APIs, they can install their OpenAPI Specification files within a folder
 in the root directory. For convenience, we have provided a large array of OpenAPI Specifications for popular and 
@@ -44,14 +52,14 @@ following configuration steps are completed for purposeful execution.
 ## Configuration
 
 There is a wide array of configuration options available within the codebase. For convenience, the configuration options
-are easily accessible within the `configurations.py` file in the root directory. The file contains information
+are easily accessible within `src/autoresttest/configurations.py`. The file contains information
 regarding each of the parameters that can be altered. The following are additional instructions for each of the configuration choices.
-Note that the parameteres referenced in the following steps are found in the `configurations.py` file.
+Note that the parameteres referenced in the following steps are found in `src/autoresttest/configurations.py`.
 
 #### 1. Specifying the API Directory
 
 If the user intends to use their own OpenAPI Specification files as described in the *Installation* section, 
-they can change the **SPECIFICATION_DIRECTORY** variable within the `configurations.py` file to the name of the directory containing the
+they can change the **SPECIFICATION_DIRECTORY** variable within `src/autoresttest/configurations.py` to the name of the directory containing the
 added specifications.
 
 #### 2. Configuring the Reinforcement Learning Parameters
@@ -67,7 +75,7 @@ time-based approach. The default value is set to 10 minutes. This can be altered
 
 > [!TIP]
 > The above steps alter the variables across all four agents used within the software. If the user desires to change
-> the individual agent parameters, they can navigate to the `src/reinforcement/agents.py` file and change the parameters.
+> the individual agent parameters, they can navigate to the `src/autoresttest/agents` files and change the parameters.
 
 #### 3. Configuring the OpenAI Model
 
@@ -76,8 +84,8 @@ the program. The user can use the **OPENAI_LLM_ENGINE** variable to specify an a
 model is selected given its high performance, cost-effectiveness, and high token limit.
 
 > [!WARNING]
-> The software heavily uses the **JSON mode** from recent OpenAI API engines. All GPT 3.5-Turbo, 4-Turbo, 4o, and o1 engines support the JSON mode. 
-> Additionally, the cost of execution is only provided for the most recent versions of the 4o, 4o-mini, o1 and o1-mini engines.
+> The software heavily uses the **JSON mode** from recent OpenAI API engines. All recent models should support the JSON mode. 
+> The console output will list token usage for analyzing tool costs.
 
 #### 4. Use of Cached Graphs and Reinforcement Learning Tables
 
@@ -97,11 +105,12 @@ of different authentication flows, the Header agent is only able to use Basic Au
 
 ## Execution
 
-The software can be executed by running the `AutoRestTest.py` file from the root directory using the following command:
+Run the script using Poetry, after following the installation instructions:
 ```
-python3 AutoRestTest.py
+poetry run autoresttest
 ```
-To indicate the specification for execution, change the **SPECIFICATION_LOCATION** variable in the `configurations.py` file.
+
+To indicate the specification for execution, change the **SPECIFICATION_LOCATION** variable in `src/autoresttest/configurations.py`. This path must be relative to the root directory.
 
 ### Docker Execution
 
@@ -113,7 +122,7 @@ docker build -t autoresttest .
 docker run -it autoresttest
 ```
 
-Ensure that the `configurations.py` file is configured correctly before executing the software.
+Ensure that `src/autoresttest/configurations.py` is configured correctly before executing the software.
 
 ## Results
 
@@ -142,7 +151,3 @@ These files contain the necessary information for analysis into the success of A
 > The output files can grow in size according to the number of operations and the duration of execution. 
 > For example, the file containing successful responses can grow to be several **gigabytes** when executing for a long duration. 
 > It is recommended to clear the `data` directory when the files are no longer needed.
-
-
-
-
