@@ -51,27 +51,25 @@ following configuration steps are completed for purposeful execution.
 
 ## Configuration
 
-There is a wide array of configuration options available within the codebase. For convenience, the configuration options
-are easily accessible within `src/autoresttest/configurations.py`. The file contains information
-regarding each of the parameters that can be altered. The following are additional instructions for each of the configuration choices.
-Note that the parameteres referenced in the following steps are found in `src/autoresttest/configurations.py`.
+There is a wide array of configuration options available within the codebase. All configuration options are easily accessible via a single TOML file at the project root: `configurations.toml`.
 
-#### 1. Specifying the API Directory
+Below are the relevant settings and where to find them in `configurations.toml`.
 
-If the user intends to use their own OpenAPI Specification files as described in the *Installation* section, 
-they can change the **SPECIFICATION_DIRECTORY** variable within `src/autoresttest/configurations.py` to the name of the directory containing the
-added specifications.
+#### 1. Specifying the API Specification
 
-#### 2. Configuring the Reinforcement Learning Parameters
+If you intend to use your own OpenAPI Specification file as described in the Installation section, set the relative path (from the project root) to that file in `configurations.toml` under `[spec].location`.
 
-The user can configure the reinforcement learning parameters, such as the learning rate (**LEARNING_RATE**), the discount factor (**DISCOUNT_FACTOR**), 
-and the epsilon-greedy exploration value (**EXPLORATION_RATE**) used in Q-learning. As default, the parameters are set to the following values:
-- Learning Rate: 0.1
-- Discount Factor: 0.9
-- Epsilon: 0.3
+Only `.yaml` and `.json` files are supported (OpenAPI 3.0). Example: `aratrl-openapi/market2.yaml`.
 
-Instead of limiting the amount of episodes, the program limits the amount of reinforcement learning iterations using a 
-time-based approach. The default value is set to 10 minutes. This can be altered by changing the **TIME_DURATION** variable in the configurations file. The units are in seconds.
+#### 2. Configuring Reinforcement Learning Parameters
+
+Configure Q-learning parameters in `configurations.toml`:
+- `[q_learning].learning_rate` (default: `0.1`)
+- `[q_learning].discount_factor` (default: `0.9`)
+- `[q_learning].max_exploration` (epsilon; default: `1`, decays over time to `0.1`)
+
+Instead of limiting episodes, the program limits RL iterations using a time budget. Set the duration (in seconds) under:
+- `[request_generation].time_duration` (default: `1200`)
 
 > [!TIP]
 > The above steps alter the variables across all four agents used within the software. If the user desires to change
@@ -79,9 +77,9 @@ time-based approach. The default value is set to 10 minutes. This can be altered
 
 #### 3. Configuring the OpenAI Model
 
-If the user wants to reduce the cost of executing the software, they can change the OpenAI models used throughout 
-the program. The user can use the **OPENAI_LLM_ENGINE** variable to specify an appropriate model. By default, the **gpt-4o-mini**
-model is selected given its high performance, cost-effectiveness, and high token limit.
+To manage cost and performance, adjust the LLM settings in `configurations.toml`:
+- `[llm].engine` (default: `gpt-4o-mini`)
+- `[llm].temperature` (default: `0.7`)
 
 > [!WARNING]
 > The software heavily uses the **JSON mode** from recent OpenAI API engines. All recent models should support the JSON mode. 
@@ -89,15 +87,21 @@ model is selected given its high performance, cost-effectiveness, and high token
 
 #### 4. Use of Cached Graphs and Reinforcement Learning Tables
 
-The software uses a caching mechanism to store the graph edges and reinforcement learning tables for each OpenAPI 
-Specifications after generation. This is done to reduce the cost of execution and to speed up the process on repeated
-trials. The user can determine whether they want to use the cached graphs and tables by changing the **USE_CACHED_GRAPH**
-and **USE_CACHED_TABLE** variables. By default, both variables are set to **False**.
+The software can cache the graph and Q-tables to reduce cost and speed up repeated runs. Configure this behavior under:
+- `[cache].use_cached_graph` (default: `true`)
+- `[cache].use_cached_table` (default: `true`)
 
-### 5. Optional Header Agent
+> [!NOTE]
+> When enabled, these options store and read cached data under the `cache/` directory at the project root (for example, `cache/graphs/` and `cache/q_tables/`).
+> If disk usage becomes a concern, you can delete the cached project information in `cache/` after use; the data will be regenerated on the next run when needed.
+
+#### 5. Optional Header Agent
 
 AutoRestTest contains an optional Header agent responsible for testing the API with different authentication headers. Due to difficulties 
 of different authentication flows, the Header agent is only able to use Basic Authentication. By default, the agent is disabled.
+
+Toggle via `configurations.toml`:
+- `[agents.header].enabled` (default: `false`)
 
 > [!CAUTION]
 > The Header agent Q-table should be rerun when executing services with local databases that refresh, as the user
@@ -110,7 +114,7 @@ Run the script using Poetry, after following the installation instructions:
 poetry run autoresttest
 ```
 
-To indicate the specification for execution, change the **SPECIFICATION_LOCATION** variable in `src/autoresttest/configurations.py`. This path must be relative to the root directory.
+To indicate the specification for execution, set `[spec].location` in `configurations.toml`. This path must be relative to the project root.
 
 ### Docker Execution
 
@@ -122,7 +126,7 @@ docker build -t autoresttest .
 docker run -it autoresttest
 ```
 
-Ensure that `src/autoresttest/configurations.py` is configured correctly before executing the software.
+Ensure that `configurations.toml` is configured correctly before executing the software.
 
 ## Results
 

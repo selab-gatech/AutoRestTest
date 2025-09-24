@@ -1,3 +1,5 @@
+# DEPRECATED CONFIG FORMAT
+
 # Description: This file contains the configurations for AutoRestTest.
 # Change the values for the variables as described in the README.
 

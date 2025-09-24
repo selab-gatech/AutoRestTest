@@ -17,27 +17,17 @@ from autoresttest.utils import (
     is_json_seriable,
     EmbeddingModel,
     get_api_url,
-    INPUT_COST_PER_TOKEN,
 )
 
-from autoresttest.configurations import (
-    USE_CACHED_GRAPH,
-    USE_CACHED_TABLE,
-    LEARNING_RATE,
-    DISCOUNT_FACTOR,
-    MAX_EXPLORATION,
-    TIME_DURATION,
-    MUTATION_RATE,
-    SPECIFICATION_LOCATION,
-    ENABLE_HEADER_AGENT,
-    OPENAI_LLM_ENGINE,
-)
+from autoresttest.config import get_config
 
 load_dotenv()
 
 AUTORESTTEST_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = AUTORESTTEST_DIR.parent.parent
 DATA_ROOT = PROJECT_ROOT / "data"
+
+CONFIG = get_config()
 
 
 def ensure_output_dir(spec_name: str) -> Path:
@@ -209,8 +199,8 @@ class AutoRestTest:
         self.local_test = True
         self.is_naive = False
         construct_db_dir()
-        self.use_cached_graph = USE_CACHED_GRAPH
-        self.use_cached_table = USE_CACHED_TABLE
+        self.use_cached_graph = CONFIG.cache.use_cached_graph
+        self.use_cached_table = CONFIG.cache.use_cached_table
 
     def init_graph(
         self,
@@ -234,7 +224,7 @@ class AutoRestTest:
 
     def generate_graph(self, spec_name: str, ext: str, embedding_model: EmbeddingModel):
         spec_path = self.spec_dir / f"{spec_name}{ext}"
-        db_graph = AUTORESTTEST_DIR / "cache" / "graphs" / spec_name
+        db_graph = PROJECT_ROOT / "cache" / "graphs" / spec_name
         print("CREATING SEMANTIC OPERATION DEPENDECY GRAPH...")
         with shelve.open(str(db_graph)) as db:
 
@@ -277,13 +267,13 @@ class AutoRestTest:
         print("INITIATING Q-TABLES...")
         q_learning = QLearning(
             operation_graph,
-            alpha=LEARNING_RATE,
-            gamma=DISCOUNT_FACTOR,
-            epsilon=MAX_EXPLORATION,
-            time_duration=TIME_DURATION,
-            mutation_rate=MUTATION_RATE,
+            alpha=CONFIG.q_learning.learning_rate,
+            gamma=CONFIG.q_learning.discount_factor,
+            epsilon=CONFIG.q_learning.max_exploration,
+            time_duration=CONFIG.request_generation.time_duration,
+            mutation_rate=CONFIG.request_generation.mutation_rate,
         )
-        db_q_table = AUTORESTTEST_DIR / "cache" / "q_tables" / spec_name
+        db_q_table = PROJECT_ROOT / "cache" / "q_tables" / spec_name
 
         q_learning.operation_agent.initialize_q_table()
         print("Initialized operation agent Q-table.")
@@ -317,7 +307,7 @@ class AutoRestTest:
                     print("Error loading value agent from shelve.")
                     loaded_value_from_shelf = False
 
-                if ENABLE_HEADER_AGENT:
+                if CONFIG.enable_header_agent:
                     try:
                         q_learning.header_agent.q_table = compiled_q_table["header"]
                         print(
@@ -335,10 +325,10 @@ class AutoRestTest:
                 q_learning.value_agent.initialize_q_table()
                 print(f"Initialized new value agent Q-table for {spec_name}.")
 
-            if ENABLE_HEADER_AGENT and not loaded_header_from_shelf:
+            if CONFIG.enable_header_agent and not loaded_header_from_shelf:
                 q_learning.header_agent.initialize_q_table()
                 print(f"Initialized new header agent Q-table for {spec_name}.")
-            elif not ENABLE_HEADER_AGENT:
+            elif not CONFIG.enable_header_agent:
                 q_learning.header_agent.q_table = None
 
             try:
@@ -386,7 +376,7 @@ class AutoRestTest:
 
 def main():
     specification_directory, specification_name, ext = parse_specification_location(
-        PROJECT_ROOT / SPECIFICATION_LOCATION
+        PROJECT_ROOT / CONFIG.specification_location
     )
     auto_rest_test = AutoRestTest(spec_dir=specification_directory)
     auto_rest_test.run_single(specification_name, ext)

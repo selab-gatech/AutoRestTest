@@ -17,7 +17,7 @@ import sys
 root_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.append(root_directory)
 
-from autoresttest.configurations import ENABLE_HEADER_AGENT, LEARNING_RATE, DISCOUNT_FACTOR, MAX_EXPLORATION, MUTATION_RATE
+from autoresttest.config import get_config
 from autoresttest.graph.generate_graph import OperationGraph
 from autoresttest.graph.specification_parser import SpecificationParser
 from autoresttest.models import OperationProperties
@@ -27,6 +27,9 @@ from autoresttest.graph import RequestGenerator
 from autoresttest.utils import construct_db_dir, construct_basic_token, get_object_shallow_mappings, get_body_params, \
     get_response_params, get_response_param_mappings, remove_nulls, encode_dictionary, EmbeddingModel, get_api_url
 from autoresttest.llm import identify_generator, randomize_string, random_generator, randomize_object
+
+
+CONFIG = get_config()
 
 
 class Ablation2:
@@ -228,7 +231,7 @@ class Ablation2:
 
         if mutate_token:
             random_token_params = {"username": randomize_string(), "password": randomize_string()}
-            if ENABLE_HEADER_AGENT and header and random.random() < 0.5:
+            if CONFIG.enable_header_agent and header and random.random() < 0.5:
                 header = None
             else:
                 header = {"Authorization": construct_basic_token(random_token_params)}
@@ -534,7 +537,7 @@ class Ablation2:
 
         elapsed_time = time.time() - start_time
 
-        if ENABLE_HEADER_AGENT:
+        if CONFIG.enable_header_agent:
             agent_options = ["PARAMETER & BODY", "DATA_SOURCE", "VALUE", "DEPENDENCY", "HEADER", "NONE", "ALL"]
         else:
             agent_options = ["PARAMETER & BODY", "DATA_SOURCE", "VALUE", "DEPENDENCY", "NONE", "ALL"]
@@ -585,7 +588,7 @@ class Ablation2:
             select_params = self.parameter_agent.get_action(operation_id)
 
             # Determine header
-            if ENABLE_HEADER_AGENT:
+            if CONFIG.enable_header_agent:
                 select_header = self.header_agent.get_action(operation_id)
             else:
                 select_header = None
@@ -822,8 +825,14 @@ def generate_graph_ablation_2(spec_dir, spec_name, embedding_model):
 
 def perform_q_learning_ablation_2(operation_graph: OperationGraph, spec_name, duration):
     print("Initializing agents!")
-    q_learning = Ablation2(operation_graph, alpha=LEARNING_RATE, gamma=DISCOUNT_FACTOR, epsilon=MAX_EXPLORATION,
-                           time_duration=duration, mutation_rate=MUTATION_RATE)
+    q_learning = Ablation2(
+        operation_graph,
+        alpha=CONFIG.q_learning.learning_rate,
+        gamma=CONFIG.q_learning.discount_factor,
+        epsilon=CONFIG.q_learning.max_exploration,
+        time_duration=duration,
+        mutation_rate=CONFIG.request_generation.mutation_rate,
+    )
     with shelve.open(f"../cache/q_tables/{spec_name}") as db:
         if spec_name in db:
             compiled_q_table = db[spec_name]

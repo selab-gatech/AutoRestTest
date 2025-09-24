@@ -1,46 +1,62 @@
 .idea/
+.vscode/
 .github/
 .gradle/
-.vscode/
+
+# OS artifacts
+.DS_Store
 **/.DS_Store
+
+# Python
+venv/
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
 .hypothesis/
 
-venv/
-target/
-logs/
-output/
-Fuzz/
-Compile/
-restler_bin/
-out/
-kittylogs/
-services/jdk8/erc20-rest-service/bin/
-RestlerLogs/
-restler/
-rest-gitlab/
-**/testing_output/
-**/__pycache__/
-services/service_logs/
-src/data/
-data/
-src/cache/
-
+# Environment
 .env
-**/cache/
+
+# Data and cache directories
+data/
+src/data/
 **/data/
-**/.venv/
+src/cache/
+**/cache/
+**/testing_output/
 **/glove.6B.50d.w2v.txt
-**/config.py
-test.json
-cp.txt
+
+# Logs and reports
+logs/
+kittylogs/
+RestlerLogs/
+services/service_logs/
 *.log
-*.pkl
 log_*
-evomaster-benchmark-cs-rest-artificial-news.iml
-evomaster.jar
-workloadResultsFile.xlsx
-faultloadResultsFile.xlsx
+*LOG_PATH*
 org.jacoco.*
 jacoco_*
-*LOG_PATH*
+workloadResultsFile.xlsx
+faultloadResultsFile.xlsx
+
+# Build and tooling outputs
+target/
+output/
+out/
+restler_bin/
+restler/
+rest-gitlab/
+Fuzz/
+Compile/
+services/jdk8/erc20-rest-service/bin/
+
+# Project-specific artifacts
+test.json
+cp.txt
+*.pkl
+evomaster-benchmark-cs-rest-artificial-news.iml
+evomaster.jar
 test.py

@@ -7,7 +7,7 @@ import requests
 from dataclasses import dataclass, field, asdict
 from typing import Any, AnyStr, Dict, Optional, List
 
-from autoresttest.configurations import DEFAULT_TEMPERATURE
+from autoresttest.config import get_config
 from autoresttest.prompts import (
     ENUM_EXAMPLE_CONSTRAINT_PROMPT,
     FAILED_PARAMETER_MATCHINGS_PROMPT,
@@ -50,6 +50,9 @@ from autoresttest.models import (
 )
 
 from .llm import OpenAILanguageModel
+
+
+CONFIG = get_config()
 
 
 def randomize_boolean():
@@ -204,7 +207,7 @@ class SmartValueGenerator:
         operation_properties: OperationProperties,
         requirements: Optional[RequestRequirements] = None,
         engine="gpt-4o",
-        temperature=DEFAULT_TEMPERATURE,
+        temperature=CONFIG.default_temperature,
     ):
         self.operation_properties: OperationProperties = operation_properties
         self.processed_operation = remove_nulls(asdict(operation_properties))

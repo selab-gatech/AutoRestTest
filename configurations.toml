@@ -1,0 +1,43 @@
+# ===========================
+# AutoRestTest Configuration
+# ===========================
+
+[spec]
+# Relative path from the project root to the OpenAPI specification file.
+# Only .yaml and .json are supported; file MUST be OpenAPI 3.0.
+location = "aratrl-openapi/market2.yaml"
+
+[llm]
+# OpenAI model used for Value Agent (and optional Header Agent) generation.
+# Must be JSON-mode compatible.
+engine = "gpt-4o-mini"
+
+# Default sampling temperature for the LLM (0.0 = deterministic, higher = more random).
+temperature = 0.7
+
+[agents.header]
+# Whether to enable the Header Agent (uses Basic tokens). Only helpful for APIs requiring such auth.
+enabled = false
+
+[cache]
+# Use the cached Semantic Operation Dependency Graph produced by a prior run.
+use_cached_graph = true
+
+# Use the cached Q-table(s) for the Value Agent (and optional Header Agent) to avoid re-running the LLM.
+use_cached_table = true
+
+# Tip: Set either cache flag to false if you changed graph construction or table generation logic to regenerate the cache.
+
+[q_learning]
+# Q-learning agent hyperparameters.
+learning_rate = 0.1        # alpha
+discount_factor = 0.9       # gamma
+max_exploration = 1         # epsilon; decays over time to 0.1
+
+[request_generation]
+# Controls the request generation process.
+# Duration for generation in seconds.
+time_duration = 1200
+
+# Probability of mutating request parameters during generation.
+mutation_rate = 0.2
