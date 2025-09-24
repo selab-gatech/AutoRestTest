@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from autoresttest.configurations import OPENAI_LLM_ENGINE, DEFAULT_TEMPERATURE
+from autoresttest.config import get_config
 from autoresttest.prompts.system_prompts import DEFAULT_SYSTEM_MESSAGE
 from autoresttest.utils import (
     INPUT_COST_PER_TOKEN,
@@ -12,6 +12,7 @@ from autoresttest.utils import (
     encode_dictionary,
 )
 
+CONFIG = get_config()
 
 load_dotenv()
 
@@ -43,7 +44,10 @@ class OpenAILanguageModel:
         )
 
     def __init__(
-        self, engine=OPENAI_LLM_ENGINE, temperature=DEFAULT_TEMPERATURE, max_tokens=4000
+        self,
+        engine=CONFIG.openai_llm_engine,
+        temperature=CONFIG.default_temperature,
+        max_tokens=4000,
     ):
         self.api_key = os.getenv("OPENAI_API_KEY")
         if self.api_key is None or self.api_key.strip() == "":
@@ -119,3 +123,4 @@ class OpenAILanguageModel:
 
         OpenAILanguageModel.cache[cache_key] = result
         return result
+

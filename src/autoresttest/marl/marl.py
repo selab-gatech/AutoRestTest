@@ -11,7 +11,7 @@ import numpy as np
 import requests
 import shelve
 
-from autoresttest.configurations import ENABLE_HEADER_AGENT
+from autoresttest.config import get_config
 from autoresttest.graph import OperationGraph, OperationProperties
 from autoresttest.agents import (
     OperationAgent,
@@ -39,6 +39,9 @@ from autoresttest.llm import (
     random_generator,
     randomize_object,
 )
+
+
+CONFIG = get_config()
 
 
 class QLearning:
@@ -329,7 +332,7 @@ class QLearning:
                 "username": randomize_string(),
                 "password": randomize_string(),
             }
-            if ENABLE_HEADER_AGENT and header and random.random() < 0.5:
+            if CONFIG.enable_header_agent and header and random.random() < 0.5:
                 header = None
             else:
                 header = {"Authorization": construct_basic_token(random_token_params)}
@@ -768,7 +771,7 @@ class QLearning:
 
         elapsed_time = time.time() - start_time
 
-        if ENABLE_HEADER_AGENT:
+        if CONFIG.enable_header_agent:
             agent_options = [
                 "PARAMETER & BODY",
                 "DATA_SOURCE",
@@ -882,7 +885,7 @@ class QLearning:
             select_params = self.parameter_agent.get_action(operation_id)
 
             # Determine header
-            if ENABLE_HEADER_AGENT:
+            if CONFIG.enable_header_agent:
                 select_header = self.header_agent.get_action(operation_id)
             else:
                 select_header = None
@@ -1216,7 +1219,7 @@ class QLearning:
                 next_Q_data = self.data_source_agent.get_Q_next(operation_id)
 
                 curr_Q_header, next_Q_header = 0, 0
-                if ENABLE_HEADER_AGENT:
+                if CONFIG.enable_header_agent:
                     curr_Q_header += self.header_agent.get_Q_curr(
                         operation_id, select_header
                     )
@@ -1370,7 +1373,7 @@ class QLearning:
                     operation_id, data_source, td_error
                 )
 
-                if ENABLE_HEADER_AGENT:
+                if CONFIG.enable_header_agent:
                     self.header_agent.update_Q_item(
                         operation_id, select_header, td_error
                     )
@@ -1549,3 +1552,4 @@ class QLearning:
 
     def run(self):
         self.execute_operations()
+

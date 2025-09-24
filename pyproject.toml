@@ -18,6 +18,8 @@ beautifulsoup4 = "4.12.3"
 python-dotenv = "1.0.1"
 prance = "23.6.21.0"
 openapi-spec-validator = "0.7.1"
+pydantic = "2.7.1"
+tomli = "2.0.1"
 
 [tool.poetry.scripts]
 autoresttest = "autoresttest.autoresttest:main"
