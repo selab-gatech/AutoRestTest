@@ -42,6 +42,23 @@ python run_service.py language-tool no_token
 
 The script supports the following services:
 
+### JDK 8_1 Services (Requires Build)
+These services must be built before running. Use `bash services/build_jdk8_1_services.sh` to build them:
+
+- **Features Service**: A REST API for managing product features and configurations. Runs on port 30100.
+  - Command: `python run_service_mac.py features-service no_token`
+  - Requires: Java 8, Maven
+  
+- **NCS (Numerical Constraint Service)**: An artificial REST service for constraint testing. Runs on port 30200.
+  - Command: `python run_service_mac.py ncs no_token`
+  - Requires: Java 8, Maven
+  
+- **SCS (String Constraint Service)**: An artificial REST service for string operations. Runs on port 30300.
+  - Command: `python run_service_mac.py scs no_token`
+  - Requires: Java 8, Maven
+
+### Other Services
+
 - FDIC: Runs a reverse proxy for FDIC.
 - Genome Nexus: Runs a Genome Nexus server and its reverse proxy.
 - Language Tool: Runs the Language Tool server and its reverse proxy.
@@ -54,6 +71,26 @@ The script supports the following services:
 - All: Runs all of the above services.
 
 For each service, the script runs the necessary setup and startup commands, including starting servers, running proxies, replacing tokens in necessary files, and more.
+
+## Building JDK 8_1 Services
+
+Before running features-service, ncs, or scs, you must build them first:
+
+```bash
+# Make the build script executable
+chmod +x services/build_jdk8_1_services.sh
+
+# Run the build script
+bash services/build_jdk8_1_services.sh
+```
+
+This will:
+1. Navigate to the aratrl-service/jdk8_1 directory
+2. Load the Java 8 environment
+3. Run `mvn clean install -DskipTests` to build all services
+4. Generate the necessary JAR files and classpaths
+
+The build process may take several minutes to complete.
 
 ## Troubleshooting
 
