@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
+import yaml
 from prance import ResolvingParser, BaseParser
 
 from autoresttest.config import get_config
@@ -59,18 +60,22 @@ class SpecificationParser:
                 )
             except Exception as exc: # Best effort fallback
                 logging.warning(
-                    "Validation failed for %s; falling back to non-validating parser. Error: %s",
+                    "Validation failed for %s; attempting sanitized re-parse. Error: %s",
                     spec_path,
                     exc,
                 )
+                with open(spec_path, "r", encoding="utf-8") as fh:
+                    if str(spec_path).lower().endswith(".json"):
+                        raw_spec = json.load(fh)
+                    else:
+                        raw_spec = yaml.safe_load(fh)
+                self._sanitize_schema(raw_spec)
                 self.resolving_parser = ResolvingParser(
-                    spec_path,
+                    spec_string=json.dumps(raw_spec),
                     strict=False,
                     recursion_limit=CONFIG.recursion_limit,
                     recursion_limit_handler=default_recursive_limit_handler,
-                    backend="python", # Disables validation
                 )
-                self._sanitize_schema(self.resolving_parser.specification)
         else:
             raise ValueError("No specification path provided.")
         # self.directory_path = 'specs/original/oas/'
@@ -328,9 +333,12 @@ class SpecificationParser:
 
 if __name__ == "__main__":
     # testing
-    spec_path = os.path.normpath("../../aratrl-openapi/project.yaml")
+    #spec_path = os.path.normpath("../../aratrl-openapi/project.yaml")
+    spec_path = os.path.normpath("../../../kafka-rest.yaml")
     spec_parser = SpecificationParser(spec_name="project", spec_path=spec_path)
-    spec_parser.single_json_spec_output()
+    spec_parser.parse_specification()
+    print(spec_parser.parse_specification())
+    #spec_parser.single_json_spec_output()
     # spec_parser.parse_all_specifications()
     # spec_parser.all_json_spec_output()
 
