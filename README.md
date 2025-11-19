@@ -44,7 +44,41 @@ Alternatives (provided but not recommended):
 
 Optionally, if the user wants to test specific APIs, they can install their OpenAPI Specification files within a folder
 in the root directory. For convenience, we have provided a large array of OpenAPI Specifications for popular and 
-widely-used APIs. These Specification scan be seen in the `aratrl-openapi` and `specs` directories.
+widely-used APIs. These Specifications can be seen in the `aratrl-openapi` and `specs` directories.
+
+### Running Local Services
+
+AutoRestTest includes support for running local REST API services for testing. Some services require building before use:
+
+#### JDK 8_1 Services (features-service, ncs, scs)
+
+These services must be built before first use:
+
+```bash
+# Make the build script executable
+chmod +x services/build_jdk8_1_services.sh
+
+# Build all JDK 8_1 services
+bash services/build_jdk8_1_services.sh
+```
+
+After building, start a service:
+```bash
+cd services
+python3 run_service_mac.py features-service no_token
+```
+
+For detailed instructions, see `FEATURES_SERVICE_SETUP.md`.
+
+#### Other Supported Services
+
+Other services like genome-nexus, language-tool, youtube, etc. can be run without building:
+```bash
+cd services
+python3 run_service_mac.py <service-name> <token>
+```
+
+See `services/README.md` for the full list of supported services.
 
 At this point, the installation step is complete and the software can be executed. However, it is important that the
 following configuration steps are completed for purposeful execution.

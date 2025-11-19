@@ -549,6 +549,23 @@ class DependencyAgent(BaseAgent):
             self.q_table[operation_id][param_location][operation_param][
                 dependent_operation_id
             ] = {"params": {}, "body": {}, "response": {}}
+        
+        # Ensure dependent_location is valid
+        if dependent_location not in ["params", "body", "response"]:
+            print(f"Warning: Invalid dependent_location '{dependent_location}'. Skipping dependency.")
+            return
+        
+        # Ensure the dependent_location key exists in the structure
+        if (
+            dependent_location
+            not in self.q_table[operation_id][param_location][operation_param][
+                dependent_operation_id
+            ]
+        ):
+            self.q_table[operation_id][param_location][operation_param][
+                dependent_operation_id
+            ][dependent_location] = {}
+        
         if (
             dependent_param
             not in self.q_table[operation_id][param_location][operation_param][

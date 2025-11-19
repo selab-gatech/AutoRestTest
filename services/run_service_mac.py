@@ -37,9 +37,30 @@ if __name__ == "__main__":
     token = sys.argv[2]
     base = os.getcwd()
 
-    cov = "-javaagent:" + base + "/../org.jacoco.agent-0.8.7-runtime.jar=destfile=jacoco"
+    # Check if Jacoco agent exists, otherwise run without code coverage
+    jacoco_path = base + "/../org.jacoco.agent-0.8.7-runtime.jar"
+    if os.path.exists(jacoco_path):
+        cov = "-javaagent:" + jacoco_path + "=destfile=jacoco"
+    else:
+        print("Warning: Jacoco agent not found. Running without code coverage.")
+        cov = ""
 
-    if name == "fdic":
+    if name == "features-service":
+        if cov:
+            subprocess.run(
+                ". ./java8_mac.env && cd ../aratrl-service/jdk8_1/cs/rest/original/features-service && java " + cov + "30100.exec" + " -jar target/features-service-sut.jar --server.port=30100",
+                shell=True)
+        else:
+            subprocess.run(
+                ". ./java8_mac.env && cd ../aratrl-service/jdk8_1/cs/rest/original/features-service && java -jar target/features-service-sut.jar --server.port=30100",
+                shell=True)
+    elif name == "ncs":
+        run_service("../aratrl-service/jdk8_1/cs/rest/artificial/ncs", "org.restncs.NcsApplication",
+                    "30200")
+    elif name == "scs":
+        run_service("../aratrl-service/jdk8_1/cs/rest/artificial/scs", "org.restscs.ScsApplication",
+                    "30300")
+    elif name == "fdic":
         subprocess.run("tmux new -d -s fdic-proxy 'LOG_FILE=log-fdic.txt mitmproxy --mode reverse:https://banks.data.fdic.gov -p 9001 -s proxy.py'", shell=True)
     elif name == "genome-nexus":
         subprocess.run("docker stop gn-mongo", shell=True)
@@ -86,6 +107,16 @@ if __name__ == "__main__":
             "tmux new -d -s youtube-proxy 'LOG_FILE=log-youtube.txt mitmproxy --mode reverse:http://0.0.0.0:8080 -p 9009 -s proxy.py'",
             shell=True)
     elif name == "all":
+        # Start features-service
+        subprocess.run(
+            "tmux new -d -s features-service-server '. ./java8_mac.env && cd ../aratrl-service/jdk8_1/cs/rest/original/features-service && java " + cov + "30100.exec" + " -jar target/features-service-sut.jar'",
+            shell=True)
+        # Start ncs
+        run_service("../aratrl-service/jdk8_1/cs/rest/artificial/ncs", "org.restncs.NcsApplication",
+                    "30200")
+        # Start scs
+        run_service("../aratrl-service/jdk8_1/cs/rest/artificial/scs", "org.restscs.ScsApplication",
+                    "30300")
         subprocess.run(
             "tmux new -d -s fdic-proxy 'LOG_FILE=log-fdic.txt mitmproxy --mode reverse:https://banks.data.fdic.gov -p 9001 -s proxy.py'",
             shell=True)
