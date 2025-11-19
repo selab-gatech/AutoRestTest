@@ -1,10 +1,13 @@
+import json
+import logging
 import os
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Union
-import json
 
 from prance import ResolvingParser, BaseParser
 
+from autoresttest.config import get_config
 from autoresttest.models import (
     OperationProperties,
     ParameterProperties,
@@ -23,6 +26,21 @@ def json_spec_output(output_directory: Path, file_name: str, spec: Dict):
         json.dump(spec, file, ensure_ascii=False, indent=4)
 
 
+CONFIG = get_config()
+
+
+def default_recursive_limit_handler(limit, parsed_url, recursions=()):
+    """
+    Prance parser uses this as fallback when exceeding recursive depth to avoid recursive resolution errors.
+    """
+    return {
+        "type": "object",
+        "title": "Recursion Limit Exceeded",
+        "description": "recursive_limit_exceeded",
+        "properties": {}
+    }
+
+
 class SpecificationParser:
     """
     Class to parse a specification file and return a dictionary of all the operations and their properties.
@@ -32,13 +50,53 @@ class SpecificationParser:
         self.spec_path = spec_path
         self.spec_name = spec_name
         if spec_path is not None:
-            self.resolving_parser = ResolvingParser(spec_path, strict=False)
-            self.base_parser = BaseParser(spec_path, strict=False)
+            try:
+                self.resolving_parser = ResolvingParser(
+                    spec_path,
+                    strict=False,
+                    recursion_limit=CONFIG.recursion_limit,  # Use user-provided recursion depth limit
+                    recursion_limit_handler=default_recursive_limit_handler,  # For infinite recursion errors
+                )
+            except Exception as exc: # Best effort fallback
+                logging.warning(
+                    "Validation failed for %s; falling back to non-validating parser. Error: %s",
+                    spec_path,
+                    exc,
+                )
+                self.resolving_parser = ResolvingParser(
+                    spec_path,
+                    strict=False,
+                    recursion_limit=CONFIG.recursion_limit,
+                    recursion_limit_handler=default_recursive_limit_handler,
+                    backend="python", # Disables validation
+                )
+                self._sanitize_schema(self.resolving_parser.specification)
         else:
             raise ValueError("No specification path provided.")
         # self.directory_path = 'specs/original/oas/'
         self.directory_path = "specs/aratrl-openapi/"
         self.all_specs = {}
+
+    def _sanitize_schema(self, obj: Union[Dict, List]):
+        """
+        Recursively fix common validation errors on OpenAPI Specifications when using the prance parser without validation enabled.
+        """
+        if isinstance(obj, dict):
+            if "pattern" in obj:
+                pattern_val = obj.get("pattern")
+                if isinstance(pattern_val, str):
+                    try:
+                        re.compile(pattern_val)
+                    except re.error:
+                        obj.pop("pattern", None)
+            obj.pop("typt", None)
+            if "oneOf" in obj and not isinstance(obj.get("oneOf"), list):
+                obj.pop("oneOf", None)
+            for value in list(obj.values()):
+                self._sanitize_schema(value)
+        elif isinstance(obj, list):
+            for item in obj:
+                self._sanitize_schema(item)
 
     def get_api_url(self) -> str:
         """
@@ -53,7 +111,7 @@ class SpecificationParser:
         return self.resolving_parser.specification.get("info", {}).get("title")
 
     def process_parameter_object_properties(
-        self, properties: Dict
+            self, properties: Dict
     ) -> Dict[str, SchemaProperties]:
         """
         Process the properties of a parameter of type object to return a dictionary of all the properties and their
@@ -69,7 +127,7 @@ class SpecificationParser:
         return object_properties
 
     def process_parameter_schema(
-        self, schema: Dict, description: str = None
+            self, schema: Dict, description: str = None
     ) -> SchemaProperties:
         """
         Process the schema of a parameter to return a ValueProperties object
@@ -183,7 +241,7 @@ class SpecificationParser:
         return response_properties
 
     def process_operation_details(
-        self, http_method: str, endpoint_path: str, operation_details: Dict
+            self, http_method: str, endpoint_path: str, operation_details: Dict
     ) -> OperationProperties:
         """
         Process the parameters and request body details within a given operation to return as OperationProperties object.

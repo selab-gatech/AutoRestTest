@@ -27,7 +27,6 @@ from autoresttest.utils import (
     get_request_body_params,
     get_object_shallow_mappings,
     get_param_combinations,
-    get_combinations,
     get_required_params,
     get_body_object_combinations,
 )

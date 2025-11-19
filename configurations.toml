@@ -7,6 +7,13 @@
 # Only .yaml and .json are supported; file MUST be OpenAPI 3.0.
 location = "aratrl-openapi/market2.yaml"
 
+# Maximum depth for resolving recursive references in the OpenAPI specification.
+recursion_limit = 50
+
+[agent]
+# Upper bound on generated parameter/body combinations to keep Q-table sizes manageable.
+max_combinations = 10
+
 [llm]
 # OpenAI model used for Value Agent (and optional Header Agent) generation.
 # Must be JSON-mode compatible.

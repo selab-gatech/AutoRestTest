@@ -17,6 +17,7 @@ CONFIG_PATH = PROJECT_ROOT / CONFIG_FILE_NAME
 
 class SpecConfig(BaseModel):
     location: str
+    recursion_limit: int = 50
 
 
 class LLMConfig(BaseModel):
@@ -30,6 +31,10 @@ class HeaderAgentConfig(BaseModel):
 
 class AgentsConfig(BaseModel):
     header: HeaderAgentConfig
+
+
+class AgentCombinationConfig(BaseModel):
+    max_combinations: int = 10
 
 
 class CacheConfig(BaseModel):
@@ -52,6 +57,7 @@ class Config(BaseModel):
     spec: SpecConfig
     llm: LLMConfig
     agents: AgentsConfig
+    agent: AgentCombinationConfig
     cache: CacheConfig
     q_learning: QLearningConfig
     request_generation: RequestGenerationConfig
@@ -61,6 +67,10 @@ class Config(BaseModel):
     @property
     def specification_location(self) -> str:
         return self.spec.location
+
+    @property
+    def recursion_limit(self) -> int:
+        return self.spec.recursion_limit
 
     @property
     def openai_llm_engine(self) -> str:
@@ -73,6 +83,10 @@ class Config(BaseModel):
     @property
     def enable_header_agent(self) -> bool:
         return self.agents.header.enabled
+
+    @property
+    def max_combinations(self) -> int:
+        return self.agent.max_combinations
 
 
 def _load_raw_config() -> Dict[str, Any]:
