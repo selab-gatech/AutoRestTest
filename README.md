@@ -95,6 +95,9 @@ If you intend to use your own OpenAPI Specification file as described in the Ins
 
 Only `.yaml` and `.json` files are supported (OpenAPI 3.0). Example: `aratrl-openapi/market2.yaml`.
 
+If your spec has recursive `$ref` chains, you can tune the resolver depth with:
+- `[spec].recursion_limit` (default: `50`)
+
 #### 2. Configuring Reinforcement Learning Parameters
 
 Configure Q-learning parameters in `configurations.toml`:
@@ -104,6 +107,9 @@ Configure Q-learning parameters in `configurations.toml`:
 
 Instead of limiting episodes, the program limits RL iterations using a time budget. Set the duration (in seconds) under:
 - `[request_generation].time_duration` (default: `1200`)
+
+To control how many parameter/body combinations are generated (and keep Q-tables manageable), adjust:
+- `[agent].max_combinations` (default: `10`)
 
 > [!TIP]
 > The above steps alter the variables across all four agents used within the software. If the user desires to change
