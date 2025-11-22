@@ -6,6 +6,11 @@ from .utils import (
     compose_json_fix_prompt,
     construct_basic_token,
     construct_db_dir,
+    get_graph_cache_path,
+    get_q_table_cache_path,
+    CACHE_ROOT,
+    Q_TABLE_CACHE_DIR,
+    GRAPH_CACHE_DIR,
     encode_dict_as_key,
     encode_dictionary,
     get_api_url,
@@ -23,6 +28,7 @@ from .utils import (
     get_response_params,
     is_json_seriable,
     remove_nulls,
+    dispatch_request,
 )
 
 __all__ = [
@@ -33,6 +39,11 @@ __all__ = [
     "compose_json_fix_prompt",
     "construct_basic_token",
     "construct_db_dir",
+    "get_graph_cache_path",
+    "get_q_table_cache_path",
+    "CACHE_ROOT",
+    "Q_TABLE_CACHE_DIR",
+    "GRAPH_CACHE_DIR",
     "encode_dict_as_key",
     "encode_dictionary",
     "get_api_url",
@@ -50,4 +61,5 @@ __all__ = [
     "get_response_params",
     "is_json_seriable",
     "remove_nulls",
+    "dispatch_request",
 ]

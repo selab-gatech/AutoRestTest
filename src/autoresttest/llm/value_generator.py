@@ -51,7 +51,6 @@ from autoresttest.models import (
 
 from .llm import OpenAILanguageModel
 
-
 CONFIG = get_config()
 
 
@@ -70,7 +69,7 @@ def randomize_integer():
     elif percent <= 90:
         return random.randint(0, 1000)
     else:
-        return random.randint(-(2**10), (2**10))
+        return random.randint(-(2 ** 10), (2 ** 10))
 
 
 def randomize_float():
@@ -80,7 +79,7 @@ def randomize_float():
     elif percent <= 90:
         return random.uniform(0, 1000)
     else:
-        return random.uniform(-(2**10), (2**10))
+        return random.uniform(-(2 ** 10), (2 ** 10))
 
 
 def randomize_string():
@@ -134,7 +133,7 @@ def identify_generator(value: Any):
         "object": randomize_object,
         "null": randomize_null,
     }
-    return generators.get(value)
+    return generators.get(value) or random_generator()
 
 
 def random_generator():
@@ -153,27 +152,36 @@ def random_generator():
 
 class NaiveValueGenerator:
     def __init__(
-        self,
-        parameters: Dict[AnyStr, ParameterProperties],
-        request_body: Dict[AnyStr, SchemaProperties],
+            self,
+            parameters: Dict[AnyStr, ParameterProperties],
+            request_body: Dict[AnyStr, SchemaProperties],
     ):
         self.parameters: Dict[AnyStr, ParameterProperties] = parameters
         self.request_body: Dict[AnyStr, SchemaProperties] = request_body
 
     def generate_value(self, item_properties: SchemaProperties) -> Any:
-        if item_properties.type == "object" or item_properties.properties is not None:
+        if item_properties is None:
+            return None
+
+        item_type = getattr(item_properties, "type", None)
+        props = getattr(item_properties, "properties", None)
+        if props is not None and not isinstance(props, dict):
+            props = None
+        if item_type == "object" or props is not None:
             return {
-                item_name: self.generate_value(item_properties)
-                for item_name, item_properties in item_properties.properties.items()
+                item_name: self.generate_value(prop_schema)
+                for item_name, prop_schema in (props or {}).items()
             }
-        if item_properties.type == "array" or item_properties.items is not None:
+        items = getattr(item_properties, "items", None)
+        if not isinstance(items, SchemaProperties):
+            items = None
+        if item_type == "array" or items is not None:
             return [
-                self.generate_value(item_properties.items)
+                self.generate_value(items)
                 for _ in range(randomized_array_length())
             ]
-        return (
-            identify_generator(item_properties.type)() if item_properties.type else None
-        )
+        generator = identify_generator(item_type) if item_type else random_generator()
+        return generator()
 
     def generate_parameters(self) -> Dict[AnyStr, Any]:
         query_parameters = {}
@@ -203,11 +211,11 @@ class PromptData:
 
 class SmartValueGenerator:
     def __init__(
-        self,
-        operation_properties: OperationProperties,
-        requirements: Optional[RequestRequirements] = None,
-        engine="gpt-4o",
-        temperature=CONFIG.default_temperature,
+            self,
+            operation_properties: OperationProperties,
+            requirements: Optional[RequestRequirements] = None,
+            engine="gpt-4o",
+            temperature=CONFIG.default_temperature,
     ):
         self.operation_properties: OperationProperties = operation_properties
         self.processed_operation = remove_nulls(asdict(operation_properties))
@@ -236,11 +244,11 @@ class SmartValueGenerator:
 
         if necessary:
             prompt += (
-                PARAMETER_NECESSITY_PROMPT + "\n".join(select_params.keys()) + "\n\n"
+                    PARAMETER_NECESSITY_PROMPT + "\n".join(select_params.keys()) + "\n\n"
             )
         else:
             prompt += (
-                PARAMETER_REQUIREMENTS_PROMPT + "\n".join(select_params.keys()) + "\n\n"
+                    PARAMETER_REQUIREMENTS_PROMPT + "\n".join(select_params.keys()) + "\n\n"
             )
 
         prompt += "Reminder:\n" + ENUM_EXAMPLE_CONSTRAINT_PROMPT + "\n"
@@ -269,14 +277,14 @@ class SmartValueGenerator:
         prompt = f"{GEN_PROMPT}\n{FEWSHOT_PROMPT}\n"
         prompt += template_gen_prompt(summary=self.summary, schema=schema)
         prompt += (
-            RETRY_PARAMETER_REQUIREMENTS_PROMPT
-            + "\n".join(select_params.keys())
-            + "\n\n"
+                RETRY_PARAMETER_REQUIREMENTS_PROMPT
+                + "\n".join(select_params.keys())
+                + "\n\n"
         )
         prompt += (
-            FAILED_PARAMETER_MATCHINGS_PROMPT
-            + json.dumps(failed_mappings, indent=2)
-            + "\n"
+                FAILED_PARAMETER_MATCHINGS_PROMPT
+                + json.dumps(failed_mappings, indent=2)
+                + "\n"
         )
         if response is not None:
             prompt += FAILED_PARAMETER_RESPONSE_PROMPT + response.text + "\n\n"
@@ -288,7 +296,7 @@ class SmartValueGenerator:
         return prompt
 
     def compose_informed_value_prompt(
-        self, prompt_data: PromptData, responses: List[RequestResponse]
+            self, prompt_data: PromptData, responses: List[RequestResponse]
     ):
         GEN_PROMPT = prompt_data.GEN_PROMPT
         schema = prompt_data.schema
@@ -360,7 +368,7 @@ class SmartValueGenerator:
         return nonreq_request_body
 
     def _form_parameter_gen_prompt(
-        self, schema: Dict, is_request_body: bool, necessary: bool = False
+            self, schema: Dict, is_request_body: bool, necessary: bool = False
     ):
         if is_request_body:
             prompt_data = PromptData(
@@ -382,11 +390,11 @@ class SmartValueGenerator:
             return self._compose_parameter_gen_prompt(prompt_data, necessary=necessary)
 
     def _form_retry_parameter_gen_prompt(
-        self,
-        schema: Dict,
-        failed_mappings: Dict,
-        response: requests.Response,
-        is_request_body: bool,
+            self,
+            schema: Dict,
+            failed_mappings: Dict,
+            response: requests.Response,
+            is_request_body: bool,
     ):
         if is_request_body:
             prompt_data = PromptData(
@@ -412,7 +420,7 @@ class SmartValueGenerator:
             return self._compose_retry_parameter_gen_prompt(prompt_data)
 
     def _form_value_agent_prompt(
-        self, schema: Dict, is_request_body: bool, num_values: int
+            self, schema: Dict, is_request_body: bool, num_values: int
     ):
         if is_request_body:
             prompt_data = PromptData(
@@ -439,8 +447,8 @@ class SmartValueGenerator:
         parameters = {}
         for parameter_name, parameter_value in schema.items():
             if (
-                parameter_name in self.parameters
-                and parameter_name not in self.parameters_reqs
+                    parameter_name in self.parameters
+                    and parameter_name not in self.parameters_reqs
             ):
                 parameters[parameter_name] = parameter_value
         parameters.update(self.parameters_reqs)
@@ -512,7 +520,7 @@ class SmartValueGenerator:
         return request_body
 
     def generate_retry_parameters(
-        self, failed_request_data: RequestData, response: requests.Response
+            self, failed_request_data: RequestData, response: requests.Response
     ):
         """
         Uses the OpenAI language model to generate values for the parameters using JSON outputs
@@ -542,7 +550,7 @@ class SmartValueGenerator:
         return parameter_matchings
 
     def generate_retry_request_body(
-        self, failed_request_data: RequestData, response: requests.Response
+            self, failed_request_data: RequestData, response: requests.Response
     ):
         """
         Uses the OpenAI language model to generate values for the request body using JSON outputs
@@ -663,7 +671,7 @@ class SmartValueGenerator:
         return request_body
 
     def generate_informed_value_agent_body(
-        self, num_values: int, responses: List[RequestResponse]
+            self, num_values: int, responses: List[RequestResponse]
     ):
         if self.request_body is None or len(self.request_body) == 0:
             return {}
@@ -696,7 +704,7 @@ class SmartValueGenerator:
         return request_body
 
     def generate_informed_value_agent_params(
-        self, num_values: int, responses: List[RequestResponse]
+            self, num_values: int, responses: List[RequestResponse]
     ):
         if self.parameters is None or len(self.parameters) == 0:
             return {}

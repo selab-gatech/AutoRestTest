@@ -10,6 +10,9 @@ location = "aratrl-openapi/market2.yaml"
 # Maximum depth for resolving recursive references in the OpenAPI specification.
 recursion_limit = 50
 
+# Validate the OpenAPI spec strictly (errors will abort) when true; allow lenient parsing when false.
+strict_validation = false
+
 [agent]
 # Upper bound on generated parameter/body combinations to keep Q-table sizes manageable.
 max_combinations = 10

@@ -3,11 +3,10 @@ import logging
 from typing import List, Dict, Tuple, Optional
 
 from .request_generator import RequestGenerator
-from .specification_parser import OperationProperties, SpecificationParser
 from .similarity_comparator import OperationDependencyComparator
 
-from autoresttest.models import SimilarityValue
-
+from autoresttest.models import OperationProperties, SimilarityValue
+from autoresttest.specification import SpecificationParser
 from autoresttest.utils import EmbeddingModel
 
 

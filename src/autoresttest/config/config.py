@@ -18,6 +18,7 @@ CONFIG_PATH = PROJECT_ROOT / CONFIG_FILE_NAME
 class SpecConfig(BaseModel):
     location: str
     recursion_limit: int = 50
+    strict_validation: bool = True
 
 
 class LLMConfig(BaseModel):
@@ -71,6 +72,10 @@ class Config(BaseModel):
     @property
     def recursion_limit(self) -> int:
         return self.spec.recursion_limit
+
+    @property
+    def strict_validation(self) -> bool:
+        return self.spec.strict_validation
 
     @property
     def openai_llm_engine(self) -> str:

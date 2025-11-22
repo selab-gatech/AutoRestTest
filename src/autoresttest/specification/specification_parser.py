@@ -3,10 +3,13 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Set
 
-import yaml
-from prance import ResolvingParser, BaseParser
+from prance import ResolvingParser, ValidationError as PranceValidationError
+from openapi_spec_validator.validation.exceptions import (
+    ValidationError as OASValidationError,
+    OpenAPIValidationError,
+)
 
 from autoresttest.config import get_config
 from autoresttest.models import (
@@ -42,6 +45,26 @@ def default_recursive_limit_handler(limit, parsed_url, recursions=()):
     }
 
 
+class LenientResolvingParser(ResolvingParser):
+    """
+    ResolvingParser constructor calls:
+    1. RefResolver.resolve_references()
+    2. BaseParser._validate(self) -> openapi-spec-validator
+    Override _validate to provide error on incorrect schemas instead of crashing
+    """
+    def _validate(self):
+        try:
+            super()._validate()
+        except (PranceValidationError, OASValidationError, OpenAPIValidationError) as exc:
+            logging.warning(
+                "OpenAPI validation failed for %s; continuing with unvalidated "
+                "specs. Error: %s",
+                getattr(self, "url", None),
+                exc,
+            )
+            self.valid = False
+
+
 class SpecificationParser:
     """
     Class to parse a specification file and return a dictionary of all the operations and their properties.
@@ -50,58 +73,23 @@ class SpecificationParser:
     def __init__(self, spec_path=None, spec_name=None):
         self.spec_path = spec_path
         self.spec_name = spec_name
-        if spec_path is not None:
-            try:
-                self.resolving_parser = ResolvingParser(
-                    spec_path,
-                    strict=False,
-                    recursion_limit=CONFIG.recursion_limit,  # Use user-provided recursion depth limit
-                    recursion_limit_handler=default_recursive_limit_handler,  # For infinite recursion errors
-                )
-            except Exception as exc: # Best effort fallback
-                logging.warning(
-                    "Validation failed for %s; attempting sanitized re-parse. Error: %s",
-                    spec_path,
-                    exc,
-                )
-                with open(spec_path, "r", encoding="utf-8") as fh:
-                    if str(spec_path).lower().endswith(".json"):
-                        raw_spec = json.load(fh)
-                    else:
-                        raw_spec = yaml.safe_load(fh)
-                self._sanitize_schema(raw_spec)
-                self.resolving_parser = ResolvingParser(
-                    spec_string=json.dumps(raw_spec),
-                    strict=False,
-                    recursion_limit=CONFIG.recursion_limit,
-                    recursion_limit_handler=default_recursive_limit_handler,
-                )
-        else:
+        if spec_path is None:
             raise ValueError("No specification path provided.")
-        # self.directory_path = 'specs/original/oas/'
-        self.directory_path = "specs/aratrl-openapi/"
+
+        self.resolving_parser = self._build_resolving_parser(spec_path)
+        self.directory_path = "specs/aratrl-openapi/" # DEPRECATED - NOT USED IN EXECUTION
         self.all_specs = {}
 
-    def _sanitize_schema(self, obj: Union[Dict, List]):
-        """
-        Recursively fix common validation errors on OpenAPI Specifications when using the prance parser without validation enabled.
-        """
-        if isinstance(obj, dict):
-            if "pattern" in obj:
-                pattern_val = obj.get("pattern")
-                if isinstance(pattern_val, str):
-                    try:
-                        re.compile(pattern_val)
-                    except re.error:
-                        obj.pop("pattern", None)
-            obj.pop("typt", None)
-            if "oneOf" in obj and not isinstance(obj.get("oneOf"), list):
-                obj.pop("oneOf", None)
-            for value in list(obj.values()):
-                self._sanitize_schema(value)
-        elif isinstance(obj, list):
-            for item in obj:
-                self._sanitize_schema(item)
+
+    def _build_resolving_parser(self, spec_path):
+        parser_cls = ResolvingParser if CONFIG.strict_validation else LenientResolvingParser
+        return parser_cls(
+            spec_path,
+            backend="openapi-spec-validator",  # AutoRestTest supports OAS 3.x
+            strict=True,
+            recursion_limit=CONFIG.recursion_limit,
+            recursion_limit_handler=default_recursive_limit_handler,
+        )
 
     def get_api_url(self) -> str:
         """
@@ -122,7 +110,7 @@ class SpecificationParser:
         Process the properties of a parameter of type object to return a dictionary of all the properties and their
         corresponding parameter values.
         """
-        if properties is None:
+        if properties is None or not isinstance(properties, dict):
             return None
         object_properties = {}
         for name, values in properties.items():
@@ -137,7 +125,7 @@ class SpecificationParser:
         """
         Process the schema of a parameter to return a ValueProperties object
         """
-        if not schema:
+        if not schema or not isinstance(schema, dict):
             return None
 
         value_properties = SchemaProperties(
@@ -174,6 +162,8 @@ class SpecificationParser:
         """
         Process an individual parameter to return a ParameterProperties object.
         """
+        if not isinstance(parameter, dict):
+            return ParameterProperties()
         parameter_properties = ParameterProperties(
             name=parameter.get("name"),
             in_value=parameter.get("in"),
@@ -246,13 +236,13 @@ class SpecificationParser:
         return response_properties
 
     def process_operation_details(
-            self, http_method: str, endpoint_path: str, operation_details: Dict
+            self, http_method: str, endpoint_path: str, operation_details: Dict, operation_id: str
     ) -> OperationProperties:
         """
         Process the parameters and request body details within a given operation to return as OperationProperties object.
         """
         operation_properties = OperationProperties(
-            operation_id=operation_details.get("operationId"),
+            operation_id=operation_id,
             endpoint_path=endpoint_path,
             http_method=http_method,
             summary=operation_details.get("summary"),
@@ -276,6 +266,49 @@ class SpecificationParser:
 
         return operation_properties
 
+    def _normalize_endpoint_path(self, endpoint_path: str) -> str:
+        """
+        Convert a path template to a safe string segment for fallback operationIds.
+        """
+        normalized = endpoint_path.replace("{", "").replace("}", "")
+        normalized = re.sub(r"[^a-zA-Z0-9]+", "_", normalized).strip("_")
+        return normalized or "root"
+
+    def _resolve_operation_id(
+            self,
+            http_method: str,
+            endpoint_path: str,
+            operation_details: Dict,
+            seen_ids: Set[str],
+    ) -> str:
+        """
+        Use provided operationId when available; otherwise construct a unique, deterministic fallback.
+        If a duplicate is detected, append an incrementing suffix to keep IDs unique.
+        """
+        provided_id = operation_details.get("operationId")
+        candidate = provided_id if provided_id else None
+
+        if not candidate:
+            normalized_path = self._normalize_endpoint_path(endpoint_path)
+            candidate = f"{http_method.lower()}_{normalized_path}"
+
+        base_candidate = candidate
+        suffix = 1
+        while candidate in seen_ids:
+            candidate = f"{base_candidate}_{suffix}"
+            suffix += 1
+
+        if provided_id and candidate != provided_id:
+            logging.warning(
+                "Duplicate operationId '%s' for %s %s; using '%s' to avoid collision.",
+                provided_id,
+                http_method,
+                endpoint_path,
+                candidate,
+            )
+
+        return candidate
+
     def parse_specification(self) -> Dict[str, OperationProperties]:
         """
         Parse the specification file to return a dictionary of all the operations and their properties.
@@ -284,16 +317,19 @@ class SpecificationParser:
         """
         supported_methods = {"get", "post", "put", "delete", "head", "options", "patch"}
         operation_collection = {}
+        seen_ids: Set[str] = set()
         spec_paths = self.resolving_parser.specification.get("paths", {})
         for endpoint_path, endpoint_details in spec_paths.items():
             for http_method, operation_details in endpoint_details.items():
                 if http_method in supported_methods:
+                    operation_id = self._resolve_operation_id(
+                        http_method, endpoint_path, operation_details, seen_ids
+                    )
+                    seen_ids.add(operation_id)
                     operation_properties = self.process_operation_details(
-                        http_method, endpoint_path, operation_details
+                        http_method, endpoint_path, operation_details, operation_id
                     )
-                    operation_collection.setdefault(
-                        operation_properties.operation_id, operation_properties
-                    )
+                    operation_collection[operation_id] = operation_properties
         return operation_collection
 
     def parse_all_specifications(self) -> dict:
@@ -303,7 +339,7 @@ class SpecificationParser:
         for file_name in os.listdir(self.directory_path):
             print("Specification parsing for file: ", file_name)
             self.spec_path = os.path.join(self.directory_path, file_name)
-            self.resolving_parser = ResolvingParser(self.spec_path, strict=False)
+            self.resolving_parser = self._build_resolving_parser(self.spec_path)
             self.all_specs[file_name] = self.parse_specification()
             # print("Output: " + str(output))
 
@@ -333,12 +369,12 @@ class SpecificationParser:
 
 if __name__ == "__main__":
     # testing
-    #spec_path = os.path.normpath("../../aratrl-openapi/project.yaml")
+    # spec_path = os.path.normpath("../../aratrl-openapi/project.yaml")
     spec_path = os.path.normpath("../../../kafka-rest.yaml")
     spec_parser = SpecificationParser(spec_name="project", spec_path=spec_path)
     spec_parser.parse_specification()
     print(spec_parser.parse_specification())
-    #spec_parser.single_json_spec_output()
+    # spec_parser.single_json_spec_output()
     # spec_parser.parse_all_specifications()
     # spec_parser.all_json_spec_output()
 
