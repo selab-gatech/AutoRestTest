@@ -724,17 +724,14 @@ class SmartValueGenerator:
                 system_message=REQUEST_BODY_GEN_SYSTEM_MESSAGE,
                 json_mode=True,
             )
-            print("Generated request body: ", generated_request_body)
             try:
                 generated_request_body = json.loads(generated_request_body)
             except json.JSONDecodeError:
-                print("Encountered a JSON decode error for ", generated_request_body)
+                print("Handling a JSON decode error...")
                 generated_request_body = attempt_fix_json(generated_request_body)
-            print("Before validating request body", generated_request_body)
             validated_request_body = self._validate_value_body(
                 generated_request_body.get("request_body")
             )
-            print("After validating request body", validated_request_body)
             request_body[mime_type] = validated_request_body
         return request_body
 
