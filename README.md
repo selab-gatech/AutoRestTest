@@ -7,6 +7,10 @@ and create enhanced comprehensive test cases.
 
 Watch this [demonstration video](https://www.youtube.com/watch?v=VVus2W8rap8) of AutoRestTest to learn how it solves complex challenges in automated REST API testing, as well as its configuration, execution steps, and output.
 
+> [!NOTE]
+> Following the release of the demonstration video, the code base has been refactored.
+> Refer to this `README.md` for the most current setup and execution details.
+
 <p align="center">
   <a href="https://www.youtube.com/watch?v=VVus2W8rap8">
     <img src="https://img.youtube.com/vi/VVus2W8rap8/0.jpg" alt="Watch the video">
@@ -24,72 +28,121 @@ learning tables and graph edges.
 
 ## Installation
 
-The following are the steps to install the *AutoRestTest* software:
-1. Clone the Github repository.
-2. Install the required dependencies:
-   - Either use `requirements.txt` to install the dependencies or the Conda environment file `auto-rest-test.yml`
-3. Create a `.env` file in the root directory and add the following environmental variable:
-   - `OPENAI_API_KEY = '<YOUR_API_KEY>'` 
+We recommend using Poetry with `pyproject.toml` for dependency management and scripts. A `poetry.lock` file pins exact versions.
 
-> [!TIP]
-> For compatability across different operating systems, it is recommended to use the Conda environment file
+Steps:
+1. Clone the repository.
+2. Ensure Python 3.10.x is available (project targets `>=3.10,<3.11`).
+3. Install dependencies with Poetry (uses `poetry.lock` if present):
+   - `poetry install`
+4. Create a `.env` file in the project root and add:
+   - `OPENAI_API_KEY='<YOUR_API_KEY>'`
+
+Alternatives (provided but not recommended):
+- `pip install -r requirements.txt`
+- `conda env create -f autoresttest.yaml`
 
 Optionally, if the user wants to test specific APIs, they can install their OpenAPI Specification files within a folder
 in the root directory. For convenience, we have provided a large array of OpenAPI Specifications for popular and 
-widely-used APIs. These Specification scan be seen in the `aratrl-openapi` and `specs` directories.
+widely-used APIs. These Specifications can be seen in the `aratrl-openapi` and `specs` directories.
+
+### Running Local Services
+
+AutoRestTest includes support for running local REST API services for testing. Some services require building before use:
+
+#### JDK 8_1 Services (features-service, ncs, scs)
+
+These services must be built before first use:
+
+```bash
+# Make the build script executable
+chmod +x services/build_jdk8_1_services.sh
+
+# Build all JDK 8_1 services
+bash services/build_jdk8_1_services.sh
+```
+
+After building, start a service:
+```bash
+cd services
+python3 run_service_mac.py features-service no_token
+```
+
+For detailed instructions, see `FEATURES_SERVICE_SETUP.md`.
+
+#### Other Supported Services
+
+Other services like genome-nexus, language-tool, youtube, etc. can be run without building:
+```bash
+cd services
+python3 run_service_mac.py <service-name> <token>
+```
+
+See `services/README.md` for the full list of supported services.
 
 At this point, the installation step is complete and the software can be executed. However, it is important that the
 following configuration steps are completed for purposeful execution.
 
 ## Configuration
 
-There is a wide array of configuration options available within the codebase. For convenience, the configuration options
-are easily accessible within the `configurations.py` file in the root directory. The file contains information
-regarding each of the parameters that can be altered. The following are additional instructions for each of the configuration choices.
-Note that the parameteres referenced in the following steps are found in the `configurations.py` file.
+There is a wide array of configuration options available within the codebase. All configuration options are easily accessible via a single TOML file at the project root: `configurations.toml`.
 
-#### 1. Specifying the API Directory
+Below are the relevant settings and where to find them in `configurations.toml`.
 
-If the user intends to use their own OpenAPI Specification files as described in the *Installation* section, 
-they can change the **SPECIFICATION_DIRECTORY** variable within the `configurations.py` file to the name of the directory containing the
-added specifications.
+#### 1. Specifying the API Specification
 
-#### 2. Configuring the Reinforcement Learning Parameters
+If you intend to use your own OpenAPI Specification file as described in the Installation section, set the relative path (from the project root) to that file in `configurations.toml` under `[spec].location`.
 
-The user can configure the reinforcement learning parameters, such as the learning rate (**LEARNING_RATE**), the discount factor (**DISCOUNT_FACTOR**), 
-and the epsilon-greedy exploration value (**EXPLORATION_RATE**) used in Q-learning. As default, the parameters are set to the following values:
-- Learning Rate: 0.1
-- Discount Factor: 0.9
-- Epsilon: 0.3
+Only `.yaml` and `.json` files are supported (OpenAPI 3.0). Example: `aratrl-openapi/market2.yaml`.
 
-Instead of limiting the amount of episodes, the program limits the amount of reinforcement learning iterations using a 
-time-based approach. The default value is set to 10 minutes. This can be altered by changing the **TIME_DURATION** variable in the configurations file. The units are in seconds.
+If your spec has recursive `$ref` chains, you can tune the resolver depth with:
+- `[spec].recursion_limit` (default: `50`)
+- `[spec].strict_validation` (default: `true`) — when `true`, the OpenAPI spec is strictly validated and parsing stops on errors; when `false`, invalid sections are skipped where possible so execution can continue.
+
+#### 2. Configuring Reinforcement Learning Parameters
+
+Configure Q-learning parameters in `configurations.toml`:
+- `[q_learning].learning_rate` (default: `0.1`)
+- `[q_learning].discount_factor` (default: `0.9`)
+- `[q_learning].max_exploration` (epsilon; default: `1`, decays over time to `0.1`)
+
+Instead of limiting episodes, the program limits RL iterations using a time budget. Set the duration (in seconds) under:
+- `[request_generation].time_duration` (default: `1200`)
+
+To control how many parameter/body combinations are generated (and keep Q-tables manageable), adjust:
+- `[agent].max_combinations` (default: `10`)
 
 > [!TIP]
 > The above steps alter the variables across all four agents used within the software. If the user desires to change
-> the individual agent parameters, they can navigate to the `src/reinforcement/agents.py` file and change the parameters.
+> the individual agent parameters, they can navigate to the `src/autoresttest/agents` files and change the parameters.
 
 #### 3. Configuring the OpenAI Model
 
-If the user wants to reduce the cost of executing the software, they can change the OpenAI models used throughout 
-the program. The user can use the **OPENAI_LLM_ENGINE** variable to specify an appropriate model. By default, the **gpt-4o-mini**
-model is selected given its high performance, cost-effectiveness, and high token limit.
+To manage cost and performance, adjust the LLM settings in `configurations.toml`:
+- `[llm].engine` (default: `gpt-4o-mini`)
+- `[llm].temperature` (default: `0.7`)
 
 > [!WARNING]
-> The software heavily uses the **JSON mode** from recent OpenAI API engines. All GPT 3.5-Turbo, 4-Turbo, 4o, and o1 engines support the JSON mode. 
-> Additionally, the cost of execution is only provided for the most recent versions of the 4o, 4o-mini, o1 and o1-mini engines.
+> The software heavily uses the **JSON mode** from recent OpenAI API engines. All recent models should support the JSON mode. 
+> The console output will list token usage for analyzing tool costs.
 
 #### 4. Use of Cached Graphs and Reinforcement Learning Tables
 
-The software uses a caching mechanism to store the graph edges and reinforcement learning tables for each OpenAPI 
-Specifications after generation. This is done to reduce the cost of execution and to speed up the process on repeated
-trials. The user can determine whether they want to use the cached graphs and tables by changing the **USE_CACHED_GRAPH**
-and **USE_CACHED_TABLE** variables. By default, both variables are set to **False**.
+The software can cache the graph and Q-tables to reduce cost and speed up repeated runs. Configure this behavior under:
+- `[cache].use_cached_graph` (default: `true`)
+- `[cache].use_cached_table` (default: `true`)
 
-### 5. Optional Header Agent
+> [!NOTE]
+> When enabled, these options store and read cached data under the `cache/` directory at the project root (for example, `cache/graphs/` and `cache/q_tables/`).
+> If disk usage becomes a concern, you can delete the cached project information in `cache/` after use; the data will be regenerated on the next run when needed.
+
+#### 5. Optional Header Agent
 
 AutoRestTest contains an optional Header agent responsible for testing the API with different authentication headers. Due to difficulties 
 of different authentication flows, the Header agent is only able to use Basic Authentication. By default, the agent is disabled.
+
+Toggle via `configurations.toml`:
+- `[agents.header].enabled` (default: `false`)
 
 > [!CAUTION]
 > The Header agent Q-table should be rerun when executing services with local databases that refresh, as the user
@@ -97,11 +150,12 @@ of different authentication flows, the Header agent is only able to use Basic Au
 
 ## Execution
 
-The software can be executed by running the `AutoRestTest.py` file from the root directory using the following command:
+Run the script using Poetry, after following the installation instructions:
 ```
-python3 AutoRestTest.py
+poetry run autoresttest
 ```
-To indicate the specification for execution, change the **SPECIFICATION_LOCATION** variable in the `configurations.py` file.
+
+To indicate the specification for execution, set `[spec].location` in `configurations.toml`. This path must be relative to the project root.
 
 ### Docker Execution
 
@@ -113,7 +167,7 @@ docker build -t autoresttest .
 docker run -it autoresttest
 ```
 
-Ensure that the `configurations.py` file is configured correctly before executing the software.
+Ensure that `configurations.toml` is configured correctly before executing the software.
 
 ## Results
 
@@ -142,7 +196,3 @@ These files contain the necessary information for analysis into the success of A
 > The output files can grow in size according to the number of operations and the duration of execution. 
 > For example, the file containing successful responses can grow to be several **gigabytes** when executing for a long duration. 
 > It is recommended to clear the `data` directory when the files are no longer needed.
-
-
-
-
