@@ -81,7 +81,7 @@ SPECIFICATION:
             "type": "string"
         }, 
         "required": true
-    },
+    }
 }
 PARAMETER VALUES:
 {
@@ -91,7 +91,7 @@ PARAMETER VALUES:
             "value2": "Jane456",
             "value3": "Jack789",
             "value4": "Bob101",
-            "value5": "Alice202"
+            "value5": "Alice202",
             "value6": "Sam777",
             "value7": "Lily001",
             "value8": "Tom999",
@@ -111,7 +111,7 @@ SPECIFICATION:
             "type": "string"
         },
         "required": true
-    },
+    }
 }
 PARAMETER VALUES:
 {
@@ -140,8 +140,8 @@ SPECIFICATION:
         "personId": {
             "type": "string",
             "description": "The ID of the person. Must be in the form of their name and number. For example John123.",
-            "required": true
-            "min_length": 6,
+            "required": true,
+            "min_length": 6
         }
     }
 }
@@ -152,7 +152,7 @@ REQUEST_BODY VALUES:
             "personId": "John123"
         },
         "request_body2": {
-            "personId": "Jane456
+            "personId": "Jane456"
         },
         "request_body3": {
             "personId": "Jack789"
@@ -295,11 +295,11 @@ If the operation does contain authentication parameters in either the query or r
 {
     "authentication_parameters": {
         "query_parameters": {
-            "username": [parameter name]
+            "username": [parameter name],
             "password": [parameter name]
-        }
+        },
         "body_parameters": {
-            "username": [parameter name]
+            "username": [parameter name],
             "password": [parameter name]
         }
     }

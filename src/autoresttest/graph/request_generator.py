@@ -12,8 +12,10 @@ import requests
 import pickle
 import os
 
+from autoresttest.config import get_config
 from autoresttest.models import (
     OperationProperties,
+    ParameterKey,
     ParameterProperties,
     RequestData,
     RequestRequirements,
@@ -23,6 +25,7 @@ from autoresttest.models import (
 
 from autoresttest.utils import (
     remove_nulls,
+    split_parameter_values,
     get_params,
     get_request_body_params,
     get_param_combinations,
@@ -35,6 +38,7 @@ from autoresttest.llm import NaiveValueGenerator, SmartValueGenerator
 if TYPE_CHECKING:
     from .generate_graph import OperationGraph, OperationNode, OperationEdge
 
+CONFIG = get_config()
 
 @dataclass
 class StatusCode:
@@ -60,7 +64,7 @@ class RequestGenerator:
 
     @staticmethod
     def generate_naive_values(
-        parameters: Dict[str, ParameterProperties],
+        parameters: Dict[ParameterKey, ParameterProperties],
         request_body: Dict[str, SchemaProperties],
     ):
         value_generator = NaiveValueGenerator(
@@ -128,7 +132,7 @@ class RequestGenerator:
             value_generator = SmartValueGenerator(
                 operation_properties=request_data.operation_properties,
                 requirements=requirements,
-                temperature=0.3,
+                temperature=CONFIG.strict_temperature,
             )
             parameters, request_body = value_generator.generate_retry_parameters(
                 request_data, response
@@ -163,9 +167,10 @@ class RequestGenerator:
     ):
         if type(request_val) == dict:
             for item, properties in request_val.items():
-                if auth_parameters.get("username") == item:
+                item_name = item[0] if isinstance(item, tuple) else item
+                if auth_parameters.get("username") == item_name:
                     auth_mappings["username"] = properties
-                elif auth_parameters.get("password") == item:
+                elif auth_parameters.get("password") == item_name:
                     auth_mappings["password"] = properties
                 else:
                     self._determine_auth_mappings(
@@ -228,7 +233,11 @@ class RequestGenerator:
         params = get_param_combinations(operation_node.operation_properties.parameters)
         if not is_body:
             for param in params:
-                if set(param_auth_info.values()).issubset(set(param)):
+                param_names = {
+                    p[0] if isinstance(p, tuple) else p
+                    for p in param
+                }
+                if set(param_auth_info.values()).issubset(param_names):
                     param_q_table["params"][param] = 0
         else:
             param_q_table["params"] = {param: 0 for param in params}
@@ -398,33 +407,14 @@ class RequestGenerator:
         http_method = request_data.http_method
         parameters = request_data.parameters
         request_body = request_data.request_body
+        processed_parameters = copy.deepcopy(parameters) or {}
 
-        processed_parameters = copy.deepcopy(parameters)
+        path_params, query_params, header_params, cookie_params = split_parameter_values(
+            request_data.operation_properties.parameters, processed_parameters
+        )
 
-        if processed_parameters:
-            for (
-                parameter_name,
-                parameter_properties,
-            ) in request_data.operation_properties.parameters.items():
-                if (
-                    parameter_properties.in_value == "path"
-                    and parameter_name in processed_parameters
-                ):
-                    path_value = processed_parameters[parameter_name]
-                    endpoint_path = endpoint_path.replace(
-                        "{" + parameter_name + "}", str(path_value)
-                    )
-                    processed_parameters.pop(parameter_name, None)
-
-        if processed_parameters:
-            for parameter_name, parameter_assignment in processed_parameters.items():
-                if (
-                    request_data.operation_properties.parameters[
-                        parameter_name
-                    ].in_value
-                    == "path"
-                ):
-                    raise ValueError("Path parameter is still assigned for query")
+        for name, value in path_params.items():
+            endpoint_path = endpoint_path.replace("{" + name + "}", str(value))
 
         try:
             select_method = getattr(
@@ -434,8 +424,10 @@ class RequestGenerator:
             response = dispatch_request(
                 select_method=select_method,
                 full_url=full_url,
-                params=processed_parameters,
+                params=query_params,
                 body=request_body,
+                header=header_params,
+                cookies=cookie_params,
             )
             if response is not None:
                 if not response.ok and retry_nums < permitted_retries and allow_retry:
@@ -555,8 +547,11 @@ class RequestGenerator:
                 )
                 if response is not None:
                     possible_responses.append(response)
-                # elif response and response.response and response.response.ok:
-                #    responses[curr_node.operation_id].append(response)
+
+            # response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=3)
+            # if response is not None:
+            #     possible_responses.append(response)
+
             value_generator = SmartValueGenerator(
                 operation_properties=curr_node.operation_properties
             )

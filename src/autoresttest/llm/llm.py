@@ -46,8 +46,8 @@ class OpenAILanguageModel:
     def __init__(
         self,
         engine=CONFIG.openai_llm_engine,
-        temperature=CONFIG.default_temperature,
-        max_tokens=4000,
+        temperature=CONFIG.creative_temperature,
+        max_tokens=20000,
     ):
         self.api_key = os.getenv("OPENAI_API_KEY")
         if self.api_key is None or self.api_key.strip() == "":
@@ -58,6 +58,16 @@ class OpenAILanguageModel:
         self.engine = engine
         self.temperature = temperature
         self.max_tokens = max_tokens
+
+    def _max_tokens_field(self) -> str:
+        """
+        Prefer the newer OpenAI interface (max_completion_tokens). Fall back to max_tokens
+        for older model families that still expect it.
+        """
+        engine_str = str(self.engine)
+        if engine_str.startswith(("gpt-3.5", "gpt-4", "gpt-4o")):
+            return "max_tokens"
+        return "max_completion_tokens"
 
     def _generate_cache_key(self, user_message, system_message, json_mode):
         key_data = {
@@ -77,6 +87,7 @@ class OpenAILanguageModel:
         if cache_key in OpenAILanguageModel.cache:
             return OpenAILanguageModel.cache[cache_key]
 
+        max_tokens_field = self._max_tokens_field()
         if json_mode:
             response = self.client.chat.completions.create(
                 model=self.engine,
@@ -84,7 +95,7 @@ class OpenAILanguageModel:
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message},
                 ],
-                max_tokens=self.max_tokens,
+                **{max_tokens_field: self.max_tokens},
                 temperature=self.temperature,
                 response_format={"type": "json_object"},
             )
@@ -95,7 +106,7 @@ class OpenAILanguageModel:
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message},
                 ],
-                max_tokens=self.max_tokens,
+                **{max_tokens_field: self.max_tokens},
                 temperature=self.temperature,
             )
 
@@ -123,4 +134,3 @@ class OpenAILanguageModel:
 
         OpenAILanguageModel.cache[cache_key] = result
         return result
-

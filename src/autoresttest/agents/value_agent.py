@@ -49,6 +49,7 @@ class ValueAgent(BaseAgent):
                 for param, param_mappings in self.q_table[operation_id][
                     "params"
                 ].items()
+                if param_mappings
             }
             if self.q_table[operation_id].get("params")
             else None
@@ -57,6 +58,7 @@ class ValueAgent(BaseAgent):
             {
                 mime: max(body_mappings, key=lambda bm: bm[1])[0]
                 for mime, body_mappings in self.q_table[operation_id]["body"].items()
+                if body_mappings
             }
             if self.q_table[operation_id].get("body")
             else None
@@ -70,6 +72,7 @@ class ValueAgent(BaseAgent):
                 for param, param_mappings in self.q_table[operation_id][
                     "params"
                 ].items()
+                if param_mappings
             }
             if self.q_table[operation_id].get("params")
             else None
@@ -78,6 +81,7 @@ class ValueAgent(BaseAgent):
             {
                 mime: random.choice(body_mappings)[0]
                 for mime, body_mappings in self.q_table[operation_id]["body"].items()
+                if body_mappings
             }
             if self.q_table[operation_id].get("body")
             else None

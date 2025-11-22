@@ -31,6 +31,7 @@ from autoresttest.utils import (
     get_response_param_mappings,
     remove_nulls,
     encode_dictionary,
+    split_parameter_values,
     dispatch_request,
 )
 from autoresttest.llm import (
@@ -88,7 +89,7 @@ class QLearning:
         print("VALUE Q-TABLE: ", self.value_agent.q_table)
 
     def get_mapping(self, select_params, select_values):
-        if not select_params:
+        if not select_params or not select_values:
             return None
         return {
             param: select_values[param]
@@ -399,22 +400,18 @@ class QLearning:
             if specific_method
             else operation_properties.http_method.lower()
         )
-        processed_parameters = copy.deepcopy(parameters)
+        processed_parameters = copy.deepcopy(parameters) or {}
 
-        if processed_parameters:
-            for (
-                    parameter_name,
-                    parameter_properties,
-            ) in operation_properties.parameters.items():
-                if (
-                        parameter_properties.in_value == "path"
-                        and parameter_name in processed_parameters
-                ):
-                    path_value = processed_parameters[parameter_name]
-                    endpoint_path = endpoint_path.replace(
-                        "{" + parameter_name + "}", str(path_value)
-                    )
-                    processed_parameters.pop(parameter_name, None)
+        path_params, query_params, header_params, cookie_params = split_parameter_values(
+            operation_properties.parameters, processed_parameters
+        )
+
+        for name, value in path_params.items():
+            endpoint_path = endpoint_path.replace("{" + name + "}", str(value))
+
+        merged_headers = header_params.copy()
+        if header:
+            merged_headers.update(header)
 
         # self._test_send_operation(operation_properties, parameters, body, header, specific_method)
 
@@ -424,9 +421,10 @@ class QLearning:
             response = dispatch_request(
                 select_method=select_method,
                 full_url=full_url,
-                params=processed_parameters,
+                params=query_params,
                 body=body,
-                header=header,
+                header=merged_headers,
+                cookies=cookie_params,
             )
             return response
         except requests.exceptions.RequestException as err:

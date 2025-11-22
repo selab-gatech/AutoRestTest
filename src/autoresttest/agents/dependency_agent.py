@@ -23,6 +23,23 @@ class DependencyAgent(BaseAgent):
         self.gamma = gamma
         self.epsilon = epsilon
 
+    @staticmethod
+    def _bucket_location(location: str, is_source: bool = False) -> str:
+        """
+        Normalize various parameter locations into the q_table buckets.
+        Source locations default to 'params' unless explicitly 'body'.
+        Destination locations can be 'params', 'body', or 'response'.
+        """
+        if location == "body":
+            return "body"
+        if not is_source and location == "response":
+            return "response"
+        return "params"
+
+    @staticmethod
+    def _param_label(param_key):
+        return param_key[0] if isinstance(param_key, tuple) else param_key
+
     def initialize_q_table(self):
         # NOTE: Could flip dependent operation id and curr parameter name around to group by operation if need-be
         for (
@@ -36,24 +53,33 @@ class DependencyAgent(BaseAgent):
                 for parameter, similarities in edge.similar_parameters.items():
                     for similarity in similarities:
                         processed_in_val = similarity.in_value.split(" to ")
+                        src_loc = processed_in_val[0] if processed_in_val else "params"
+                        dest_loc = (
+                            processed_in_val[1]
+                            if len(processed_in_val) > 1
+                            else "params"
+                        )
                         dependent_parameter = similarity.dependent_val
                         destination = edge.destination.operation_id
 
                         # Note: Body should be nested
 
+                        source_bucket = self._bucket_location(src_loc, is_source=True)
+                        dest_bucket = self._bucket_location(dest_loc)
+
                         if (
-                            processed_in_val[0] == "query"
+                            source_bucket == "params"
                             and parameter not in self.q_table[operation_id]["params"]
                         ):
                             self.q_table[operation_id]["params"][parameter] = {}
                         elif (
-                            processed_in_val[0] == "body"
+                            source_bucket == "body"
                             and parameter not in self.q_table[operation_id]["body"]
                         ):
                             self.q_table[operation_id]["body"][parameter] = {}
 
                         if (
-                            processed_in_val[0] == "query"
+                            source_bucket == "params"
                             and destination
                             not in self.q_table[operation_id]["params"][parameter]
                         ):
@@ -61,7 +87,7 @@ class DependencyAgent(BaseAgent):
                                 destination
                             ] = {"params": {}, "body": {}, "response": {}}
                         elif (
-                            processed_in_val[0] == "body"
+                            source_bucket == "body"
                             and destination
                             not in self.q_table[operation_id]["body"][parameter]
                         ):
@@ -69,33 +95,14 @@ class DependencyAgent(BaseAgent):
                                 destination
                             ] = {"params": {}, "body": {}, "response": {}}
 
-                        if processed_in_val[0] == "query":
-                            if processed_in_val[1] == "query":
-                                self.q_table[operation_id]["params"][parameter][
-                                    destination
-                                ]["params"][dependent_parameter] = 0
-                            elif processed_in_val[1] == "body":
-                                self.q_table[operation_id]["params"][parameter][
-                                    destination
-                                ]["body"][dependent_parameter] = 0
-                            elif processed_in_val[1] == "response":
-                                self.q_table[operation_id]["params"][parameter][
-                                    destination
-                                ]["response"][dependent_parameter] = 0
-
-                        elif processed_in_val[0] == "body":
-                            if processed_in_val[1] == "query":
-                                self.q_table[operation_id]["body"][parameter][
-                                    destination
-                                ]["params"][dependent_parameter] = 0
-                            elif processed_in_val[1] == "body":
-                                self.q_table[operation_id]["body"][parameter][
-                                    destination
-                                ]["body"][dependent_parameter] = 0
-                            elif processed_in_val[1] == "response":
-                                self.q_table[operation_id]["body"][parameter][
-                                    destination
-                                ]["response"][dependent_parameter] = 0
+                        if source_bucket == "params":
+                            self.q_table[operation_id]["params"][parameter][
+                                destination
+                            ][dest_bucket][dependent_parameter] = 0
+                        elif source_bucket == "body":
+                            self.q_table[operation_id]["body"][parameter][
+                                destination
+                            ][dest_bucket][dependent_parameter] = 0
 
     def get_action(self, operation_id, qlearning):
         has_success = any(
@@ -497,7 +504,9 @@ class DependencyAgent(BaseAgent):
         for operation_id, operation_props in self.q_table.items():
             for location, param_values in operation_props.items():
                 for param, dependent_values in param_values.items():
-                    processed_param = embedding_model.handle_word_cases(param)
+                    processed_param = embedding_model.handle_word_cases(
+                        self._param_label(param)
+                    )
                     processed_response = embedding_model.handle_word_cases(new_property)
                     param_embedding = embedding_model.encode_sentence_or_word(
                         processed_param

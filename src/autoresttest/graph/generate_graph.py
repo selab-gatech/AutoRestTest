@@ -5,7 +5,7 @@ from typing import List, Dict, Tuple, Optional
 from .request_generator import RequestGenerator
 from .similarity_comparator import OperationDependencyComparator
 
-from autoresttest.models import OperationProperties, SimilarityValue
+from autoresttest.models import OperationProperties, SimilarityValue, ParameterKey
 from autoresttest.specification import SpecificationParser
 from autoresttest.utils import EmbeddingModel
 
@@ -23,13 +23,13 @@ class OperationEdge:
         self,
         source: OperationNode,
         destination: OperationNode,
-        similar_parameters: Dict[str, List[SimilarityValue]] = None,
+        similar_parameters: Dict[ParameterKey, List[SimilarityValue]] = None,
     ):
         if similar_parameters is None:
             similar_parameters = {}
         self.source: OperationNode = source
         self.destination: OperationNode = destination
-        self.similar_parameters: Dict[str, List[SimilarityValue]] = (
+        self.similar_parameters: Dict[ParameterKey, List[SimilarityValue]] = (
             similar_parameters  # have parameters as the key (similarity value has response param and in_value)
         )
 
@@ -88,7 +88,7 @@ class OperationGraph:
         self,
         operation_id: str,
         dependent_operation_id: str,
-        parameters: Dict[str, List[SimilarityValue]],
+        parameters: Dict[ParameterKey, List[SimilarityValue]],
     ):
         if operation_id not in self.operation_nodes:
             raise ValueError(f"Operation {operation_id} not found in the graph")
