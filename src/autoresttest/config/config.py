@@ -23,7 +23,8 @@ class SpecConfig(BaseModel):
 
 class LLMConfig(BaseModel):
     engine: str
-    temperature: float
+    creative_temperature: float
+    strict_temperature: float
 
 
 class HeaderAgentConfig(BaseModel):
@@ -82,8 +83,12 @@ class Config(BaseModel):
         return self.llm.engine
 
     @property
-    def default_temperature(self) -> float:
-        return self.llm.temperature
+    def creative_temperature(self) -> float:
+        return self.llm.creative_temperature
+
+    @property
+    def strict_temperature(self) -> float:
+        return self.llm.strict_temperature
 
     @property
     def enable_header_agent(self) -> bool:

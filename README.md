@@ -119,8 +119,9 @@ To control how many parameter/body combinations are generated (and keep Q-tables
 #### 3. Configuring the OpenAI Model
 
 To manage cost and performance, adjust the LLM settings in `configurations.toml`:
-- `[llm].engine` (default: `gpt-4o-mini`)
-- `[llm].temperature` (default: `0.7`)
+- `[llm].engine` (default: `gpt-5-mini`)
+- `[llm].creative_temperature` (default: `1`) — used for creative parameter generation.
+- `[llm].strict_temperature` (default: `1`) — used for repair or deterministic flows.
 
 > [!WARNING]
 > The software heavily uses the **JSON mode** from recent OpenAI API engines. All recent models should support the JSON mode. 
@@ -131,6 +132,9 @@ To manage cost and performance, adjust the LLM settings in `configurations.toml`
 The software can cache the graph and Q-tables to reduce cost and speed up repeated runs. Configure this behavior under:
 - `[cache].use_cached_graph` (default: `true`)
 - `[cache].use_cached_table` (default: `true`)
+
+> [!IMPORTANT]
+> The cache parameter structure changed on Nov. 22, 2025. Recreate caches (clear `cache/` contents) so they remain compatible with newer runs.
 
 > [!NOTE]
 > When enabled, these options store and read cached data under the `cache/` directory at the project root (for example, `cache/graphs/` and `cache/q_tables/`).

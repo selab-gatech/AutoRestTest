@@ -13,7 +13,7 @@ import os
 
 from autoresttest.config import get_config
 from autoresttest.specification import SpecificationParser
-from autoresttest.models import ParameterProperties, SchemaProperties
+from autoresttest.models import ParameterKey, ParameterProperties, SchemaProperties
 from autoresttest.prompts.generator_prompts import FIX_JSON_OBJ
 from autoresttest.prompts.system_prompts import FIX_JSON_SYSTEM_MESSAGE
 
@@ -36,7 +36,37 @@ def remove_nulls(item):
         return item
 
 
-def get_param_combinations(operation_parameters: Dict[str, ParameterProperties]) -> List[Tuple[str]]:
+def make_param_key(name: Optional[str], in_value: Optional[str]) -> ParameterKey:
+    """
+    Build a canonical parameter key from name and in_value.
+    """
+    return (name or "", in_value or None)
+
+
+def param_key_to_label(key: ParameterKey) -> str:
+    """
+    Create a stable string label for a parameter key (for JSON/LLM prompts).
+    """
+    name, in_value = key
+    loc = in_value if in_value is not None else "unspecified"
+    return f"{name}::{loc}"
+
+
+def label_to_param_key(label: str) -> ParameterKey:
+    """
+    Convert a parameter label back into a key tuple.
+    """
+    if "::" in label:
+        name, loc = label.split("::", 1)
+        loc = None if loc == "unspecified" else loc
+    else:
+        name, loc = label, None
+    return make_param_key(name, loc)
+
+
+def get_param_combinations(
+    operation_parameters: Dict[ParameterKey, ParameterProperties]
+) -> List[Tuple[ParameterKey, ...]]:
     param_list = get_params(operation_parameters)
     return get_combinations(param_list)
 
@@ -81,11 +111,11 @@ def get_combinations(arr: Iterable[Any]) -> List[Tuple[Any, ...]]:
     return combinations
 
 
-def get_params(operation_parameters: Dict[str, ParameterProperties]) -> List[str]:
+def get_params(operation_parameters: Dict[ParameterKey, ParameterProperties]) -> List[ParameterKey]:
     return list(operation_parameters.keys()) if operation_parameters is not None else []
 
 
-def get_required_params(operation_parameters: Dict[str, ParameterProperties]) -> Set:
+def get_required_params(operation_parameters: Dict[ParameterKey, ParameterProperties]) -> Set[ParameterKey]:
     required_parameters = set()
     for parameter, parameter_properties in operation_parameters.items():
         if parameter_properties.required == True:
@@ -163,6 +193,55 @@ def get_request_body_params(operation_body: Dict[str, SchemaProperties]) -> Dict
     return {k: get_body_params(v) for k, v in operation_body.items()} if operation_body is not None else {}
 
 
+def split_parameter_values(
+    operation_parameters: Dict[ParameterKey, ParameterProperties],
+    provided_values: Optional[Dict[ParameterKey, Any]],
+):
+    """
+    Split provided parameter values into path, query, header, and cookie buckets based on their 'in' value.
+    Ignores parameters that are not defined on the operation.
+    """
+    path_params: Dict[str, Any] = {}
+    query_params: Dict[str, Any] = {}
+    header_params: Dict[str, Any] = {}
+    cookie_params: Dict[str, Any] = {}
+
+    if not provided_values:
+        return path_params, query_params, header_params, cookie_params
+
+    for key, value in provided_values.items():
+        normalized_key = key
+        if normalized_key not in operation_parameters and not isinstance(
+            normalized_key, tuple
+        ):
+            # Fallback: match by name when provided without location
+            for candidate_key in operation_parameters.keys():
+                if (
+                    isinstance(candidate_key, tuple)
+                    and candidate_key[0] == normalized_key
+                ):
+                    normalized_key = candidate_key
+                    break
+
+        if normalized_key not in operation_parameters:
+            continue
+        if value is None:
+            continue
+        name, in_value = normalized_key
+        in_value = in_value or operation_parameters[normalized_key].in_value
+
+        if in_value == "path":
+            path_params[name] = value
+        elif in_value == "header":
+            header_params[name] = value
+        elif in_value == "cookie":
+            cookie_params[name] = value
+        else:
+            query_params[name] = value
+
+    return path_params, query_params, header_params, cookie_params
+
+
 def get_object_shallow_mappings(thing: Any) -> Optional[Dict[str, Any]]:
     """
     Determine the mappings of a given item that contains some nested objects
@@ -189,7 +268,7 @@ def compose_json_fix_prompt(invalid_json_str: str):
 def attempt_fix_json(invalid_json_str: str):
     from autoresttest.llm import OpenAILanguageModel
 
-    language_model = OpenAILanguageModel(temperature=0.3)
+    language_model = OpenAILanguageModel(temperature=CONFIG.strict_temperature)
     json_prompt = compose_json_fix_prompt(invalid_json_str)
     fixed_json = language_model.query(user_message=json_prompt, system_message=FIX_JSON_SYSTEM_MESSAGE,
                                       json_mode=True)
@@ -217,18 +296,26 @@ def _is_json_mime(mime_type: str) -> bool:
     )
 
 
-def dispatch_request(select_method, full_url: str, params: Dict, body: Dict, header: Optional[Dict] = None):
+def dispatch_request(
+    select_method,
+    full_url: str,
+    params: Dict,
+    body: Dict,
+    header: Optional[Dict] = None,
+    cookies: Optional[Dict] = None,
+):
     """
     Send a request with sensible handling for the provided body and MIME type key (if any)
     """
     params = params or {}
     headers = header if header is not None else {}
+    cookies = cookies or None
 
     if not body:
-        return select_method(full_url, params=params, headers=headers or None)
+        return select_method(full_url, params=params, headers=headers or None, cookies=cookies)
 
     if not isinstance(body, dict):
-        return select_method(full_url, params=params, data=body, headers=headers or None)
+        return select_method(full_url, params=params, data=body, headers=headers or None, cookies=cookies)
 
     # Use the first provided MIME type; bodies are expected to be singular.
     mime_type, payload = next(iter(body.items()))
@@ -236,30 +323,30 @@ def dispatch_request(select_method, full_url: str, params: Dict, body: Dict, hea
 
     if _is_json_mime(mime_type):
         headers.setdefault("Content-Type", mime_type)
-        return select_method(full_url, params=params, json=payload, headers=headers or None)
+        return select_method(full_url, params=params, json=payload, headers=headers or None, cookies=cookies)
 
     if "x-www-form-urlencoded" in mime_lower:
         headers.setdefault("Content-Type", mime_type)
         body_data = get_object_shallow_mappings(payload)
         if not body_data or not isinstance(body_data, dict):
             body_data = {"data": payload}
-        return select_method(full_url, params=params, data=body_data, headers=headers or None)
+        return select_method(full_url, params=params, data=body_data, headers=headers or None, cookies=cookies)
 
     if mime_lower.startswith("multipart/"):
         # Let requests set the multipart boundary automatically.
-        return select_method(full_url, params=params, files=payload, headers=headers or None)
+        return select_method(full_url, params=params, files=payload, headers=headers or None, cookies=cookies)
 
     if mime_lower.startswith("text/"):
         headers.setdefault("Content-Type", mime_type)
         if not isinstance(payload, str):
             payload = str(payload)
-        return select_method(full_url, params=params, data=payload, headers=headers or None)
+        return select_method(full_url, params=params, data=payload, headers=headers or None, cookies=cookies)
 
     # Fallback: send whatever the MIME type is with a best-effort serializer.
     headers.setdefault("Content-Type", mime_type)
     if isinstance(payload, (dict, list)):
-        return select_method(full_url, params=params, json=payload, headers=headers or None)
-    return select_method(full_url, params=params, data=payload, headers=headers or None)
+        return select_method(full_url, params=params, json=payload, headers=headers or None, cookies=cookies)
+    return select_method(full_url, params=params, data=payload, headers=headers or None, cookies=cookies)
 
 
 def encode_dictionary(dictionary) -> str:

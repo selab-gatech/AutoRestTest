@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, Iterable, List, Optional, Union, TYPE_CHECKING
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, TYPE_CHECKING
 
 import requests
 
@@ -15,16 +15,25 @@ def to_dict_helper(item: Any) -> Any:
     if hasattr(item, "to_dict"):
         return item.to_dict()
     if isinstance(item, dict):
-        converted = {
-            key: to_dict_helper(value)
-            for key, value in item.items()
-            if value is not None
-        }
+        converted = {}
+        for key, value in item.items():
+            if value is None:
+                continue
+            converted_key = (
+                "|".join("" if part is None else str(part) for part in key)
+                if isinstance(key, tuple)
+                else key
+            )
+            converted[converted_key] = to_dict_helper(value)
         return {key: value for key, value in converted.items() if value is not None}
     if isinstance(item, Iterable) and not isinstance(item, (str, bytes)):
         converted = [to_dict_helper(element) for element in item]
         return [value for value in converted if value is not None]
     return item
+
+
+# Key used for identifying parameters uniquely by (name, in)
+ParameterKey = Tuple[str, Optional[str]]
 
 
 @dataclass
@@ -104,7 +113,7 @@ class OperationProperties:
     endpoint_path: str = ""
     http_method: str = ""
     summary: Optional[str] = None
-    parameters: Dict[str, ParameterProperties] = field(default_factory=dict)
+    parameters: Dict[ParameterKey, ParameterProperties] = field(default_factory=dict)
     request_body: Optional[Dict[str, SchemaProperties]] = None
     responses: Optional[Dict[str, ResponseProperties]] = None
 
@@ -118,7 +127,7 @@ class RequestData:
 
     endpoint_path: str
     http_method: str
-    parameters: Dict[str, Any]
+    parameters: Dict[ParameterKey, Any]
     request_body: Dict[str, Any]
     operation_properties: OperationProperties
     requirements: Optional["RequestRequirements"] = None
@@ -219,7 +228,7 @@ class ValueAction:
 class SimilarityValue:
     """Captures similarity metadata when comparing operations."""
 
-    dependent_val: str = ""
+    dependent_val: Union[str, ParameterKey] = ""
     in_value: str = ""
     similarity: float = 0.0
 
@@ -236,6 +245,7 @@ __all__ = [
     "ResponseProperties",
     "SchemaProperties",
     "ParameterProperties",
+    "ParameterKey",
     "OperationProperties",
     "RequestData",
     "RequestRequirements",
