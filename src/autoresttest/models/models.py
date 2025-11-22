@@ -139,7 +139,7 @@ class RequestRequirements:
         if self.parameter_requirements:
             for i in range(1, len(self.parameter_requirements) + 1):
                 for subset in itertools.combinations(
-                    self.parameter_requirements.keys(), i
+                        self.parameter_requirements.keys(), i
                 ):
                     param_combinations.append(
                         {key: self.parameter_requirements[key] for key in subset}
@@ -149,7 +149,7 @@ class RequestRequirements:
         if self.request_body_requirements:
             for i in range(1, len(self.request_body_requirements) + 1):
                 for subset in itertools.combinations(
-                    self.request_body_requirements.keys(), i
+                        self.request_body_requirements.keys(), i
                 ):
                     body_combinations.append(
                         {key: self.request_body_requirements[key] for key in subset}
@@ -192,7 +192,7 @@ class RequestRequirements:
 
         combinations.sort(
             key=lambda req: len(req.parameter_requirements)
-            + len(req.request_body_requirements),
+                            + len(req.request_body_requirements),
             reverse=True,
         )
         return combinations

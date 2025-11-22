@@ -25,10 +25,10 @@ from autoresttest.utils import (
     remove_nulls,
     get_params,
     get_request_body_params,
-    get_object_shallow_mappings,
     get_param_combinations,
     get_required_params,
     get_body_object_combinations,
+    dispatch_request,
 )
 from autoresttest.llm import NaiveValueGenerator, SmartValueGenerator
 
@@ -431,12 +431,12 @@ class RequestGenerator:
                 requests, http_method
             )  # selects correct http method
             full_url = f"{self.api_url}{endpoint_path}"
-            if request_body:
-                response = self._send_mime_type(
-                    select_method, full_url, parameters, request_body
-                )
-            else:
-                response = select_method(full_url, params=parameters)
+            response = dispatch_request(
+                select_method=select_method,
+                full_url=full_url,
+                params=processed_parameters,
+                body=request_body,
+            )
             if response is not None:
                 if not response.ok and retry_nums < permitted_retries and allow_retry:
                     print("Attempting retry due to failed response...")
@@ -462,28 +462,6 @@ class RequestGenerator:
             print(f"Params: {parameters}")
             print(f"Request Body: {request_body}")
             return None
-
-    def _send_mime_type(self, select_method, full_url, parameters, request_body):
-        params = parameters if parameters else {}
-        if "application/json" in request_body:
-            req_body = request_body["application/json"]
-            response = select_method(full_url, params=params, json=req_body)
-        elif "application/x-www-form-urlencoded" in request_body:
-            req_body = request_body["application/x-www-form-urlencoded"]
-            response = select_method(full_url, params=params, data=req_body)
-        elif "multipart/form-data" in request_body:
-            req_body = request_body["multipart/form-data"]
-            response = select_method(full_url, params=params, files=req_body)
-        elif "text/plain" in request_body:
-            req_body = request_body["text/plain"]
-            headers = {"Content-Type": "text/plain"}
-            response = select_method(
-                full_url, params=params, headers=headers, data=req_body
-            )
-        else:
-            # should not reach here
-            raise ValueError("Request body mime type not supported")
-        return response
 
     def _validate_value_mappings(
         self,

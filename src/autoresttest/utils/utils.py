@@ -3,6 +3,7 @@ import hashlib
 import json
 from typing import Iterable, Dict, List, Any, Optional, Tuple, Set
 import itertools
+from pathlib import Path
 
 from gensim.downloader import load
 import numpy as np
@@ -11,13 +12,17 @@ from dotenv import load_dotenv
 import os
 
 from autoresttest.config import get_config
-from autoresttest.graph.specification_parser import SpecificationParser
+from autoresttest.specification import SpecificationParser
 from autoresttest.models import ParameterProperties, SchemaProperties
 from autoresttest.prompts.generator_prompts import FIX_JSON_OBJ
 from autoresttest.prompts.system_prompts import FIX_JSON_SYSTEM_MESSAGE
 
 load_dotenv()
 CONFIG = get_config()
+
+CACHE_ROOT = Path(__file__).resolve().parent.parents[2] / "cache"
+Q_TABLE_CACHE_DIR = CACHE_ROOT / "q_tables"
+GRAPH_CACHE_DIR = CACHE_ROOT / "graphs"
 
 
 def remove_nulls(item):
@@ -83,7 +88,7 @@ def get_params(operation_parameters: Dict[str, ParameterProperties]) -> List[str
 def get_required_params(operation_parameters: Dict[str, ParameterProperties]) -> Set:
     required_parameters = set()
     for parameter, parameter_properties in operation_parameters.items():
-        if parameter_properties.required:
+        if parameter_properties.required == True:
             required_parameters.add(parameter)
     return required_parameters
 
@@ -95,7 +100,7 @@ def get_required_body_params(operation_body: SchemaProperties) -> Optional[Set]:
 
     if operation_body.properties and operation_body.type == "object":
         for key, value in operation_body.properties.items():
-            if value.required:
+            if value.required == True:
                 required_body.add(key)
 
     elif operation_body.items and operation_body.type == "array":
@@ -198,6 +203,65 @@ def attempt_fix_json(invalid_json_str: str):
         return {}
 
 
+def _is_json_mime(mime_type: str) -> bool:
+    """
+    Returns True for any JSON-like MIME type.
+    """
+    if not mime_type:
+        return False
+    mime_lower = mime_type.lower()
+    return (
+        "json" in mime_lower
+        or mime_lower.endswith("+json")
+        or mime_lower.endswith("/json")
+    )
+
+
+def dispatch_request(select_method, full_url: str, params: Dict, body: Dict, header: Optional[Dict] = None):
+    """
+    Send a request with sensible handling for the provided body and MIME type key (if any)
+    """
+    params = params or {}
+    headers = header if header is not None else {}
+
+    if not body:
+        return select_method(full_url, params=params, headers=headers or None)
+
+    if not isinstance(body, dict):
+        return select_method(full_url, params=params, data=body, headers=headers or None)
+
+    # Use the first provided MIME type; bodies are expected to be singular.
+    mime_type, payload = next(iter(body.items()))
+    mime_lower = mime_type.lower() if mime_type else ""
+
+    if _is_json_mime(mime_type):
+        headers.setdefault("Content-Type", mime_type)
+        return select_method(full_url, params=params, json=payload, headers=headers or None)
+
+    if "x-www-form-urlencoded" in mime_lower:
+        headers.setdefault("Content-Type", mime_type)
+        body_data = get_object_shallow_mappings(payload)
+        if not body_data or not isinstance(body_data, dict):
+            body_data = {"data": payload}
+        return select_method(full_url, params=params, data=body_data, headers=headers or None)
+
+    if mime_lower.startswith("multipart/"):
+        # Let requests set the multipart boundary automatically.
+        return select_method(full_url, params=params, files=payload, headers=headers or None)
+
+    if mime_lower.startswith("text/"):
+        headers.setdefault("Content-Type", mime_type)
+        if not isinstance(payload, str):
+            payload = str(payload)
+        return select_method(full_url, params=params, data=payload, headers=headers or None)
+
+    # Fallback: send whatever the MIME type is with a best-effort serializer.
+    headers.setdefault("Content-Type", mime_type)
+    if isinstance(payload, (dict, list)):
+        return select_method(full_url, params=params, json=payload, headers=headers or None)
+    return select_method(full_url, params=params, data=payload, headers=headers or None)
+
+
 def encode_dictionary(dictionary) -> str:
     json_str = json.dumps(dictionary, sort_keys=True)
     return hashlib.sha256(json_str.encode()).hexdigest()
@@ -253,13 +317,18 @@ class EmbeddingModel:
 
 
 def construct_db_dir():
-    db_path = os.path.join(os.path.dirname(__file__), "cache/q_tables")
-    if not os.path.exists(db_path):
-        os.makedirs(db_path)
+    for path in (Q_TABLE_CACHE_DIR, GRAPH_CACHE_DIR):
+        path.mkdir(parents=True, exist_ok=True)
 
-    db_path = os.path.join(os.path.dirname(__file__), "cache/graphs")
-    if not os.path.exists(db_path):
-        os.makedirs(db_path)
+
+def get_q_table_cache_path(spec_name: str) -> Path:
+    construct_db_dir()
+    return Q_TABLE_CACHE_DIR / spec_name
+
+
+def get_graph_cache_path(spec_name: str) -> Path:
+    construct_db_dir()
+    return GRAPH_CACHE_DIR / spec_name
 
 
 def construct_basic_token(token):

@@ -97,6 +97,7 @@ Only `.yaml` and `.json` files are supported (OpenAPI 3.0). Example: `aratrl-ope
 
 If your spec has recursive `$ref` chains, you can tune the resolver depth with:
 - `[spec].recursion_limit` (default: `50`)
+- `[spec].strict_validation` (default: `true`) — when `true`, the OpenAPI spec is strictly validated and parsing stops on errors; when `false`, invalid sections are skipped where possible so execution can continue.
 
 #### 2. Configuring Reinforcement Learning Parameters
 

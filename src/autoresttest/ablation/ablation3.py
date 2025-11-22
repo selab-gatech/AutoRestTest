@@ -19,13 +19,14 @@ sys.path.append(root_directory)
 
 from autoresttest.config import get_config
 from autoresttest.graph.generate_graph import OperationGraph
-from autoresttest.graph.specification_parser import SpecificationParser
+from autoresttest.specification import SpecificationParser
 from autoresttest.models import OperationProperties
 from autoresttest.agents import OperationAgent, HeaderAgent, ParameterAgent, ValueAgent, ValueAction, BodyObjAgent, \
     DataSourceAgent, DependencyAgent
 from autoresttest.graph import RequestGenerator
-from autoresttest.utils import construct_db_dir, construct_basic_token, get_object_shallow_mappings, get_body_params, \
-    get_response_params, get_response_param_mappings, remove_nulls, encode_dictionary, EmbeddingModel, get_api_url
+from autoresttest.utils import construct_basic_token, get_body_params, \
+    get_response_params, get_response_param_mappings, remove_nulls, encode_dictionary, EmbeddingModel, get_api_url, \
+    dispatch_request, get_q_table_cache_path
 from autoresttest.llm import identify_generator, randomize_string, random_generator, randomize_object
 
 
@@ -290,33 +291,13 @@ class Ablation3:
         try:
             select_method = getattr(requests, http_method)
             full_url = self.api_url + endpoint_path
-            if body:
-                if not header:
-                    header = {}
-                if "application/json" in body:
-                    header["Content-Type"] = "application/json"
-                    response = select_method(full_url, params=processed_parameters, json=body["application/json"], headers=header)
-                elif "application/x-www-form-urlencoded" in body: # mime_type == "application/x-www-form-urlencoded":
-                    header["Content-Type"] = "application/x-www-form-urlencoded"
-                    body_data = get_object_shallow_mappings(body["application/x-www-form-urlencoded"])
-                    if not body_data or not isinstance(body_data, dict):
-                        body_data = {"data": body["application/x-www-form-urlencoded"]}
-                    body["application/x-www-form-urlencoded"] = body_data
-                    response = select_method(full_url, params=processed_parameters, data=body["application/x-www-form-urlencoded"], headers=header)
-                elif "multipart/form-data" in body:
-                    header["Content-Type"] = "multipart/form-data"
-                    file = {"file": ("file.txt", json.dumps(body["multipart/form-data"]).encode('utf-8'), "application/json"),
-                            "metadata": (None, "metadata")}
-                    body["multipart/form-data"] = file
-                    response = select_method(full_url, params=processed_parameters, files=body["multipart/form-data"], headers=header)
-                else: # mime_type == "text/plain":
-                    header["Content-Type"] = "text/plain"
-                    if not isinstance(body["text/plain"], str):
-                        body["text/plain"] = str(body["text/plain"])
-                    response = select_method(full_url, params=processed_parameters, data=body["text/plain"], headers=header)
-            else:
-                response = select_method(full_url, params=processed_parameters, headers=header)
-
+            response = dispatch_request(
+                select_method=select_method,
+                full_url=full_url,
+                params=processed_parameters,
+                body=body,
+                header=header,
+            )
             return response
         except requests.exceptions.RequestException as err:
             print(f"Error with operation {operation_properties.operation_id}: {err}")
@@ -494,39 +475,57 @@ class Ablation3:
             "object": {"default": 1}
         }
 
+        def _safe_default(value_type):
+            if not value_type:
+                return random_generator()()
+            if value_type in default_assignments:
+                return default_assignments[value_type]
+            generator = identify_generator(value_type)
+            return generator() if callable(generator) else random_generator()()
+
         parameters = {}
         if self.operation_graph.operation_nodes[operation_id].operation_properties.parameters:
             for parameter_name, parameter_properties in self.operation_graph.operation_nodes[operation_id].operation_properties.parameters.items():
                 if parameter_properties.schema:
-                    if random.random() < 0.75 and parameter_properties.schema.type:
-                        parameters[parameter_name] = default_assignments[parameter_properties.schema.type]
-                    elif parameter_properties.schema.type:
-                        parameters[parameter_name] = identify_generator(parameter_properties.schema.type)()
+                    value_type = getattr(parameter_properties.schema, "type", None)
+                    if random.random() < 0.75 and value_type:
+                        parameters[parameter_name] = _safe_default(value_type)
+                    elif value_type:
+                        generator = identify_generator(value_type)
+                        parameters[parameter_name] = generator() if callable(generator) else random_generator()()
                     else:
                         parameters[parameter_name] = random_generator()()
         body = {}
         if self.operation_graph.operation_nodes[operation_id].operation_properties.request_body:
             for mime_type, body_properties in self.operation_graph.operation_nodes[operation_id].operation_properties.request_body.items():
+                if not body_properties:
+                    continue
                 if body_properties.properties:
                     for prop in body_properties.properties:
-                        if random.random() < 0.75 and body_properties.properties[prop].type:
-                            body[mime_type] = {prop: default_assignments[body_properties.properties[prop].type]}
-                        elif body_properties.properties[prop].type:
-                            body[mime_type] = {prop: identify_generator(body_properties.properties[prop].type)()}
+                        prop_type = getattr(body_properties.properties[prop], "type", None)
+                        if random.random() < 0.75 and prop_type:
+                            body[mime_type] = {prop: _safe_default(prop_type)}
+                        elif prop_type:
+                            generator = identify_generator(prop_type)
+                            body[mime_type] = {prop: generator() if callable(generator) else random_generator()()}
                         else:
                             body[mime_type] = {prop: random_generator()()}
                 elif body_properties.items:
-                    if random.random() < 0.75 and body_properties.items.type:
-                        body[mime_type] = [default_assignments[body_properties.items.type]]
-                    elif body_properties.items.type:
-                        body[mime_type] = [identify_generator(body_properties.items.type)()]
+                    item_type = getattr(body_properties.items, "type", None)
+                    if random.random() < 0.75 and item_type:
+                        body[mime_type] = [ _safe_default(item_type) ]
+                    elif item_type:
+                        generator = identify_generator(item_type)
+                        body[mime_type] = [ generator() if callable(generator) else random_generator()() ]
                     else:
                         body[mime_type] = [random_generator()()]
                 else:
-                    if random.random() < 0.75 and body_properties.type:
-                        body[mime_type] = default_assignments[body_properties.type]
-                    elif body_properties.type:
-                        body[mime_type] = identify_generator(body_properties.type)()
+                    mime_type_val = getattr(body_properties, "type", None)
+                    if random.random() < 0.75 and mime_type_val:
+                        body[mime_type] = _safe_default(mime_type_val)
+                    elif mime_type_val:
+                        generator = identify_generator(mime_type_val)
+                        body[mime_type] = generator() if callable(generator) else random_generator()()
                     else:
                         body[mime_type] = random_generator()()
         return parameters, body
@@ -788,7 +787,8 @@ def perform_q_learning_ablation_3(operation_graph: OperationGraph, spec_name, du
         time_duration=duration,
         mutation_rate=CONFIG.request_generation.mutation_rate,
     )
-    with shelve.open(f"../cache/q_tables/{spec_name}") as db:
+    q_table_path = get_q_table_cache_path(spec_name)
+    with shelve.open(str(q_table_path)) as db:
         if spec_name in db:
             compiled_q_table = db[spec_name]
             q_learning.value_agent.q_table = compiled_q_table["value"]

@@ -10,13 +10,15 @@ from autoresttest.graph import RequestGenerator
 
 from dotenv import load_dotenv
 
-from autoresttest.graph.specification_parser import SpecificationParser
 from autoresttest.llm import OpenAILanguageModel
+from autoresttest.specification import SpecificationParser
 from autoresttest.utils import (
     construct_db_dir,
     is_json_seriable,
     EmbeddingModel,
     get_api_url,
+    get_graph_cache_path,
+    get_q_table_cache_path,
 )
 
 from autoresttest.config import get_config
@@ -224,7 +226,7 @@ class AutoRestTest:
 
     def generate_graph(self, spec_name: str, ext: str, embedding_model: EmbeddingModel):
         spec_path = self.spec_dir / f"{spec_name}{ext}"
-        db_graph = PROJECT_ROOT / "cache" / "graphs" / spec_name
+        db_graph = get_graph_cache_path(spec_name)
         print("CREATING SEMANTIC OPERATION DEPENDECY GRAPH...")
         with shelve.open(str(db_graph)) as db:
 
@@ -273,7 +275,7 @@ class AutoRestTest:
             time_duration=CONFIG.request_generation.time_duration,
             mutation_rate=CONFIG.request_generation.mutation_rate,
         )
-        db_q_table = PROJECT_ROOT / "cache" / "q_tables" / spec_name
+        db_q_table = get_q_table_cache_path(spec_name)
 
         q_learning.operation_agent.initialize_q_table()
         print("Initialized operation agent Q-table.")
