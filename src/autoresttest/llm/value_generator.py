@@ -379,7 +379,7 @@ class SmartValueGenerator:
         return prompt
 
     def _isolate_nonreq_params(self, schema: Dict[str, Dict], is_request_body=False):
-        if type(schema) is not dict:
+        if not isinstance(schema, dict):
             return {}
         nonreq_params = {}
         for param_name, param_properties in schema.items():

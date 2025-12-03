@@ -553,9 +553,9 @@ class QLearning:
                         body_properties,
                 ) in operation_node.operation_properties.request_body.items():
                     body_params = get_body_params(body_properties)
-                    self.successful_bodies[operation_id] = {
+                    self.successful_bodies[operation_id].update({
                         param: [] for param in body_params
-                    }
+                    })
 
     def _init_response_tracking(self):
         for (
@@ -576,9 +576,9 @@ class QLearning:
                         ) in response_properties.content.items():
                             response_params = []
                             get_response_params(response_details, response_params)
-                            self.successful_responses[operation_id] = {
+                            self.successful_responses[operation_id].update({
                                 param: [] for param in response_params
-                            }
+                            })
 
     def _construct_body_property(self, body_property, unconstructed_body):
         if body_property.properties or body_property.type == "object":
@@ -1101,7 +1101,7 @@ class QLearning:
                 operation_id
             ].operation_properties
             if mutate_operation:
-                avail_primitives = len(self.successful_primitives.values())
+                avail_primitives = sum(len(v) for v in self.successful_primitives.values())
                 use_mutator = random.random() < 0.8 or (
                         avail_primitives == 0 and operation_id not in complete_body_mappings
                 )

@@ -29,9 +29,11 @@ def remove_nulls(item):
     if hasattr(item, 'to_dict'):
         return item.to_dict()
     elif isinstance(item, dict):
-        return {k: remove_nulls(v) for k, v in item.items() if v and remove_nulls(v)}
+        cleaned = {k: remove_nulls(v) for k, v in item.items() if v}
+        return {k: v for k, v in cleaned.items() if v}
     elif isinstance(item, Iterable) and not isinstance(item, (str, bytes)):
-        return [remove_nulls(i) for i in item if remove_nulls(i) is not None]
+        cleaned = [remove_nulls(i) for i in item]
+        return [i for i in cleaned if i is not None]
     else:
         return item
 
@@ -96,7 +98,6 @@ def get_combinations(arr: Iterable[Any]) -> List[Tuple[Any, ...]]:
                     itertools.combinations(subset, j) for j in range(1, max_size + 1)
                 )
             )
-            print(combinations)
         for size in range(max_size + 1, len(arr) + 1):
             for i in range(0, len(arr) - size + 1):
                 subset = arr[i: i + size]
@@ -118,7 +119,7 @@ def get_params(operation_parameters: Dict[ParameterKey, ParameterProperties]) ->
 def get_required_params(operation_parameters: Dict[ParameterKey, ParameterProperties]) -> Set[ParameterKey]:
     required_parameters = set()
     for parameter, parameter_properties in operation_parameters.items():
-        if parameter_properties.required == True:
+        if parameter_properties.required:
             required_parameters.add(parameter)
     return required_parameters
 
@@ -130,7 +131,7 @@ def get_required_body_params(operation_body: SchemaProperties) -> Optional[Set]:
 
     if operation_body.properties and operation_body.type == "object":
         for key, value in operation_body.properties.items():
-            if value.required == True:
+            if value.required:
                 required_body.add(key)
 
     elif operation_body.items and operation_body.type == "array":
@@ -321,9 +322,9 @@ def dispatch_request(
     mime_type, payload = next(iter(body.items()))
     mime_lower = mime_type.lower() if mime_type else ""
 
-    # print("Parameters: ", params)
-    # print("Body: ", body)
-    # print("Headers: ", headers)
+    print("Parameters: ", params)
+    print("Body: ", body)
+    print("Headers: ", headers)
 
     if _is_json_mime(mime_type):
         headers.setdefault("Content-Type", mime_type)
@@ -364,7 +365,7 @@ def is_json_seriable(data):
     try:
         json.dumps(data)
         return True
-    except:
+    except (TypeError, ValueError):
         return False
 
 
@@ -399,11 +400,11 @@ class EmbeddingModel:
     def handle_word_cases(parameter):
         reconstructed_parameter = []
         for index, char in enumerate(parameter):
-            if char.isalpha():
+            if char == "_" or char == "-":
+                reconstructed_parameter.append(" ")
+            elif char.isalpha():
                 if char.isupper() and index != 0:
                     reconstructed_parameter.append(" " + char.lower())
-                elif char == "_" or char == "-":
-                    reconstructed_parameter.append(" ")
                 else:
                     reconstructed_parameter.append(char)
         return "".join(reconstructed_parameter)

@@ -51,7 +51,7 @@ class RequestGenerator:
     def __init__(self, operation_graph: "OperationGraph", api_url: str, is_naive=True):
         self.operation_graph: "OperationGraph" = operation_graph
         self.api_url = api_url
-        self.status_codes: Dict[int:StatusCode] = (
+        self.status_codes: Dict[int, StatusCode] = (
             {}
         )  # dictionary to track status code occurrences
         self.requests_generated = 0  # Initialize the request count
@@ -165,7 +165,7 @@ class RequestGenerator:
     def _determine_auth_mappings(
         self, request_val: Any, auth_parameters: Dict, auth_mappings
     ):
-        if type(request_val) == dict:
+        if isinstance(request_val, dict):
             for item, properties in request_val.items():
                 item_name = item[0] if isinstance(item, tuple) else item
                 if auth_parameters.get("username") == item_name:
@@ -176,12 +176,12 @@ class RequestGenerator:
                     self._determine_auth_mappings(
                         properties, auth_parameters, auth_mappings
                     )
-        elif type(request_val) == list:
+        elif isinstance(request_val, list):
             for item in request_val:
                 self._determine_auth_mappings(item, auth_parameters, auth_mappings)
 
     def _determine_if_valid_auth(self, param_auth):
-        if not param_auth or type(param_auth) != dict:
+        if not param_auth or not isinstance(param_auth, dict):
             return False
         return (
             param_auth.get("username")
@@ -215,7 +215,7 @@ class RequestGenerator:
     def _decompose_body_prop_mappings(self, bodies: List):
         body_mappings = {}
         for body in bodies:
-            if type(body) == dict:
+            if isinstance(body, dict):
                 for key, value in body.items():
                     if key not in body_mappings:
                         body_mappings[key] = []
@@ -287,7 +287,7 @@ class RequestGenerator:
 
         request_body_mappings = (
             self._decompose_body_prop_mappings(request_body_mappings[select_mime])
-            if select_mime
+            if select_mime and select_mime in request_body_mappings
             else {}
         )
 

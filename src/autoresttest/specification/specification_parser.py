@@ -96,7 +96,10 @@ class SpecificationParser:
         """
         Extract the server URL from the specification file.
         """
-        return self.resolving_parser.specification.get("servers")[0].get("url")
+        servers = self.resolving_parser.specification.get("servers")
+        if not servers:
+            raise ValueError("No servers defined in the OpenAPI specification")
+        return servers[0].get("url")
 
     def get_api_title(self) -> str:
         """

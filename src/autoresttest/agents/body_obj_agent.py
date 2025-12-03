@@ -62,6 +62,7 @@ class BodyObjAgent(BaseAgent):
                     set(body_obj)
                 ):
                     best_action = (body_obj, value)
+            best_action = best_action[0]  # Extract just the body_obj key
         else:
             best_action = (
                 max(self.q_table[operation_id][mime].items(), key=lambda x: x[1])[0]
