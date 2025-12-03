@@ -321,9 +321,15 @@ def dispatch_request(
     mime_type, payload = next(iter(body.items()))
     mime_lower = mime_type.lower() if mime_type else ""
 
+    # print("Parameters: ", params)
+    # print("Body: ", body)
+    # print("Headers: ", headers)
+
     if _is_json_mime(mime_type):
         headers.setdefault("Content-Type", mime_type)
-        return select_method(full_url, params=params, json=payload, headers=headers or None, cookies=cookies)
+        if payload is not None:
+            return select_method(full_url, params=params, json=payload, headers=headers or None, cookies=cookies)
+        return select_method(full_url, params=params, headers=headers or None, cookies=cookies)
 
     if "x-www-form-urlencoded" in mime_lower:
         headers.setdefault("Content-Type", mime_type)

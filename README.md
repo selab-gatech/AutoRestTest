@@ -152,6 +152,26 @@ Toggle via `configurations.toml`:
 > The Header agent Q-table should be rerun when executing services with local databases that refresh, as the user
 > credentials may become invalid.
 
+#### 6. Custom Static Headers
+
+For APIs that require custom headers (such as API keys or Bearer tokens), you can configure static headers in the `[custom_headers]` section. These headers are included with every request.
+
+```toml
+[custom_headers]
+DOLAPIKEY = "${DOLAPIKEY}"
+X-API-Key = "your-static-key"
+Authorization = "Bearer ${ACCESS_TOKEN}"
+```
+
+Environment variable interpolation is supported using the `${VAR_NAME}` syntax. Store sensitive values in your `.env` file:
+```
+DOLAPIKEY=your_secret_api_key
+ACCESS_TOKEN=your_bearer_token
+```
+
+> [!CAUTION]
+> If you enable the Header Agent (`[agents.header].enabled = true`) alongside custom headers, be aware that the Header Agent may override your `Authorization` header during testing. The Header Agent uses Basic Authentication tokens and has higher priority than custom static headers. For Bearer token or API key authentication, keep the Header Agent disabled.
+
 ## Execution
 
 Run the script using Poetry, after following the installation instructions:

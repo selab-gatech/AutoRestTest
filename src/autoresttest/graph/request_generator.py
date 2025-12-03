@@ -421,12 +421,17 @@ class RequestGenerator:
                 requests, http_method
             )  # selects correct http method
             full_url = f"{self.api_url}{endpoint_path}"
+
+            # Merge custom headers from config
+            merged_headers = header_params.copy()
+            merged_headers.update(get_config().static_headers)
+
             response = dispatch_request(
                 select_method=select_method,
                 full_url=full_url,
                 params=query_params,
                 body=request_body,
-                header=header_params,
+                header=merged_headers,
                 cookies=cookie_params,
             )
             if response is not None:

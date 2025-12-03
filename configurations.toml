@@ -54,3 +54,11 @@ time_duration = 1200
 
 # Probability of mutating request parameters during generation.
 mutation_rate = 0.2
+
+[custom_headers]
+# Static headers to include with every request.
+# Supports environment variable interpolation using ${VAR_NAME} syntax.
+# Example:
+# Authorization = "Bearer ${ACCESS_TOKEN}"
+# X-API-Key = "static-value"
+Authorization = "Bearer testing"
