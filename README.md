@@ -109,6 +109,9 @@ Configure Q-learning parameters in `configurations.toml`:
 Instead of limiting episodes, the program limits RL iterations using a time budget. Set the duration (in seconds) under:
 - `[request_generation].time_duration` (default: `1200`)
 
+> [!NOTE]
+> This time budget applies only to the MARL (Q-learning) phase. The initial value table generation phase, which runs before Q-learning begins, is not time-limited and will process all operations in the specification.
+
 To control how many parameter/body combinations are generated (and keep Q-tables manageable), adjust:
 - `[agent].max_combinations` (default: `10`)
 

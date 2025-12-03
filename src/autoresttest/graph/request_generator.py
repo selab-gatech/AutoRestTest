@@ -436,7 +436,6 @@ class RequestGenerator:
             )
             if response is not None:
                 if not response.ok and retry_nums < permitted_retries and allow_retry:
-                    print("Attempting retry due to failed response...")
                     return self._handle_retry(
                         request_data, response, retry_nums, permitted_retries
                     )
@@ -546,16 +545,14 @@ class RequestGenerator:
         lowest_occurrences = min(occurrences.values()) if occurrences else 0
         if lowest_occurrences < desired_size:
             possible_responses = []
-            for i in range(3):
+            # Use two samples with two retries each to gather server responses for augmenting value generation
+            print("Augmenting value generation with server responses...")
+            for _ in range(2):
                 response = self.create_and_send_request(
-                    curr_node, allow_retry=True, permitted_retries=i
+                    curr_node, allow_retry=True, permitted_retries=2
                 )
                 if response is not None:
                     possible_responses.append(response)
-
-            # response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=3)
-            # if response is not None:
-            #     possible_responses.append(response)
 
             value_generator = SmartValueGenerator(
                 operation_properties=curr_node.operation_properties
