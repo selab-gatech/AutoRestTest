@@ -312,6 +312,10 @@ def dispatch_request(
     headers = header if header is not None else {}
     cookies = cookies or None
 
+    # print("Parameters: ", params)
+    # print("Body: ", body)
+    # print("Headers: ", headers)
+
     if not body:
         return select_method(full_url, params=params, headers=headers or None, cookies=cookies)
 
@@ -321,10 +325,6 @@ def dispatch_request(
     # Use the first provided MIME type; bodies are expected to be singular.
     mime_type, payload = next(iter(body.items()))
     mime_lower = mime_type.lower() if mime_type else ""
-
-    print("Parameters: ", params)
-    print("Body: ", body)
-    print("Headers: ", headers)
 
     if _is_json_mime(mime_type):
         headers.setdefault("Content-Type", mime_type)

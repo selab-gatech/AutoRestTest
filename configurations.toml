@@ -61,4 +61,3 @@ mutation_rate = 0.2
 # Example:
 # Authorization = "Bearer ${ACCESS_TOKEN}"
 # X-API-Key = "static-value"
-Authorization = "Bearer testing"
