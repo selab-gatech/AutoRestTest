@@ -170,14 +170,12 @@ For APIs that require custom headers (such as API keys or Bearer tokens), you ca
 
 ```toml
 [custom_headers]
-DOLAPIKEY = "${DOLAPIKEY}"
 X-API-Key = "your-static-key"
 Authorization = "Bearer ${ACCESS_TOKEN}"
 ```
 
 Environment variable interpolation is supported using the `${VAR_NAME}` syntax. Store sensitive values in your `.env` file:
 ```
-DOLAPIKEY=your_secret_api_key
 ACCESS_TOKEN=your_bearer_token
 ```
 
