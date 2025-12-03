@@ -6,6 +6,7 @@ import numpy as np
 
 from .base_agent import BaseAgent
 
+from autoresttest.config import get_config
 from autoresttest.graph import OperationGraph
 from autoresttest.models import ValueAction
 
@@ -25,17 +26,28 @@ class ValueAgent(BaseAgent):
         self.epsilon = epsilon
 
     def initialize_q_table(self) -> None:
-        responses = defaultdict(list)
-        visited = set()
+        config = get_config()
         request_generator = self.operation_graph.request_generator
-        for (
-            operation_id,
-            operation_node,
-        ) in self.operation_graph.operation_nodes.items():
-            if operation_id not in visited:
-                request_generator.value_depth_traversal(
-                    operation_node, self.q_table, responses, visited
-                )
+
+        if config.parallelize_value_generation:
+            # Parallel processing using thread pool
+            request_generator.generate_value_tables_parallel(
+                operation_nodes=self.operation_graph.operation_nodes,
+                parameter_mappings=self.q_table,
+                max_workers=config.value_generation_workers,
+            )
+        else:
+            # Original sequential DFS traversal
+            responses = defaultdict(list)
+            visited = set()
+            for (
+                operation_id,
+                operation_node,
+            ) in self.operation_graph.operation_nodes.items():
+                if operation_id not in visited:
+                    request_generator.value_depth_traversal(
+                        operation_node, self.q_table, responses, visited
+                    )
 
     def get_action(self, operation_id: str) -> ValueAction:
         if random.random() < self.epsilon:
@@ -49,7 +61,7 @@ class ValueAgent(BaseAgent):
                 for param, param_mappings in self.q_table[operation_id][
                     "params"
                 ].items()
-                if param_mappings
+                if param_mappings and len(param_mappings) > 0
             }
             if self.q_table[operation_id].get("params")
             else None
@@ -58,7 +70,7 @@ class ValueAgent(BaseAgent):
             {
                 mime: max(body_mappings, key=lambda bm: bm[1])[0]
                 for mime, body_mappings in self.q_table[operation_id]["body"].items()
-                if body_mappings
+                if body_mappings and len(body_mappings) > 0
             }
             if self.q_table[operation_id].get("body")
             else None

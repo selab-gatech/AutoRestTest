@@ -1,7 +1,9 @@
 import copy
 import random
+import threading
 import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from json import JSONDecodeError
 from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING
@@ -51,7 +53,7 @@ class RequestGenerator:
     def __init__(self, operation_graph: "OperationGraph", api_url: str, is_naive=True):
         self.operation_graph: "OperationGraph" = operation_graph
         self.api_url = api_url
-        self.status_codes: Dict[int:StatusCode] = (
+        self.status_codes: Dict[int, StatusCode] = (
             {}
         )  # dictionary to track status code occurrences
         self.requests_generated = 0  # Initialize the request count
@@ -165,7 +167,7 @@ class RequestGenerator:
     def _determine_auth_mappings(
         self, request_val: Any, auth_parameters: Dict, auth_mappings
     ):
-        if type(request_val) == dict:
+        if isinstance(request_val, dict):
             for item, properties in request_val.items():
                 item_name = item[0] if isinstance(item, tuple) else item
                 if auth_parameters.get("username") == item_name:
@@ -176,12 +178,12 @@ class RequestGenerator:
                     self._determine_auth_mappings(
                         properties, auth_parameters, auth_mappings
                     )
-        elif type(request_val) == list:
+        elif isinstance(request_val, list):
             for item in request_val:
                 self._determine_auth_mappings(item, auth_parameters, auth_mappings)
 
     def _determine_if_valid_auth(self, param_auth):
-        if not param_auth or type(param_auth) != dict:
+        if not param_auth or not isinstance(param_auth, dict):
             return False
         return (
             param_auth.get("username")
@@ -215,7 +217,7 @@ class RequestGenerator:
     def _decompose_body_prop_mappings(self, bodies: List):
         body_mappings = {}
         for body in bodies:
-            if type(body) == dict:
+            if isinstance(body, dict):
                 for key, value in body.items():
                     if key not in body_mappings:
                         body_mappings[key] = []
@@ -287,7 +289,7 @@ class RequestGenerator:
 
         request_body_mappings = (
             self._decompose_body_prop_mappings(request_body_mappings[select_mime])
-            if select_mime
+            if select_mime and select_mime in request_body_mappings
             else {}
         )
 
@@ -421,17 +423,21 @@ class RequestGenerator:
                 requests, http_method
             )  # selects correct http method
             full_url = f"{self.api_url}{endpoint_path}"
+
+            # Merge custom headers from config
+            merged_headers = header_params.copy()
+            merged_headers.update(get_config().static_headers)
+
             response = dispatch_request(
                 select_method=select_method,
                 full_url=full_url,
                 params=query_params,
                 body=request_body,
-                header=header_params,
+                header=merged_headers,
                 cookies=cookie_params,
             )
             if response is not None:
                 if not response.ok and retry_nums < permitted_retries and allow_retry:
-                    print("Attempting retry due to failed response...")
                     return self._handle_retry(
                         request_data, response, retry_nums, permitted_retries
                     )
@@ -541,16 +547,13 @@ class RequestGenerator:
         lowest_occurrences = min(occurrences.values()) if occurrences else 0
         if lowest_occurrences < desired_size:
             possible_responses = []
-            for i in range(3):
+            # Use two samples with two retries each to gather server responses for augmenting value generation
+            for _ in range(2):
                 response = self.create_and_send_request(
-                    curr_node, allow_retry=True, permitted_retries=i
+                    curr_node, allow_retry=True, permitted_retries=2
                 )
                 if response is not None:
                     possible_responses.append(response)
-
-            # response = self.create_and_send_request(curr_node, allow_retry=True, permitted_retries=3)
-            # if response is not None:
-            #     possible_responses.append(response)
 
             value_generator = SmartValueGenerator(
                 operation_properties=curr_node.operation_properties
@@ -579,6 +582,88 @@ class RequestGenerator:
         print(
             "Completed value table generation for operation: ", curr_node.operation_id
         )
+
+    def generate_value_tables_parallel(
+        self,
+        operation_nodes: Dict[str, "OperationNode"],
+        parameter_mappings: Dict,
+        max_workers: int = 4,
+    ) -> None:
+        """Generate value tables for all operations in parallel using a thread pool."""
+        visited_lock = threading.Lock()
+        mappings_lock = threading.Lock()
+        visited: Set[str] = set()
+
+        def process_operation(operation_node: "OperationNode") -> None:
+            operation_id = operation_node.operation_id
+
+            # Check if already processed (with lock)
+            with visited_lock:
+                if operation_id in visited:
+                    return
+                visited.add(operation_id)
+
+            print(f"Building value table generation for operation: {operation_id}")
+
+            # Generate values (I/O bound - HTTP + LLM calls)
+            occurrences: Dict[str, int] = {}
+            desired_size = 10
+            lowest_occurrences = min(occurrences.values()) if occurrences else 0
+
+            if lowest_occurrences < desired_size:
+                possible_responses: List[RequestResponse] = []
+                for _ in range(2):
+                    response = self.create_and_send_request(
+                        operation_node, allow_retry=True, permitted_retries=2
+                    )
+                    if response is not None:
+                        possible_responses.append(response)
+
+                value_generator = SmartValueGenerator(
+                    operation_properties=operation_node.operation_properties
+                )
+                if possible_responses:
+                    parameters, request_body = (
+                        value_generator.generate_informed_value_agent_params(
+                            num_values=desired_size - lowest_occurrences,
+                            responses=possible_responses,
+                        ),
+                        value_generator.generate_informed_value_agent_body(
+                            num_values=desired_size - lowest_occurrences,
+                            responses=possible_responses,
+                        ),
+                    )
+                else:
+                    parameters, request_body = (
+                        value_generator.generate_value_agent_params(
+                            num_values=desired_size - lowest_occurrences
+                        ),
+                        value_generator.generate_value_agent_body(
+                            num_values=desired_size - lowest_occurrences
+                        ),
+                    )
+
+                # Thread-safe update to parameter_mappings
+                with mappings_lock:
+                    self._validate_value_mappings(
+                        operation_node, parameter_mappings, parameters, request_body, occurrences
+                    )
+
+            print(f"Completed value table generation for operation: {operation_id}")
+
+        # Submit all operations to thread pool
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(process_operation, node): op_id
+                for op_id, node in operation_nodes.items()
+            }
+
+            for future in as_completed(futures):
+                op_id = futures[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Error processing operation {op_id}: {e}")
 
     def create_and_send_request(
         self,

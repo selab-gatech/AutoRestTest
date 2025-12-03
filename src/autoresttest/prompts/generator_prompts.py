@@ -318,7 +318,7 @@ Here is the incorrect JSON string you returned. Fix the JSON object and return t
 def template_gen_prompt(summary: str, schema: Dict) -> str:
     try:
         schema = json.dumps(schema, indent=2)
-    except:
+    except (TypeError, ValueError):
         schema = str(schema)
     return f"SUMMARY: {summary}\nSPECIFICATION:\n {schema}\n"
 

@@ -13,10 +13,6 @@ recursion_limit = 50
 # Validate the OpenAPI spec strictly (errors will abort) when true; allow lenient parsing when false.
 strict_validation = false
 
-[agent]
-# Upper bound on generated parameter/body combinations to keep Q-table sizes manageable.
-max_combinations = 10
-
 [llm]
 # OpenAI model used for Value Agent (and optional Header Agent) generation.
 # Must be JSON-mode compatible.
@@ -27,6 +23,18 @@ creative_temperature = 1
 
 # Sampling temperature for strict/repair flows (e.g., retries, JSON fixes).
 strict_temperature = 1
+
+[agent]
+# Upper bound on generated parameter/body combinations to keep Q-table sizes manageable.
+max_combinations = 10
+
+[agent.value]
+# Enable parallel value table generation using thread pool.
+# Set to false to use sequential DFS generation.
+parallelize = true
+
+# Number of worker threads for parallel generation (ignored if parallelize = false).
+max_workers = 4
 
 [agents.header]
 # Whether to enable the Header Agent (uses Basic tokens). Only helpful for APIs requiring such auth.
@@ -54,3 +62,10 @@ time_duration = 1200
 
 # Probability of mutating request parameters during generation.
 mutation_rate = 0.2
+
+[custom_headers]
+# Static headers to include with every request.
+# Supports environment variable interpolation using ${VAR_NAME} syntax.
+# Example:
+# Authorization = "Bearer ${ACCESS_TOKEN}"
+# X-API-Key = "static-value"

@@ -313,7 +313,7 @@ class QLearning:
 
         parameter_type_mutate_rate = 0.5
         body_mutate_rate = 0.3
-        mutate_method = random.random() < 0
+        mutate_method = random.random() < 0.002 # Extremely low probability due to unimportant check
         mutate_media = random.random() < 0.02
         mutate_parameter_completely = random.random() < 0.05
         mutate_token = random.random() < 0.2
@@ -410,6 +410,7 @@ class QLearning:
             endpoint_path = endpoint_path.replace("{" + name + "}", str(value))
 
         merged_headers = header_params.copy()
+        merged_headers.update(CONFIG.static_headers)  # Add custom headers from config
         if header:
             merged_headers.update(header)
 
@@ -552,9 +553,9 @@ class QLearning:
                         body_properties,
                 ) in operation_node.operation_properties.request_body.items():
                     body_params = get_body_params(body_properties)
-                    self.successful_bodies[operation_id] = {
+                    self.successful_bodies[operation_id].update({
                         param: [] for param in body_params
-                    }
+                    })
 
     def _init_response_tracking(self):
         for (
@@ -575,9 +576,9 @@ class QLearning:
                         ) in response_properties.content.items():
                             response_params = []
                             get_response_params(response_details, response_params)
-                            self.successful_responses[operation_id] = {
+                            self.successful_responses[operation_id].update({
                                 param: [] for param in response_params
-                            }
+                            })
 
     def _construct_body_property(self, body_property, unconstructed_body):
         if body_property.properties or body_property.type == "object":
@@ -1100,7 +1101,7 @@ class QLearning:
                 operation_id
             ].operation_properties
             if mutate_operation:
-                avail_primitives = len(self.successful_primitives.values())
+                avail_primitives = sum(len(v) for v in self.successful_primitives.values())
                 use_mutator = random.random() < 0.8 or (
                         avail_primitives == 0 and operation_id not in complete_body_mappings
                 )
@@ -1350,7 +1351,7 @@ class QLearning:
 
             # Update successful parameters to use for future operation dependencies
             if response is not None and response.ok and not mutated_parameter_names:
-                print("Successful response!")
+                # print("Successful response!")
                 if parameters and self.successful_parameters[operation_id]:
                     for param_name, param_val in parameters.items():
                         if (

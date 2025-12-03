@@ -1,11 +1,17 @@
 """Configuration loading utilities for AutoRestTest."""
 
+import os
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict
-import tomli as tomllib
 
+import tomli as tomllib
+from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict
+
+# Load environment variables from .env file for custom header interpolation
+load_dotenv()
 
 
 CONFIG_FILE_NAME = "configurations.toml"
@@ -35,8 +41,14 @@ class AgentsConfig(BaseModel):
     header: HeaderAgentConfig
 
 
+class ValueAgentConfig(BaseModel):
+    parallelize: bool = True
+    max_workers: int = 4
+
+
 class AgentCombinationConfig(BaseModel):
     max_combinations: int = 10
+    value: ValueAgentConfig = ValueAgentConfig()
 
 
 class CacheConfig(BaseModel):
@@ -55,6 +67,23 @@ class RequestGenerationConfig(BaseModel):
     mutation_rate: float
 
 
+class CustomHeadersConfig(BaseModel):
+    """Custom static headers. Supports ${VAR_NAME} env var interpolation."""
+
+    model_config = ConfigDict(extra="allow")
+
+    def get_headers(self) -> Dict[str, str]:
+        headers = {}
+        for key, value in (self.model_extra or {}).items():
+            if isinstance(value, str):
+                headers[key] = re.sub(
+                    r"\$\{([^}]+)\}", lambda m: os.getenv(m.group(1), ""), value
+                )
+            else:
+                headers[key] = str(value)
+        return headers
+
+
 class Config(BaseModel):
     spec: SpecConfig
     llm: LLMConfig
@@ -63,6 +92,7 @@ class Config(BaseModel):
     cache: CacheConfig
     q_learning: QLearningConfig
     request_generation: RequestGenerationConfig
+    custom_headers: CustomHeadersConfig = CustomHeadersConfig()
 
     model_config = ConfigDict(frozen=True)
 
@@ -97,6 +127,19 @@ class Config(BaseModel):
     @property
     def max_combinations(self) -> int:
         return self.agent.max_combinations
+
+    @property
+    def parallelize_value_generation(self) -> bool:
+        return self.agent.value.parallelize
+
+    @property
+    def value_generation_workers(self) -> int:
+        return self.agent.value.max_workers
+
+    @property
+    def static_headers(self) -> Dict[str, str]:
+        """Return custom headers with env var interpolation applied."""
+        return self.custom_headers.get_headers()
 
 
 def _load_raw_config() -> Dict[str, Any]:

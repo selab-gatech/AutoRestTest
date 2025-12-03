@@ -92,6 +92,8 @@ class OperationGraph:
     ):
         if operation_id not in self.operation_nodes:
             raise ValueError(f"Operation {operation_id} not found in the graph")
+        if dependent_operation_id not in self.operation_nodes:
+            raise ValueError(f"Dependent operation {dependent_operation_id} not found in the graph")
         source_node = self.operation_nodes[operation_id]
         destination_node = self.operation_nodes[dependent_operation_id]
         edge = OperationEdge(
@@ -112,6 +114,8 @@ class OperationGraph:
         # TODO: Update tentative edge handling for lists
         if operation_id not in self.operation_nodes:
             raise ValueError(f"Operation {operation_id} not found in the graph")
+        if dependent_operation_id not in self.operation_nodes:
+            raise ValueError(f"Dependent operation {dependent_operation_id} not found in the graph")
         source_node = self.operation_nodes[operation_id]
         destination_node = self.operation_nodes[dependent_operation_id]
         similar_parameters = {}
@@ -131,7 +135,7 @@ class OperationGraph:
         source_node.tentative_edges.append(edge)
         source_node.tentative_edges = heapq.nlargest(
             self.next_most_similar_count,
-            source_node.tentative_edges,
+            [e for e in source_node.tentative_edges if e.similar_parameters],
             key=lambda x: next(iter(x.similar_parameters.values())).similarity,
         )  # small n so efficient
 
@@ -158,11 +162,14 @@ class OperationGraph:
         if operation_id not in self.operation_nodes:
             raise ValueError(f"Operation {operation_id} not found in the graph")
         source_node = self.operation_nodes[operation_id]
+        edge_to_remove = None
         for edge in source_node.outgoing_edges:
             if edge.destination.operation_id == dependent_operation_id:
-                source_node.outgoing_edges.remove(edge)
-                self.operation_edges.remove(edge)
-                return
+                edge_to_remove = edge
+                break
+        if edge_to_remove:
+            source_node.outgoing_edges.remove(edge_to_remove)
+            self.operation_edges.remove(edge_to_remove)
 
     def determine_dependencies(self, operations):
         for operation_id, operation_properties in operations.items():
@@ -208,7 +215,6 @@ if __name__ == "__main__":
     operation_graph = OperationGraph(
         spec_path="specs/original/oas/genome-nexus.yaml",
         spec_name="genome-nexus",
-        initialize_graph=False,
     )
     # operation_graph = OperationGraph(spec_path="specs/original/oas/ocvn.yaml", spec_name="ocvn")
     operation_graph.create_graph()

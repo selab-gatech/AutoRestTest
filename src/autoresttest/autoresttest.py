@@ -328,10 +328,14 @@ class AutoRestTest:
             if not loaded_value_from_shelf:
                 q_learning.value_agent.initialize_q_table()
                 print(f"Initialized new value agent Q-table for {spec_name}.")
+                token_counter = OpenAILanguageModel.get_tokens()
+                print(f"Value table generation tokens - Input: {token_counter.input_tokens}, Output: {token_counter.output_tokens}")
 
             if CONFIG.enable_header_agent and not loaded_header_from_shelf:
                 q_learning.header_agent.initialize_q_table()
                 print(f"Initialized new header agent Q-table for {spec_name}.")
+                token_counter = OpenAILanguageModel.get_tokens()
+                print(f"Header table generation tokens - Input: {token_counter.input_tokens}, Output: {token_counter.output_tokens}")
             elif not CONFIG.enable_header_agent:
                 q_learning.header_agent.q_table = None
 
