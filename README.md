@@ -119,7 +119,16 @@ To control how many parameter/body combinations are generated (and keep Q-tables
 > The above steps alter the variables across all four agents used within the software. If the user desires to change
 > the individual agent parameters, they can navigate to the `src/autoresttest/agents` files and change the parameters.
 
-#### 3. Configuring the OpenAI Model
+#### 3. Parallel Value Table Generation
+
+The Value Agent's Q-table initialization can be parallelized using a thread pool, which significantly speeds up startup for APIs with many operations. Configure this under `[agent.value]`:
+- `[agent.value].parallelize` (default: `true`) — when `true`, operations are processed concurrently using a thread pool; when `false`, the original sequential depth-first traversal is used.
+- `[agent.value].max_workers` (default: `4`) — number of worker threads for parallel generation (ignored if `parallelize` is `false`).
+
+> [!NOTE]
+> Rate-limited responses (HTTP 429) are automatically retried with exponential backoff.
+
+#### 4. Configuring the OpenAI Model
 
 To manage cost and performance, adjust the LLM settings in `configurations.toml`:
 - `[llm].engine` (default: `gpt-5-mini`)
@@ -130,7 +139,7 @@ To manage cost and performance, adjust the LLM settings in `configurations.toml`
 > The software heavily uses the **JSON mode** from recent OpenAI API engines. All recent models should support the JSON mode. 
 > The console output will list token usage for analyzing tool costs.
 
-#### 4. Use of Cached Graphs and Reinforcement Learning Tables
+#### 5. Use of Cached Graphs and Reinforcement Learning Tables
 
 The software can cache the graph and Q-tables to reduce cost and speed up repeated runs. Configure this behavior under:
 - `[cache].use_cached_graph` (default: `true`)
@@ -143,7 +152,7 @@ The software can cache the graph and Q-tables to reduce cost and speed up repeat
 > When enabled, these options store and read cached data under the `cache/` directory at the project root (for example, `cache/graphs/` and `cache/q_tables/`).
 > If disk usage becomes a concern, you can delete the cached project information in `cache/` after use; the data will be regenerated on the next run when needed.
 
-#### 5. Optional Header Agent
+#### 6. Optional Header Agent
 
 AutoRestTest contains an optional Header agent responsible for testing the API with different authentication headers. Due to difficulties 
 of different authentication flows, the Header agent is only able to use Basic Authentication. By default, the agent is disabled.
@@ -155,7 +164,7 @@ Toggle via `configurations.toml`:
 > The Header agent Q-table should be rerun when executing services with local databases that refresh, as the user
 > credentials may become invalid.
 
-#### 6. Custom Static Headers
+#### 7. Custom Static Headers
 
 For APIs that require custom headers (such as API keys or Bearer tokens), you can configure static headers in the `[custom_headers]` section. These headers are included with every request.
 

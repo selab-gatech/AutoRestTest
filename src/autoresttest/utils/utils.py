@@ -1,6 +1,8 @@
 import base64
 import hashlib
 import json
+import random
+import time
 from typing import Iterable, Dict, List, Any, Optional, Tuple, Set
 import itertools
 from pathlib import Path
@@ -297,25 +299,17 @@ def _is_json_mime(mime_type: str) -> bool:
     )
 
 
-def dispatch_request(
+def _dispatch_request_inner(
     select_method,
     full_url: str,
     params: Dict,
     body: Dict,
-    header: Optional[Dict] = None,
-    cookies: Optional[Dict] = None,
+    headers: Dict,
+    cookies: Optional[Dict],
 ):
     """
-    Send a request with sensible handling for the provided body and MIME type key (if any)
+    Internal helper that performs a single HTTP request.
     """
-    params = params or {}
-    headers = header if header is not None else {}
-    cookies = cookies or None
-
-    # print("Parameters: ", params)
-    # print("Body: ", body)
-    # print("Headers: ", headers)
-
     if not body:
         return select_method(full_url, params=params, headers=headers or None, cookies=cookies)
 
@@ -354,6 +348,49 @@ def dispatch_request(
     if isinstance(payload, (dict, list)):
         return select_method(full_url, params=params, json=payload, headers=headers or None, cookies=cookies)
     return select_method(full_url, params=params, data=payload, headers=headers or None, cookies=cookies)
+
+
+def dispatch_request(
+    select_method,
+    full_url: str,
+    params: Dict,
+    body: Dict,
+    header: Optional[Dict] = None,
+    cookies: Optional[Dict] = None,
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+):
+    """
+    Send a request with sensible handling for the provided body and MIME type key (if any).
+    Includes automatic retry with exponential backoff for rate-limited (429) responses.
+    """
+    params = params or {}
+    headers = header.copy() if header is not None else {}
+    cookies = cookies or None
+
+    for attempt in range(max_retries + 1):
+        response = _dispatch_request_inner(
+            select_method, full_url, params, body, headers.copy(), cookies
+        )
+
+        if response is None:
+            return None
+
+        # Handle rate limiting (429) with exponential backoff + jitter
+        if response.status_code == 429:
+            if attempt < max_retries:
+                # Exponential backoff: 1s, 2s, 4s + random jitter (0-1s)
+                delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                retry_after = response.headers.get("Retry-After")
+                if retry_after and retry_after.isdigit():
+                    delay = max(delay, int(retry_after))
+                print(f"Rate limited (429). Retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                time.sleep(delay)
+                continue
+
+        return response
+
+    return response  # Return last response even if still 429
 
 
 def encode_dictionary(dictionary) -> str:

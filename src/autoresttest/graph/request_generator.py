@@ -1,7 +1,9 @@
 import copy
 import random
+import threading
 import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from json import JSONDecodeError
 from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING
@@ -546,7 +548,6 @@ class RequestGenerator:
         if lowest_occurrences < desired_size:
             possible_responses = []
             # Use two samples with two retries each to gather server responses for augmenting value generation
-            print("Augmenting value generation with server responses...")
             for _ in range(2):
                 response = self.create_and_send_request(
                     curr_node, allow_retry=True, permitted_retries=2
@@ -581,6 +582,88 @@ class RequestGenerator:
         print(
             "Completed value table generation for operation: ", curr_node.operation_id
         )
+
+    def generate_value_tables_parallel(
+        self,
+        operation_nodes: Dict[str, "OperationNode"],
+        parameter_mappings: Dict,
+        max_workers: int = 4,
+    ) -> None:
+        """Generate value tables for all operations in parallel using a thread pool."""
+        visited_lock = threading.Lock()
+        mappings_lock = threading.Lock()
+        visited: Set[str] = set()
+
+        def process_operation(operation_node: "OperationNode") -> None:
+            operation_id = operation_node.operation_id
+
+            # Check if already processed (with lock)
+            with visited_lock:
+                if operation_id in visited:
+                    return
+                visited.add(operation_id)
+
+            print(f"Building value table generation for operation: {operation_id}")
+
+            # Generate values (I/O bound - HTTP + LLM calls)
+            occurrences: Dict[str, int] = {}
+            desired_size = 10
+            lowest_occurrences = min(occurrences.values()) if occurrences else 0
+
+            if lowest_occurrences < desired_size:
+                possible_responses: List[RequestResponse] = []
+                for _ in range(2):
+                    response = self.create_and_send_request(
+                        operation_node, allow_retry=True, permitted_retries=2
+                    )
+                    if response is not None:
+                        possible_responses.append(response)
+
+                value_generator = SmartValueGenerator(
+                    operation_properties=operation_node.operation_properties
+                )
+                if possible_responses:
+                    parameters, request_body = (
+                        value_generator.generate_informed_value_agent_params(
+                            num_values=desired_size - lowest_occurrences,
+                            responses=possible_responses,
+                        ),
+                        value_generator.generate_informed_value_agent_body(
+                            num_values=desired_size - lowest_occurrences,
+                            responses=possible_responses,
+                        ),
+                    )
+                else:
+                    parameters, request_body = (
+                        value_generator.generate_value_agent_params(
+                            num_values=desired_size - lowest_occurrences
+                        ),
+                        value_generator.generate_value_agent_body(
+                            num_values=desired_size - lowest_occurrences
+                        ),
+                    )
+
+                # Thread-safe update to parameter_mappings
+                with mappings_lock:
+                    self._validate_value_mappings(
+                        operation_node, parameter_mappings, parameters, request_body, occurrences
+                    )
+
+            print(f"Completed value table generation for operation: {operation_id}")
+
+        # Submit all operations to thread pool
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(process_operation, node): op_id
+                for op_id, node in operation_nodes.items()
+            }
+
+            for future in as_completed(futures):
+                op_id = futures[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Error processing operation {op_id}: {e}")
 
     def create_and_send_request(
         self,

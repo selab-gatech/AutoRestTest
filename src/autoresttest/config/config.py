@@ -41,8 +41,14 @@ class AgentsConfig(BaseModel):
     header: HeaderAgentConfig
 
 
+class ValueAgentConfig(BaseModel):
+    parallelize: bool = True
+    max_workers: int = 4
+
+
 class AgentCombinationConfig(BaseModel):
     max_combinations: int = 10
+    value: ValueAgentConfig = ValueAgentConfig()
 
 
 class CacheConfig(BaseModel):
@@ -121,6 +127,14 @@ class Config(BaseModel):
     @property
     def max_combinations(self) -> int:
         return self.agent.max_combinations
+
+    @property
+    def parallelize_value_generation(self) -> bool:
+        return self.agent.value.parallelize
+
+    @property
+    def value_generation_workers(self) -> int:
+        return self.agent.value.max_workers
 
     @property
     def static_headers(self) -> Dict[str, str]:
