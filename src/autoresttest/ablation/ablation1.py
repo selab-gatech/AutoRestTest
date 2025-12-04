@@ -263,7 +263,7 @@ class Ablation1:
                         body[mime] = self.get_mutated_value(body_properties.type)
                     else:
                         body[mime] = randomize_object()
-                if body[mime] is None:
+                if mime in body and body[mime] is None:
                     body.pop(mime, None)
 
         if random.random() < mutate_media and body:
