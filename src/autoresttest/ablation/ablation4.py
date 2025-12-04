@@ -160,7 +160,7 @@ class Ablation4:
                                 new_obj[prop] = body_mappings[prop]
                         body[mime] = self._construct_body(new_obj, operation_id, mime)
                 else:
-                    if random.random() < 0.3:
+                    if random.random() < 0.3 and operation_id in complete_body_mappings:
                         possible_objs = []
                         for dependent_operation, dependent_prop in complete_body_mappings[operation_id].items():
                             if dependent_operation in self.successful_bodies and dependent_prop in \
@@ -169,7 +169,7 @@ class Ablation4:
                         if possible_objs:
                             selected_obj = random.choice(possible_objs)
                             body[mime] = selected_obj
-                    else:
+                    elif operation_id in complete_body_mappings:
                         body_mappings = self._deconstruct_body(body_properties)
                         if body_mappings:
                             possible_objs = []
@@ -181,12 +181,13 @@ class Ablation4:
                                 selected_obj = random.choice(possible_objs)
                                 new_obj = {}
                                 response_mappings = self._deconstruct_body(selected_obj)
-                                for prop in body_mappings:
-                                    if prop in response_mappings:
-                                        new_obj[prop] = response_mappings[prop]
-                                    else:
-                                        new_obj[prop] = body_mappings[prop]
-                                body[mime] = self._construct_body(new_obj, operation_id, mime)
+                                if response_mappings:
+                                    for prop in body_mappings:
+                                        if prop in response_mappings:
+                                            new_obj[prop] = response_mappings[prop]
+                                        else:
+                                            new_obj[prop] = body_mappings[prop]
+                                    body[mime] = self._construct_body(new_obj, operation_id, mime)
 
         return parameters, body
 
