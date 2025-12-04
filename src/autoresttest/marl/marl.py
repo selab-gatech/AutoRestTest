@@ -198,7 +198,7 @@ class QLearning:
                                 new_obj[prop] = body_mappings[prop]
                         body[mime] = self._construct_body(new_obj, operation_id, mime)
                 else:
-                    if random.random() < 0.3:
+                    if random.random() < 0.3 and operation_id in complete_body_mappings:
                         possible_objs = []
                         for (
                                 dependent_operation,
@@ -217,7 +217,7 @@ class QLearning:
                         if possible_objs:
                             selected_obj = random.choice(possible_objs)
                             body[mime] = selected_obj
-                    else:
+                    elif operation_id in complete_body_mappings:
                         body_mappings = self._deconstruct_body(body_properties)
                         if body_mappings:
                             possible_objs = []
@@ -239,14 +239,15 @@ class QLearning:
                                 selected_obj = random.choice(possible_objs)
                                 new_obj = {}
                                 response_mappings = self._deconstruct_body(selected_obj)
-                                for prop in body_mappings:
-                                    if prop in response_mappings:
-                                        new_obj[prop] = response_mappings[prop]
-                                    else:
-                                        new_obj[prop] = body_mappings[prop]
-                                body[mime] = self._construct_body(
-                                    new_obj, operation_id, mime
-                                )
+                                if response_mappings:
+                                    for prop in body_mappings:
+                                        if prop in response_mappings:
+                                            new_obj[prop] = response_mappings[prop]
+                                        else:
+                                            new_obj[prop] = body_mappings[prop]
+                                    body[mime] = self._construct_body(
+                                        new_obj, operation_id, mime
+                                    )
 
         return parameters, body
 
@@ -375,14 +376,15 @@ class QLearning:
                         body[mime] = self.get_mutated_value(body_properties.type)
                     else:
                         body[mime] = randomize_object()
-                if body[mime] is None:
+                if mime in body and body[mime] is None:
                     body.pop(mime, None)
 
         if random.random() < mutate_media and body:
             for media in body.keys():
                 avail_medias.remove(media)
-            new_body = {random.choice(avail_medias): body.popitem()[1]}
-            body = new_body
+            if avail_medias:
+                new_body = {random.choice(avail_medias): body.popitem()[1]}
+                body = new_body
 
         return parameters, body, header, specific_method, mutated_parameter_names
 
@@ -913,7 +915,7 @@ class QLearning:
                 )
 
                 parameters = {}
-                if select_params.req_params:
+                if select_params.req_params and parameter_dependencies:
                     for parameter, dependency in parameter_dependencies.items():
                         if parameter in select_params.req_params:
                             if (
@@ -992,61 +994,62 @@ class QLearning:
                             operation_id
                         ].operation_properties.request_body[select_params.mime_type]
                     )
-                    for body_property, dependency in request_body_dependencies.items():
-                        if body_property in possible_body_properties:
-                            if (
-                                    dependency["in_value"] == "params"
-                                    and dependency["dependent_operation"]
-                                    in self.successful_parameters
-                                    and dependency["dependent_val"]
-                                    in self.successful_parameters[
-                                dependency["dependent_operation"]
-                            ]
-                            ):
-                                if self.successful_parameters[
+                    if request_body_dependencies:
+                        for body_property, dependency in request_body_dependencies.items():
+                            if body_property in possible_body_properties:
+                                if (
+                                        dependency["in_value"] == "params"
+                                        and dependency["dependent_operation"]
+                                        in self.successful_parameters
+                                        and dependency["dependent_val"]
+                                        in self.successful_parameters[
                                     dependency["dependent_operation"]
-                                ][dependency["dependent_val"]]:
-                                    unconstructed_body[body_property] = random.choice(
-                                        self.successful_parameters[
-                                            dependency["dependent_operation"]
-                                        ][dependency["dependent_val"]]
-                                    )
-
-                            elif (
-                                    dependency["in_value"] == "body"
-                                    and dependency["dependent_operation"]
-                                    in self.successful_bodies
-                                    and dependency["dependent_val"]
-                                    in self.successful_bodies[
+                                ]
+                                ):
+                                    if self.successful_parameters[
                                         dependency["dependent_operation"]
-                                    ]
-                            ):
-                                if self.successful_bodies[
-                                    dependency["dependent_operation"]
-                                ][dependency["dependent_val"]]:
-                                    unconstructed_body[body_property] = random.choice(
-                                        self.successful_bodies[
-                                            dependency["dependent_operation"]
-                                        ][dependency["dependent_val"]]
-                                    )
+                                    ][dependency["dependent_val"]]:
+                                        unconstructed_body[body_property] = random.choice(
+                                            self.successful_parameters[
+                                                dependency["dependent_operation"]
+                                            ][dependency["dependent_val"]]
+                                        )
 
-                            elif (
-                                    dependency["in_value"] == "response"
-                                    and dependency["dependent_operation"]
-                                    in self.successful_responses
-                                    and dependency["dependent_val"]
-                                    in self.successful_responses[
-                                        dependency["dependent_operation"]
-                                    ]
-                            ):
-                                if self.successful_responses[
-                                    dependency["dependent_operation"]
-                                ][dependency["dependent_val"]]:
-                                    unconstructed_body[body_property] = random.choice(
-                                        self.successful_responses[
+                                elif (
+                                        dependency["in_value"] == "body"
+                                        and dependency["dependent_operation"]
+                                        in self.successful_bodies
+                                        and dependency["dependent_val"]
+                                        in self.successful_bodies[
                                             dependency["dependent_operation"]
-                                        ][dependency["dependent_val"]]
-                                    )
+                                        ]
+                                ):
+                                    if self.successful_bodies[
+                                        dependency["dependent_operation"]
+                                    ][dependency["dependent_val"]]:
+                                        unconstructed_body[body_property] = random.choice(
+                                            self.successful_bodies[
+                                                dependency["dependent_operation"]
+                                            ][dependency["dependent_val"]]
+                                        )
+
+                                elif (
+                                        dependency["in_value"] == "response"
+                                        and dependency["dependent_operation"]
+                                        in self.successful_responses
+                                        and dependency["dependent_val"]
+                                        in self.successful_responses[
+                                            dependency["dependent_operation"]
+                                        ]
+                                ):
+                                    if self.successful_responses[
+                                        dependency["dependent_operation"]
+                                    ][dependency["dependent_val"]]:
+                                        unconstructed_body[body_property] = random.choice(
+                                            self.successful_responses[
+                                                dependency["dependent_operation"]
+                                            ][dependency["dependent_val"]]
+                                        )
 
                     deconstructed_supplement_body = (
                         self._deconstruct_body(supplement_body[select_params.mime_type])
@@ -1083,7 +1086,7 @@ class QLearning:
                             operation_id, mime
                         )
                         deconstructed_body = self._deconstruct_body(body_properties)
-                        if select_properties:
+                        if select_properties and deconstructed_body:
                             new_bodies_properties = {
                                 prop: deconstructed_body[prop]
                                 for prop in deconstructed_body
