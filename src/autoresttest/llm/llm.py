@@ -1,4 +1,5 @@
 import os
+import threading
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
@@ -31,6 +32,10 @@ class OpenAILanguageModel:
     output_tokens = 0
     cache = {}
 
+    # Thread-safety locks for parallel value generation
+    _cache_lock = threading.RLock()
+    _token_lock = threading.RLock()
+
     @staticmethod
     # DEPRECATED
     def get_cumulative_cost():
@@ -46,8 +51,8 @@ class OpenAILanguageModel:
     def __init__(
         self,
         engine=CONFIG.openai_llm_engine,
-        temperature=CONFIG.default_temperature,
-        max_tokens=4000,
+        temperature=CONFIG.creative_temperature,
+        max_tokens=20000,
     ):
         self.api_key = os.getenv("OPENAI_API_KEY")
         if self.api_key is None or self.api_key.strip() == "":
@@ -58,6 +63,16 @@ class OpenAILanguageModel:
         self.engine = engine
         self.temperature = temperature
         self.max_tokens = max_tokens
+
+    def _max_tokens_field(self) -> str:
+        """
+        Prefer the newer OpenAI interface (max_completion_tokens). Fall back to max_tokens
+        for older model families that still expect it.
+        """
+        engine_str = str(self.engine)
+        if engine_str.startswith(("gpt-3.5", "gpt-4", "gpt-4o")):
+            return "max_tokens"
+        return "max_completion_tokens"
 
     def _generate_cache_key(self, user_message, system_message, json_mode):
         key_data = {
@@ -74,9 +89,13 @@ class OpenAILanguageModel:
         self, user_message, system_message=DEFAULT_SYSTEM_MESSAGE, json_mode=False
     ) -> str:
         cache_key = self._generate_cache_key(user_message, system_message, json_mode)
-        if cache_key in OpenAILanguageModel.cache:
-            return OpenAILanguageModel.cache[cache_key]
 
+        # Thread-safe cache read
+        with OpenAILanguageModel._cache_lock:
+            if cache_key in OpenAILanguageModel.cache:
+                return OpenAILanguageModel.cache[cache_key]
+
+        max_tokens_field = self._max_tokens_field()
         if json_mode:
             response = self.client.chat.completions.create(
                 model=self.engine,
@@ -84,7 +103,7 @@ class OpenAILanguageModel:
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message},
                 ],
-                max_tokens=self.max_tokens,
+                **{max_tokens_field: self.max_tokens},
                 temperature=self.temperature,
                 response_format={"type": "json_object"},
             )
@@ -95,7 +114,7 @@ class OpenAILanguageModel:
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message},
                 ],
-                max_tokens=self.max_tokens,
+                **{max_tokens_field: self.max_tokens},
                 temperature=self.temperature,
             )
 
@@ -109,18 +128,24 @@ class OpenAILanguageModel:
             if hasattr(response.usage, "completion_tokens")
             else 0
         )
-        OpenAILanguageModel.input_tokens += input_tokens
-        OpenAILanguageModel.output_tokens += output_tokens
-        if self.engine in INPUT_COST_PER_TOKEN:
-            OpenAILanguageModel.cumulative_cost += (
-                input_tokens * INPUT_COST_PER_TOKEN[self.engine]
-            )
-        if self.engine in OUTPUT_COST_PER_TOKEN:
-            OpenAILanguageModel.cumulative_cost += (
-                output_tokens * OUTPUT_COST_PER_TOKEN[self.engine]
-            )
+
+        # Thread-safe token and cost updates
+        with OpenAILanguageModel._token_lock:
+            OpenAILanguageModel.input_tokens += input_tokens
+            OpenAILanguageModel.output_tokens += output_tokens
+            if self.engine in INPUT_COST_PER_TOKEN:
+                OpenAILanguageModel.cumulative_cost += (
+                    input_tokens * INPUT_COST_PER_TOKEN[self.engine]
+                )
+            if self.engine in OUTPUT_COST_PER_TOKEN:
+                OpenAILanguageModel.cumulative_cost += (
+                    output_tokens * OUTPUT_COST_PER_TOKEN[self.engine]
+                )
+
         result = response.choices[0].message.content.strip()
 
-        OpenAILanguageModel.cache[cache_key] = result
-        return result
+        # Thread-safe cache write
+        with OpenAILanguageModel._cache_lock:
+            OpenAILanguageModel.cache[cache_key] = result
 
+        return result

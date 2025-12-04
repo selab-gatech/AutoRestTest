@@ -14,6 +14,7 @@ from openapi_spec_validator.validation.exceptions import (
 from autoresttest.config import get_config
 from autoresttest.models import (
     OperationProperties,
+    ParameterKey,
     ParameterProperties,
     ResponseProperties,
     SchemaProperties,
@@ -95,7 +96,10 @@ class SpecificationParser:
         """
         Extract the server URL from the specification file.
         """
-        return self.resolving_parser.specification.get("servers")[0].get("url")
+        servers = self.resolving_parser.specification.get("servers")
+        if not servers:
+            raise ValueError("No servers defined in the OpenAPI specification")
+        return servers[0].get("url")
 
     def get_api_title(self) -> str:
         """
@@ -181,7 +185,7 @@ class SpecificationParser:
             )
         return parameter_properties
 
-    def process_parameters(self, parameter_list) -> Dict[str, ParameterProperties]:
+    def process_parameters(self, parameter_list) -> Dict[ParameterKey, ParameterProperties]:
         """
         Process the parameters list to return a Dictionary with all its properties and values.
         """
@@ -189,7 +193,10 @@ class SpecificationParser:
         if parameter_list:
             for parameter in parameter_list:
                 parameter_properties = self.process_parameter(parameter)
-                parameters.setdefault(parameter_properties.name, parameter_properties)
+                if not parameter_properties.name:
+                    continue
+                key = (parameter_properties.name, parameter_properties.in_value)
+                parameters[key] = parameter_properties
         return parameters
 
     def process_request_body(self, request_body) -> Dict[str, SchemaProperties]:
@@ -236,7 +243,12 @@ class SpecificationParser:
         return response_properties
 
     def process_operation_details(
-            self, http_method: str, endpoint_path: str, operation_details: Dict, operation_id: str
+            self,
+            http_method: str,
+            endpoint_path: str,
+            operation_details: Dict,
+            operation_id: str,
+            merged_parameters: List[Dict],
     ) -> OperationProperties:
         """
         Process the parameters and request body details within a given operation to return as OperationProperties object.
@@ -247,9 +259,9 @@ class SpecificationParser:
             http_method=http_method,
             summary=operation_details.get("summary"),
         )
-        if operation_details.get("parameters"):
+        if merged_parameters:
             operation_properties.parameters = self.process_parameters(
-                parameter_list=operation_details.get("parameters")
+                parameter_list=merged_parameters
             )
 
         if operation_details.get("requestBody"):
@@ -309,6 +321,22 @@ class SpecificationParser:
 
         return candidate
 
+    def _merge_parameters(
+            self, path_parameters: List[Dict], operation_parameters: List[Dict]
+    ) -> List[Dict]:
+        """
+        Merge path-level and operation-level parameters, letting operation-level definitions override
+        matching path-level parameters (by (name, in)).
+        """
+        merged: Dict[ParameterKey, Dict] = {}
+        for raw_param in path_parameters or []:
+            if isinstance(raw_param, dict):
+                merged[(raw_param.get("name"), raw_param.get("in"))] = raw_param
+        for raw_param in operation_parameters or []:
+            if isinstance(raw_param, dict):
+                merged[(raw_param.get("name"), raw_param.get("in"))] = raw_param
+        return list(merged.values())
+
     def parse_specification(self) -> Dict[str, OperationProperties]:
         """
         Parse the specification file to return a dictionary of all the operations and their properties.
@@ -320,14 +348,22 @@ class SpecificationParser:
         seen_ids: Set[str] = set()
         spec_paths = self.resolving_parser.specification.get("paths", {})
         for endpoint_path, endpoint_details in spec_paths.items():
+            path_level_parameters = endpoint_details.get("parameters", [])
             for http_method, operation_details in endpoint_details.items():
                 if http_method in supported_methods:
+                    merged_parameters = self._merge_parameters(
+                        path_level_parameters, operation_details.get("parameters", [])
+                    )
                     operation_id = self._resolve_operation_id(
                         http_method, endpoint_path, operation_details, seen_ids
                     )
                     seen_ids.add(operation_id)
                     operation_properties = self.process_operation_details(
-                        http_method, endpoint_path, operation_details, operation_id
+                        http_method,
+                        endpoint_path,
+                        operation_details,
+                        operation_id,
+                        merged_parameters,
                     )
                     operation_collection[operation_id] = operation_properties
         return operation_collection

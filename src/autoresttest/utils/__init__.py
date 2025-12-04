@@ -19,6 +19,9 @@ from .utils import (
     get_body_params,
     get_combinations,
     get_object_shallow_mappings,
+    make_param_key,
+    param_key_to_label,
+    label_to_param_key,
     get_param_combinations,
     get_params,
     get_request_body_params,
@@ -28,6 +31,7 @@ from .utils import (
     get_response_params,
     is_json_seriable,
     remove_nulls,
+    split_parameter_values,
     dispatch_request,
 )
 
@@ -52,6 +56,9 @@ __all__ = [
     "get_body_params",
     "get_combinations",
     "get_object_shallow_mappings",
+    "make_param_key",
+    "param_key_to_label",
+    "label_to_param_key",
     "get_param_combinations",
     "get_params",
     "get_request_body_params",
@@ -61,5 +68,6 @@ __all__ = [
     "get_response_params",
     "is_json_seriable",
     "remove_nulls",
+    "split_parameter_values",
     "dispatch_request",
 ]

@@ -39,10 +39,12 @@ from autoresttest.utils import (
     get_request_body_params,
     get_object_shallow_mappings,
     attempt_fix_json,
+    param_key_to_label,
 )
 from autoresttest.models import (
     OperationProperties,
     ParameterProperties,
+    ParameterKey,
     RequestData,
     RequestRequirements,
     RequestResponse,
@@ -153,10 +155,10 @@ def random_generator():
 class NaiveValueGenerator:
     def __init__(
             self,
-            parameters: Dict[AnyStr, ParameterProperties],
+            parameters: Dict[ParameterKey, ParameterProperties],
             request_body: Dict[AnyStr, SchemaProperties],
     ):
-        self.parameters: Dict[AnyStr, ParameterProperties] = parameters
+        self.parameters: Dict[ParameterKey, ParameterProperties] = parameters
         self.request_body: Dict[AnyStr, SchemaProperties] = request_body
 
     def generate_value(self, item_properties: SchemaProperties) -> Any:
@@ -183,7 +185,7 @@ class NaiveValueGenerator:
         generator = identify_generator(item_type) if item_type else random_generator()
         return generator()
 
-    def generate_parameters(self) -> Dict[AnyStr, Any]:
+    def generate_parameters(self) -> Dict[ParameterKey, Any]:
         query_parameters = {}
         for parameter_name, parameter_properties in self.parameters.items():
             randomized_value = self.generate_value(parameter_properties.schema)
@@ -211,26 +213,55 @@ class PromptData:
 
 class SmartValueGenerator:
     def __init__(
-            self,
-            operation_properties: OperationProperties,
-            requirements: Optional[RequestRequirements] = None,
-            engine="gpt-4o",
-            temperature=CONFIG.default_temperature,
+        self,
+        operation_properties: OperationProperties,
+        requirements: Optional[RequestRequirements] = None,
+        engine="gpt-4o",
+        temperature=CONFIG.creative_temperature,
     ):
         self.operation_properties: OperationProperties = operation_properties
-        self.processed_operation = remove_nulls(asdict(operation_properties))
-        self.parameters: Dict[str, Dict] = self.processed_operation.get("parameters")
+        self.processed_operation = remove_nulls(operation_properties.to_dict())
+        self.parameters_raw: Dict[ParameterKey, ParameterProperties] = (
+            operation_properties.parameters or {}
+        )
+        self.parameter_lookup: Dict[str, ParameterKey] = {
+            param_key_to_label(key): key for key in self.parameters_raw.keys()
+        }
+        self.parameters: Dict[str, Dict] = {
+            label: remove_nulls(param.to_dict())
+            for label, param in (
+                (param_key_to_label(key), param)
+                for key, param in self.parameters_raw.items()
+            )
+        }
         self.request_body: Dict[str, Dict] = self.processed_operation.get(
             "request_body"
         )
         self.summary: str = self.processed_operation.get("summary")
         self.language_model = OpenAILanguageModel(temperature=temperature)
+        self.parameter_requirements_raw: Dict[ParameterKey, Any] = (
+            requirements.parameter_requirements if requirements else {}
+        )
+        self.parameter_requirements_labels: Dict[str, Any] = {
+            param_key_to_label(key): value
+            for key, value in self.parameter_requirements_raw.items()
+        }
         self.request_body_reqs: Dict[str, Any] = (
             requirements.request_body_requirements if requirements else {}
         )
-        self.parameters_reqs: Dict[str, Any] = (
-            requirements.parameter_requirements if requirements else {}
-        )
+        self.parameters_reqs: Dict[str, Any] = self.parameter_requirements_labels
+
+    def _format_param_dict_for_prompt(self, params: Optional[Dict]) -> Dict:
+        if not params:
+            return {}
+        formatted = {}
+        for key, value in params.items():
+            if isinstance(key, tuple):
+                label = param_key_to_label(key)
+            else:
+                label = str(key)
+            formatted[label] = value
+        return formatted
 
     def _compose_parameter_gen_prompt(self, prompt_data: PromptData, necessary=False):
         GEN_PROMPT = prompt_data.GEN_PROMPT
@@ -256,7 +287,6 @@ class SmartValueGenerator:
         if FEWSHOT_PROMPT:
             prompt += "Here are some examples of creating values from specifications:\n"
             prompt += FEWSHOT_PROMPT + "\n"
-            prompt += "SPECIFICATION:\n" + json.dumps(schema, indent=2) + "\n"
 
         if is_request_body:
             prompt += "REQUEST_BODY VALUES:\n"
@@ -273,6 +303,9 @@ class SmartValueGenerator:
         is_request_body = prompt_data.is_request_body
         response = prompt_data.response
         failed_mappings = prompt_data.failed_mappings
+
+        if not is_request_body:
+            failed_mappings = self._format_param_dict_for_prompt(failed_mappings)
 
         prompt = f"{GEN_PROMPT}\n{FEWSHOT_PROMPT}\n"
         prompt += template_gen_prompt(summary=self.summary, schema=schema)
@@ -319,9 +352,10 @@ class SmartValueGenerator:
             prompt += get_informed_agent_params_prompt() + "\n"
             for request_response in responses:
                 if request_response is not None:
-                    prompt += (
-                        f"PAST PARAMETERS: {request_response.request.parameters}\n"
+                    formatted_params = self._format_param_dict_for_prompt(
+                        request_response.request.parameters
                     )
+                    prompt += f"PAST PARAMETERS: {formatted_params}\n"
                     prompt += f"STATUS CODE: {request_response.response.status_code}\n"
                     prompt += f"RESPONSE: {request_response.response.text[:1000]}\n\n"
 
@@ -330,8 +364,6 @@ class SmartValueGenerator:
 
         prompt += "Here are some examples of creating values from specifications:\n"
         prompt += few_shot_prompt + "\n"
-
-        prompt += "SPECIFICATION:\n" + json.dumps(schema, indent=2) + "\n"
 
         if is_request_body:
             prompt += "REQUEST_BODY VALUES:\n"
@@ -347,7 +379,7 @@ class SmartValueGenerator:
         return prompt
 
     def _isolate_nonreq_params(self, schema: Dict[str, Dict], is_request_body=False):
-        if type(schema) is not dict:
+        if not isinstance(schema, dict):
             return {}
         nonreq_params = {}
         for param_name, param_properties in schema.items():
@@ -444,14 +476,12 @@ class SmartValueGenerator:
     def _validate_parameters(self, schema: Dict) -> Optional[Dict]:
         if schema is None:
             return None
-        parameters = {}
+        parameters: Dict[ParameterKey, Any] = {}
         for parameter_name, parameter_value in schema.items():
-            if (
-                    parameter_name in self.parameters
-                    and parameter_name not in self.parameters_reqs
-            ):
-                parameters[parameter_name] = parameter_value
-        parameters.update(self.parameters_reqs)
+            param_key = self.parameter_lookup.get(parameter_name)
+            if param_key and param_key not in self.parameter_requirements_raw:
+                parameters[param_key] = parameter_value
+        parameters.update(self.parameter_requirements_raw)
         return parameters
 
     def generate_parameters(self, necessary=False) -> Optional[Dict[str, Any]]:
@@ -602,11 +632,12 @@ class SmartValueGenerator:
     def _validate_value_params(self, schema: Dict) -> Dict[Any, List]:
         if schema is None:
             return {}
-        param_mappings = defaultdict(list)
+        param_mappings: Dict[ParameterKey, List] = defaultdict(list)
         for param_name, param_values in schema.items():
-            if param_name in self.parameters:
+            param_key = self.parameter_lookup.get(param_name)
+            if param_key in self.parameters_raw:
                 for param_value in param_values.values():
-                    param_mappings[param_name].append(param_value)
+                    param_mappings[param_key].append(param_value)
         return param_mappings
 
     def generate_value_agent_params(self, num_values: int) -> Optional[Dict[str, List]]:
@@ -696,6 +727,7 @@ class SmartValueGenerator:
             try:
                 generated_request_body = json.loads(generated_request_body)
             except json.JSONDecodeError:
+                print("Handling a JSON decode error...")
                 generated_request_body = attempt_fix_json(generated_request_body)
             validated_request_body = self._validate_value_body(
                 generated_request_body.get("request_body")
