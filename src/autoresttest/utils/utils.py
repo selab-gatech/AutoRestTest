@@ -427,11 +427,21 @@ class EmbeddingModel:
     def __init__(self):
         self.model = load("glove-wiki-gigaword-50")
         self.threshold = 0.8
+        self._embedding_cache: Dict[str, Optional[np.ndarray]] = {}
 
-    def encode_sentence_or_word(self, thing: str):
+    def encode_sentence_or_word(self, thing: str) -> Optional[np.ndarray]:
+        if thing in self._embedding_cache:
+            return self._embedding_cache[thing]
+
         words = thing.split(" ")
         word_vectors = [self.model[word] for word in words if word in self.model]
-        return np.mean(word_vectors, axis=0) if word_vectors else None
+        result = np.mean(word_vectors, axis=0) if word_vectors else None
+        self._embedding_cache[thing] = result
+        return result
+
+    def clear_cache(self):
+        """Clear embedding cache to free memory after graph generation."""
+        self._embedding_cache.clear()
 
     @staticmethod
     def handle_word_cases(parameter):

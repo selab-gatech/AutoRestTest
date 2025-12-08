@@ -2,6 +2,8 @@ import heapq
 import logging
 from typing import List, Dict, Tuple, Optional
 
+from tqdm import tqdm
+
 from .request_generator import RequestGenerator
 from .similarity_comparator import OperationDependencyComparator
 
@@ -172,7 +174,11 @@ class OperationGraph:
             self.operation_edges.remove(edge_to_remove)
 
     def determine_dependencies(self, operations):
-        for operation_id, operation_properties in operations.items():
+        for operation_id, operation_properties in tqdm(
+            operations.items(),
+            desc="Building operation dependency graph",
+            unit="operations"
+        ):
             for (
                 dependent_operation_id,
                 dependent_operation_properties,
@@ -204,11 +210,11 @@ class OperationGraph:
         operations: Dict[str, OperationProperties] = (
             self.spec_parser.parse_specification()
         )
-        print("PARSED SPECIFICATION!!!")
+        print(f"Parsed specification ({len(operations)} operations)")
         for operation_id, operation_properties in operations.items():
             self.add_operation_node(operation_properties)
         self.determine_dependencies(operations)
-        print("COMPLETED COSINE SIMILARITY!!!")
+        print("Graph construction complete!")
 
 
 if __name__ == "__main__":
@@ -216,20 +222,15 @@ if __name__ == "__main__":
 
     # Get project root: generate_graph.py -> graph -> autoresttest -> src -> project root
     PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-    spec_path = PROJECT_ROOT / "mastadon_openapi.json"
+    spec_path = PROJECT_ROOT / "seawedfs.yaml"
 
     # Create required dependencies
-    print("Initializing embedding model...")
     embedding_model = EmbeddingModel()
-    print("Initialized embedding model!")
-
-    print("Initializing specification parser...")
     spec_parser = SpecificationParser(spec_path=str(spec_path))
-    print("Initialized specification parser!")
 
     operation_graph = OperationGraph(
         spec_path=str(spec_path),
-        spec_name="mastadon_openapi",
+        spec_name="seawedfs",
         spec_parser=spec_parser,
         embedding_model=embedding_model,
     )
