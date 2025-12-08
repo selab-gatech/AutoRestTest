@@ -8,7 +8,7 @@
 location = "aratrl-openapi/market2.yaml"
 
 # Maximum depth for resolving recursive references in the OpenAPI specification.
-recursion_limit = 50
+recursion_limit = 5
 
 # Validate the OpenAPI spec strictly (errors will abort) when true; allow lenient parsing when false.
 strict_validation = false
