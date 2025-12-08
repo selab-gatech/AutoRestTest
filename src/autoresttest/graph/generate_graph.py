@@ -212,11 +212,27 @@ class OperationGraph:
 
 
 if __name__ == "__main__":
+    from pathlib import Path
+
+    # Get project root: generate_graph.py -> graph -> autoresttest -> src -> project root
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+    spec_path = PROJECT_ROOT / "mastadon_openapi.json"
+
+    # Create required dependencies
+    print("Initializing embedding model...")
+    embedding_model = EmbeddingModel()
+    print("Initialized embedding model!")
+
+    print("Initializing specification parser...")
+    spec_parser = SpecificationParser(spec_path=str(spec_path))
+    print("Initialized specification parser!")
+
     operation_graph = OperationGraph(
-        spec_path="specs/original/oas/genome-nexus.yaml",
-        spec_name="genome-nexus",
+        spec_path=str(spec_path),
+        spec_name="mastadon_openapi",
+        spec_parser=spec_parser,
+        embedding_model=embedding_model,
     )
-    # operation_graph = OperationGraph(spec_path="specs/original/oas/ocvn.yaml", spec_name="ocvn")
     operation_graph.create_graph()
     for operation_id, operation_node in operation_graph.operation_nodes.items():
         print("=====================================")

@@ -3,7 +3,7 @@
 ### Introduction
 ***AutoRestTest*** is a complete testing software for automated API testing that combines the utility of graph
 theory, Large Language Models (LLMs), and multi-agent reinforcement learning (MARL) to parse the OpenAPI Specification
-and create enhanced comprehensive test cases.
+and create enhanced comprehensive test cases. AutoRestTest specifically supports **OpenAPI Specification 3.0**.
 
 Watch this [demonstration video](https://www.youtube.com/watch?v=VVus2W8rap8) of AutoRestTest to learn how it solves complex challenges in automated REST API testing, as well as its configuration, execution steps, and output.
 
@@ -95,8 +95,8 @@ If you intend to use your own OpenAPI Specification file as described in the Ins
 
 Only `.yaml` and `.json` files are supported (OpenAPI 3.0). Example: `aratrl-openapi/market2.yaml`.
 
-If your spec has recursive `$ref` chains, you can tune the resolver depth with:
-- `[spec].recursion_limit` (default: `50`)
+Specification parsing is handled by [Prance](https://github.com/jfinkhaeuser/prance). If your spec has recursive `$ref` chains or circular references, you can tune the resolver depth with:
+- `[spec].recursion_limit` (default: `5`) — limits how deep circular references are resolved; increase this value if your specification has longer reference chains.
 - `[spec].strict_validation` (default: `true`) — when `true`, the OpenAPI spec is strictly validated and parsing stops on errors; when `false`, invalid sections are skipped where possible so execution can continue.
 
 #### 2. Configuring Reinforcement Learning Parameters
