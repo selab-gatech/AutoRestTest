@@ -35,7 +35,7 @@ class BodyObjAgent(BaseAgent):
                     mime,
                     body_properties,
                 ) in operation_node.operation_properties.request_body.items():
-                    if body_properties.type == "object":
+                    if body_properties.type == "object" and body_properties.properties:
                         body_obj_combinations = get_combinations(
                             body_properties.properties.keys()
                         )
@@ -45,6 +45,10 @@ class BodyObjAgent(BaseAgent):
                         self.q_table[operation_id][mime]["None"] = 0
 
     def get_action(self, operation_id: str, mime: str):
+        if operation_id not in self.q_table:
+            raise ValueError(f"Operation '{operation_id}' not found in the Q-table for BodyObjAgent.")
+        if mime not in self.q_table.get(operation_id, {}):
+            raise ValueError(f"MIME type '{mime}' not found for operation '{operation_id}' in the Q-table for BodyObjAgent.")
         if random.random() < self.epsilon:
             return self.get_random_action(operation_id, mime)
         return self.get_best_action(operation_id, mime)

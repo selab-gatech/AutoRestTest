@@ -51,6 +51,10 @@ class ParameterAgent(BaseAgent):
             self.q_table[operation_id]["body"]["None"] = 0
 
     def get_action(self, operation_id: str) -> ParameterAction:
+        if operation_id not in self.q_table:
+            raise ValueError(f"Operation '{operation_id}' not found in the Q-table for ParameterAgent.")
+        if operation_id not in self.operation_graph.operation_nodes:
+            raise ValueError(f"Operation '{operation_id}' not found in the operation graph.")
         if random.random() < self.epsilon:
             return self.get_random_action(operation_id)
         return self.get_best_action(operation_id)

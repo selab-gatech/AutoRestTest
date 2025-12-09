@@ -105,6 +105,8 @@ class DependencyAgent(BaseAgent):
                             ][dest_bucket][dependent_parameter] = 0
 
     def get_action(self, operation_id, qlearning):
+        if operation_id not in self.q_table:
+            raise ValueError(f"Operation '{operation_id}' not found in the Q-table for DependencyAgent.")
         has_success = any(
             status_code // 100 == 2
             for status_codes in qlearning.operation_response_counter.values()

@@ -138,7 +138,7 @@ class OperationGraph:
         source_node.tentative_edges = heapq.nlargest(
             self.next_most_similar_count,
             [e for e in source_node.tentative_edges if e.similar_parameters],
-            key=lambda x: next(iter(x.similar_parameters.values())).similarity,
+            key=lambda x: max(sv.similarity for sv in next(iter(x.similar_parameters.values()))),
         )  # small n so efficient
 
     def update_operation_dependencies(

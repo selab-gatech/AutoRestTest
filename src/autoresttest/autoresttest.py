@@ -49,11 +49,6 @@ def parse_args():
         help="Specifies the number of specifications: 'one' or 'many'",
     )
     parser.add_argument(
-        "local_test",
-        type=lambda x: (str(x).lower() == "true"),
-        help="Specifies whether the test is local (true/false)",
-    )
-    parser.add_argument(
         "-s",
         "--spec_name",
         type=str,
@@ -178,7 +173,7 @@ def output_report(
         "Percentage of Successfully Processed Operations": str(
             round(
                 len(unique_processed_200s)
-                / len(q_learning.operation_agent.q_table)
+                / max(len(q_learning.operation_agent.q_table), 1)
                 * 100,
                 2,
             )
@@ -200,7 +195,6 @@ def parse_specification_location(spec_loc: str):
 class AutoRestTest:
     def __init__(self, spec_dir: Union[Path, str]):
         self.spec_dir = Path(spec_dir).expanduser()
-        self.local_test = True
         self.is_naive = False
         construct_db_dir()
         self.use_cached_graph = CONFIG.cache.use_cached_graph
@@ -215,7 +209,7 @@ class AutoRestTest:
         print(f"Parsing OpenAPI specification: {spec_path}...")
         spec_parser = SpecificationParser(spec_path=str(spec_path), spec_name=spec_name)
         print("Specification parsed successfully!")
-        api_url = get_api_url(spec_parser, self.local_test)
+        api_url = get_api_url(spec_parser)
         operation_graph = OperationGraph(
             spec_path=str(spec_path),
             spec_name=spec_name,

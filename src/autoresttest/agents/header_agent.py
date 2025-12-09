@@ -39,6 +39,8 @@ class HeaderAgent(BaseAgent):
             self.q_table[operation_id].append([None, 0])
 
     def get_action(self, operation_id: str) -> Optional[str]:
+        if operation_id not in self.q_table:
+            raise ValueError(f"Operation '{operation_id}' not found in the Q-table for HeaderAgent.")
         if random.random() < self.epsilon:
             return self.get_random_action(operation_id)
         return self.get_best_action(operation_id)

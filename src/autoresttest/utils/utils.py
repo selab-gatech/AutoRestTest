@@ -481,9 +481,5 @@ def construct_basic_token(token):
     return f"Basic {encoded_str}"
 
 
-def get_api_url(spec_parser: SpecificationParser, local_test: bool):
-    api_url = spec_parser.get_api_url()
-    if not local_test:
-        api_url = api_url.replace("localhost", os.getenv("EC2_ADDRESS"))
-        api_url = api_url.replace(":9", ":8")
-    return api_url
+def get_api_url(spec_parser: SpecificationParser):
+    return spec_parser.get_api_url()

@@ -1498,7 +1498,7 @@ class QLearning:
         print(f"Number of unique server errors: {unique_errors}")
         print(f"Number of successful operations: {len(unique_processed_200s)}")
         print(
-            f"Percentage of successful operations: {len(unique_processed_200s) / len(self.operation_graph.operation_nodes) * 100:.2f}%"
+            f"Percentage of successful operations: {len(unique_processed_200s) / max(len(self.operation_graph.operation_nodes), 1) * 100:.2f}%"
         )
         print(
             "Time remaining: ",

@@ -30,9 +30,13 @@ class OperationAgent(BaseAgent):
         return self.get_best_action()
 
     def get_best_action(self) -> str:
+        if not self.q_table:
+            raise ValueError("No operations were parsed from the specification for OperationAgent.")
         return max(self.q_table.items(), key=lambda x: x[1])[0]
 
     def get_random_action(self) -> str:
+        if not self.q_table:
+            raise ValueError("No operations were parsed from the specification for OperationAgent.")
         return random.choice(list(self.q_table.keys()))
 
     def update_q_table(self, operation_id: str, reward: float) -> None:
