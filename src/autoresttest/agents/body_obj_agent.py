@@ -106,6 +106,8 @@ class BodyObjAgent(BaseAgent):
         self.q_table[operation_id][mime][action] = new_q
 
     def get_Q_next(self, operation_id: str, mime: str) -> float:
+        if operation_id not in self.q_table or mime not in self.q_table.get(operation_id, {}):
+            return 0.0
         return (
             max(self.q_table[operation_id][mime].values())
             if self.q_table[operation_id][mime]
@@ -115,6 +117,8 @@ class BodyObjAgent(BaseAgent):
     def get_Q_curr(self, operation_id: str, mime: str, action) -> float:
         if action is None:
             action = "None"
+        if operation_id not in self.q_table or mime not in self.q_table.get(operation_id, {}):
+            return 0.0
         return (
             self.q_table[operation_id][mime].get(action, 0.0)
             if self.q_table[operation_id][mime]
@@ -126,6 +130,10 @@ class BodyObjAgent(BaseAgent):
     ) -> None:
         if action is None:
             action = "None"
+        if operation_id not in self.q_table or mime not in self.q_table.get(operation_id, {}):
+            return
+        if action not in self.q_table[operation_id][mime]:
+            return
         self.q_table[operation_id][mime][action] += self.alpha * td_error
 
     def number_of_zeros(self, operation_id: str) -> int:

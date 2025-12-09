@@ -593,7 +593,11 @@ class SmartValueGenerator:
         for mime_type, schema in self.request_body.items():
             request_body_prompt = self._form_retry_parameter_gen_prompt(
                 schema=schema,
-                failed_mappings=failed_request_data.request_body.get(mime_type),
+                failed_mappings=(
+                    failed_request_data.request_body.get(mime_type)
+                    if failed_request_data.request_body
+                    else None
+                ),
                 response=response,
                 is_request_body=True,
             )

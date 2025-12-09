@@ -40,6 +40,8 @@ class OperationAgent(BaseAgent):
         return random.choice(list(self.q_table.keys()))
 
     def update_q_table(self, operation_id: str, reward: float) -> None:
+        if operation_id not in self.q_table:
+            return
         current_q = self.q_table[operation_id]
         best_next_q = self.get_Q_next(operation_id)
         new_q = current_q + self.alpha * (reward + self.gamma * best_next_q - current_q)
@@ -52,6 +54,8 @@ class OperationAgent(BaseAgent):
         return self.q_table.get(operation_id, 0.0)
 
     def update_Q_item(self, operation_id: str, td_error: float) -> None:
+        if operation_id not in self.q_table:
+            return
         self.q_table[operation_id] = (
             self.q_table.get(operation_id, 0.0) + self.alpha * td_error
         )

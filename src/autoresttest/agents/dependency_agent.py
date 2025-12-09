@@ -360,11 +360,17 @@ class DependencyAgent(BaseAgent):
         return "EXPLORE", random_params, random_body
 
     def update_q_table(self, operation_id, dependent_params, dependent_body, reward):
+        if operation_id not in self.q_table:
+            return
         if dependent_params:
             for param, dependent in dependent_params.items():
                 current_q = 0
                 best_next_q = -np.inf
                 if not dependent["dependent_operation"]:
+                    continue
+                if param not in self.q_table[operation_id].get("params", {}):
+                    continue
+                if dependent["dependent_operation"] not in self.q_table[operation_id]["params"][param]:
                     continue
                 for location, dependent_params in self.q_table[operation_id]["params"][
                     param
@@ -390,6 +396,10 @@ class DependencyAgent(BaseAgent):
                 current_q = 0
                 best_next_q = -np.inf
                 if not dependent["dependent_operation"]:
+                    continue
+                if param not in self.q_table[operation_id].get("body", {}):
+                    continue
+                if dependent["dependent_operation"] not in self.q_table[operation_id]["body"][param]:
                     continue
                 for location, dependent_params in self.q_table[operation_id]["body"][
                     param
@@ -414,10 +424,17 @@ class DependencyAgent(BaseAgent):
         best_next_q_params = []
         best_next_q_body = []
 
+        if operation_id not in self.q_table:
+            return best_next_q_params, best_next_q_body
+
         if dependent_params:
             for param, dependent in dependent_params.items():
                 best_next_q = -np.inf
                 if not dependent["dependent_operation"]:
+                    continue
+                if param not in self.q_table[operation_id].get("params", {}):
+                    continue
+                if dependent["dependent_operation"] not in self.q_table[operation_id]["params"][param]:
                     continue
                 for location, dependent_params in self.q_table[operation_id]["params"][
                     param
@@ -430,6 +447,10 @@ class DependencyAgent(BaseAgent):
             for param, dependent in dependent_body.items():
                 best_next_q = -np.inf
                 if not dependent["dependent_operation"]:
+                    continue
+                if param not in self.q_table[operation_id].get("body", {}):
+                    continue
+                if dependent["dependent_operation"] not in self.q_table[operation_id]["body"][param]:
                     continue
                 for location, dependent_params in self.q_table[operation_id]["body"][
                     param
@@ -444,10 +465,17 @@ class DependencyAgent(BaseAgent):
         current_Q_params = []
         current_Q_body = []
 
+        if operation_id not in self.q_table:
+            return current_Q_params, current_Q_body
+
         if dependent_params:
             for param, dependent in dependent_params.items():
                 current_q = 0
                 if not dependent["dependent_operation"]:
+                    continue
+                if param not in self.q_table[operation_id].get("params", {}):
+                    continue
+                if dependent["dependent_operation"] not in self.q_table[operation_id]["params"][param]:
                     continue
                 for location, dependent_params in self.q_table[operation_id]["params"][
                     param
@@ -462,6 +490,10 @@ class DependencyAgent(BaseAgent):
                 current_q = 0
                 if not dependent["dependent_operation"]:
                     continue
+                if param not in self.q_table[operation_id].get("body", {}):
+                    continue
+                if dependent["dependent_operation"] not in self.q_table[operation_id]["body"][param]:
+                    continue
                 for location, dependent_params in self.q_table[operation_id]["body"][
                     param
                 ][dependent["dependent_operation"]].items():
@@ -473,9 +505,15 @@ class DependencyAgent(BaseAgent):
         return current_Q_params, current_Q_body
 
     def update_Q_item(self, operation_id, dependent_params, dependent_body, td_error):
+        if operation_id not in self.q_table:
+            return
         if dependent_params:
             for param, dependent in dependent_params.items():
                 if not dependent["dependent_operation"]:
+                    continue
+                if param not in self.q_table[operation_id].get("params", {}):
+                    continue
+                if dependent["dependent_operation"] not in self.q_table[operation_id]["params"][param]:
                     continue
                 for location, dependent_params in self.q_table[operation_id]["params"][
                     param
@@ -489,6 +527,10 @@ class DependencyAgent(BaseAgent):
         if dependent_body:
             for param, dependent in dependent_body.items():
                 if not dependent["dependent_operation"]:
+                    continue
+                if param not in self.q_table[operation_id].get("body", {}):
+                    continue
+                if dependent["dependent_operation"] not in self.q_table[operation_id]["body"][param]:
                     continue
                 for location, dependent_params in self.q_table[operation_id]["body"][
                     param
@@ -678,6 +720,8 @@ class DependencyAgent(BaseAgent):
         return "RANDOM", parameter_dependency_assignment, body_dependency_assignment
 
     def number_of_zeros(self, operation_id):
+        if operation_id not in self.q_table:
+            return 0
         zeros = 0
         for location, param_values in self.q_table[operation_id].items():
             for param, dependent_values in param_values.items():

@@ -142,6 +142,8 @@ class OpenAILanguageModel:
                     output_tokens * OUTPUT_COST_PER_TOKEN[self.engine]
                 )
 
+        if not response.choices:
+            return ""
         result = response.choices[0].message.content.strip()
 
         # Thread-safe cache write

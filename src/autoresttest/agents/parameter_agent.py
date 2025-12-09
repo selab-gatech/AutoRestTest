@@ -114,6 +114,8 @@ class ParameterAgent(BaseAgent):
         return ParameterAction(req_params=best_params, mime_type=best_body)
 
     def get_Q_next(self, operation_id: str) -> Tuple[float, float]:
+        if operation_id not in self.q_table:
+            return 0.0, 0.0
         best_next_q_params = (
             max(self.q_table[operation_id]["params"].values())
             if self.q_table[operation_id]["params"]
@@ -129,6 +131,8 @@ class ParameterAgent(BaseAgent):
     def get_Q_curr(
         self, operation_id: str, action: ParameterAction
     ) -> Tuple[float, float]:
+        if operation_id not in self.q_table:
+            return 0.0, 0.0
         req_params_key = action.req_params if action.req_params is not None else "None"
         mime_type_key = action.mime_type if action.mime_type is not None else "None"
         current_q_params = (
@@ -146,13 +150,15 @@ class ParameterAgent(BaseAgent):
     def update_Q_item(
         self, operation_id: str, action: ParameterAction, td_error: float
     ) -> None:
+        if operation_id not in self.q_table:
+            return
         req_params_key = action.req_params if action.req_params is not None else "None"
         mime_type_key = action.mime_type if action.mime_type is not None else "None"
-        if self.q_table[operation_id]["params"]:
+        if self.q_table[operation_id]["params"] and req_params_key in self.q_table[operation_id]["params"]:
             self.q_table[operation_id]["params"][req_params_key] += (
                 self.alpha * td_error
             )
-        if self.q_table[operation_id]["body"]:
+        if self.q_table[operation_id]["body"] and mime_type_key in self.q_table[operation_id]["body"]:
             self.q_table[operation_id]["body"][mime_type_key] += (
                 self.alpha * td_error
             )
@@ -160,6 +166,8 @@ class ParameterAgent(BaseAgent):
     def update_q_table(
         self, operation_id: str, action: ParameterAction, reward: float
     ) -> None:
+        if operation_id not in self.q_table:
+            return
         req_params_key = action.req_params if action.req_params is not None else "None"
         mime_type_key = action.mime_type if action.mime_type is not None else "None"
         current_q_params = (
@@ -188,12 +196,14 @@ class ParameterAgent(BaseAgent):
         new_q_body = current_q_body + self.alpha * (
             reward + self.gamma * best_next_q_body - current_q_body
         )
-        if self.q_table[operation_id]["params"]:
+        if self.q_table[operation_id]["params"] and req_params_key in self.q_table[operation_id]["params"]:
             self.q_table[operation_id]["params"][req_params_key] = new_q_params
-        if self.q_table[operation_id]["body"]:
+        if self.q_table[operation_id]["body"] and mime_type_key in self.q_table[operation_id]["body"]:
             self.q_table[operation_id]["body"][mime_type_key] = new_q_body
 
     def number_of_zeros(self, operation_id: str) -> int:
+        if operation_id not in self.q_table:
+            return 0
         zeros = 0
         for value in self.q_table[operation_id]["params"].values():
             if value == 0:

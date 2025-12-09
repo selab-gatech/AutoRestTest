@@ -381,7 +381,8 @@ class QLearning:
 
         if random.random() < mutate_media and body:
             for media in body.keys():
-                avail_medias.remove(media)
+                if media in avail_medias:
+                    avail_medias.remove(media)
             if avail_medias:
                 new_body = {random.choice(avail_medias): body.popitem()[1]}
                 body = new_body

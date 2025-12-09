@@ -92,7 +92,7 @@ def get_combinations(arr: Iterable[Any]) -> List[Tuple[Any, ...]]:
     max_size = CONFIG.max_combinations
     # Empirically determined - 16 is max number before size grows too large; configurable for tuning storage size.
 
-    if len(arr) >= max_size:
+    if len(arr) > max_size:
         for i in range(0, len(arr) - max_size):
             subset = arr[i: i + max_size]
             combinations.extend(
@@ -133,7 +133,8 @@ def get_required_body_params(operation_body: SchemaProperties) -> Optional[Set]:
 
     if operation_body.properties and operation_body.type == "object":
         for key, value in operation_body.properties.items():
-            if value.required:
+            # Check if key is in the PARENT's required list (not child's required field)
+            if operation_body.required and key in operation_body.required:
                 required_body.add(key)
 
     elif operation_body.items and operation_body.type == "array":

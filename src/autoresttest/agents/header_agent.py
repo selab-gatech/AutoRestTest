@@ -56,6 +56,8 @@ class HeaderAgent(BaseAgent):
     def update_q_table(
         self, operation_id: str, action: Optional[str], reward: float
     ) -> None:
+        if operation_id not in self.q_table:
+            return
         current_q = 0.0
         best_next_q = -np.inf
         for mapping in self.q_table[operation_id]:
@@ -68,12 +70,16 @@ class HeaderAgent(BaseAgent):
                 mapping[1] = new_q
 
     def get_Q_next(self, operation_id: str) -> float:
+        if operation_id not in self.q_table:
+            return 0.0
         best_next_q = -np.inf
         for mapping in self.q_table[operation_id]:
             best_next_q = max(best_next_q, mapping[1])
         return best_next_q
 
     def get_Q_curr(self, operation_id: str, token: Optional[str]) -> float:
+        if operation_id not in self.q_table:
+            return 0.0
         current_q = 0.0
         for mapping in self.q_table[operation_id]:
             if mapping[0] == token:
@@ -83,6 +89,8 @@ class HeaderAgent(BaseAgent):
     def update_Q_item(
         self, operation_id: str, token: Optional[str], td_error: float
     ) -> None:
+        if operation_id not in self.q_table:
+            return
         for mapping in self.q_table[operation_id]:
             if mapping[0] == token:
                 mapping[1] += self.alpha * td_error

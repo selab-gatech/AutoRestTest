@@ -52,21 +52,35 @@ class DataSourceAgent(BaseAgent):
         return random.choice(list(self.q_table[operation_id].keys()))
 
     def update_q_table(self, operation_id: str, action: str, reward: float) -> None:
+        if operation_id not in self.q_table:
+            return
+        if action not in self.q_table[operation_id]:
+            return
         current_q = self.q_table[operation_id][action]
         best_next_q = self.get_Q_next(operation_id)
         new_q = current_q + self.alpha * (reward + self.gamma * best_next_q - current_q)
         self.q_table[operation_id][action] = new_q
 
     def get_Q_next(self, operation_id: str) -> float:
+        if operation_id not in self.q_table or not self.q_table[operation_id]:
+            return 0.0
         return max(self.q_table[operation_id].values())
 
     def get_Q_curr(self, operation_id: str, action: str) -> float:
-        return self.q_table[operation_id][action]
+        if operation_id not in self.q_table:
+            return 0.0
+        return self.q_table[operation_id].get(action, 0.0)
 
     def update_Q_item(self, operation_id: str, action: str, td_error: float) -> None:
+        if operation_id not in self.q_table:
+            return
+        if action not in self.q_table[operation_id]:
+            return
         self.q_table[operation_id][action] += self.alpha * td_error
 
     def number_of_zeros(self, operation_id: str) -> int:
+        if operation_id not in self.q_table:
+            return 0
         zeros = 0
         for value in self.q_table[operation_id].values():
             if value == 0:
