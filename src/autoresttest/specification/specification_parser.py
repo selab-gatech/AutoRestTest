@@ -36,12 +36,24 @@ CONFIG = get_config()
 
 def default_recursive_limit_handler(limit, parsed_url, recursions=()):
     """
-    Prance parser uses this as fallback when exceeding recursive depth to avoid recursive resolution errors.
+    Prance invokes this handler when a circular/self-reference exceeds the recursion_limit.
+
+    Parameters:
+        limit: The configured recursion_limit value.
+        parsed_url: The parsed URL of the reference that triggered the limit (contains the $ref path).
+        recursions: Tuple of reference URLs that form the circular chain.
+
+    Returns a placeholder schema to substitute for the circular reference.
     """
+    # Extract the reference name from the parsed URL fragment (e.g., "#/components/schemas/Node" -> "Node")
+    ref_name = "self-reference"
+    if parsed_url and hasattr(parsed_url, "fragment") and parsed_url.fragment:
+        ref_name = parsed_url.fragment.split("/")[-1]
+
     return {
         "type": "object",
-        "title": "Recursion Limit Exceeded",
-        "description": "recursive_limit_exceeded",
+        "title": f"Circular Reference: {ref_name}",
+        "description": f"circular_self_reference:{ref_name}",
         "properties": {}
     }
 
@@ -406,7 +418,7 @@ class SpecificationParser:
 if __name__ == "__main__":
     # testing
     # spec_path = os.path.normpath("../../aratrl-openapi/project.yaml")
-    spec_path = os.path.normpath("../../../kafka-rest.yaml")
+    spec_path = os.path.normpath("kafka-rest.yaml")
     spec_parser = SpecificationParser(spec_name="project", spec_path=spec_path)
     spec_parser.parse_specification()
     print(spec_parser.parse_specification())
