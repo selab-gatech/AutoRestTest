@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeAlias, Union, TYPE_CHECKING
 
 import requests
 
@@ -33,7 +33,7 @@ def to_dict_helper(item: Any) -> Any:
 
 
 # Key used for identifying parameters uniquely by (name, in)
-ParameterKey = Tuple[str, Optional[str]]
+ParameterKey: TypeAlias = tuple[str, str | None]
 
 
 @dataclass

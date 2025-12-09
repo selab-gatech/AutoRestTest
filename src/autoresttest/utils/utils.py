@@ -11,7 +11,6 @@ from gensim.downloader import load
 import numpy as np
 
 from dotenv import load_dotenv
-import os
 
 from autoresttest.config import get_config
 from autoresttest.specification import SpecificationParser
@@ -27,8 +26,8 @@ Q_TABLE_CACHE_DIR = CACHE_ROOT / "q_tables"
 GRAPH_CACHE_DIR = CACHE_ROOT / "graphs"
 
 
-def remove_nulls(item):
-    if hasattr(item, 'to_dict'):
+def remove_nulls(item: Any) -> Any:
+    if hasattr(item, "to_dict"):
         return item.to_dict()
     elif isinstance(item, dict):
         cleaned = {k: remove_nulls(v) for k, v in item.items() if v}
@@ -40,7 +39,7 @@ def remove_nulls(item):
         return item
 
 
-def make_param_key(name: Optional[str], in_value: Optional[str]) -> ParameterKey:
+def make_param_key(name: str | None, in_value: str | None) -> ParameterKey:
     """
     Build a canonical parameter key from name and in_value.
     """
@@ -69,14 +68,19 @@ def label_to_param_key(label: str) -> ParameterKey:
 
 
 def get_param_combinations(
-    operation_parameters: Dict[ParameterKey, ParameterProperties]
+    operation_parameters: Dict[ParameterKey, ParameterProperties],
 ) -> List[Tuple[ParameterKey, ...]]:
     param_list = get_params(operation_parameters)
     return get_combinations(param_list)
 
 
-def get_body_combinations(operation_body: Dict[str, SchemaProperties]) -> Dict[str, List[Tuple[str]]]:
-    return {k: get_combinations(v) for k, v in get_request_body_params(operation_body).items()}
+def get_body_combinations(
+    operation_body: Dict[str, SchemaProperties],
+) -> Dict[str, List[Tuple[str]]]:
+    return {
+        k: get_combinations(v)
+        for k, v in get_request_body_params(operation_body).items()
+    }
 
 
 def get_body_object_combinations(body_schema: SchemaProperties) -> List[Tuple[str]]:
@@ -94,7 +98,7 @@ def get_combinations(arr: Iterable[Any]) -> List[Tuple[Any, ...]]:
 
     if len(arr) > max_size:
         for i in range(0, len(arr) - max_size):
-            subset = arr[i: i + max_size]
+            subset = arr[i : i + max_size]
             combinations.extend(
                 itertools.chain.from_iterable(
                     itertools.combinations(subset, j) for j in range(1, max_size + 1)
@@ -102,7 +106,7 @@ def get_combinations(arr: Iterable[Any]) -> List[Tuple[Any, ...]]:
             )
         for size in range(max_size + 1, len(arr) + 1):
             for i in range(0, len(arr) - size + 1):
-                subset = arr[i: i + size]
+                subset = arr[i : i + size]
                 combinations.extend([tuple(subset)])
     else:
         combinations.extend(
@@ -114,11 +118,15 @@ def get_combinations(arr: Iterable[Any]) -> List[Tuple[Any, ...]]:
     return combinations
 
 
-def get_params(operation_parameters: Dict[ParameterKey, ParameterProperties]) -> List[ParameterKey]:
+def get_params(
+    operation_parameters: Dict[ParameterKey, ParameterProperties],
+) -> List[ParameterKey]:
     return list(operation_parameters.keys()) if operation_parameters is not None else []
 
 
-def get_required_params(operation_parameters: Dict[ParameterKey, ParameterProperties]) -> Set[ParameterKey]:
+def get_required_params(
+    operation_parameters: Dict[ParameterKey, ParameterProperties],
+) -> Set[ParameterKey]:
     required_parameters = set()
     for parameter, parameter_properties in operation_parameters.items():
         if parameter_properties.required:
@@ -166,7 +174,7 @@ def get_body_params(body: SchemaProperties) -> List[str]:
     return []
 
 
-def get_response_params(response: SchemaProperties, response_params: List):
+def get_response_params(response: SchemaProperties, response_params: list[str]) -> None:
     if response is None:
         return
 
@@ -180,7 +188,7 @@ def get_response_params(response: SchemaProperties, response_params: List):
         get_response_params(response.items, response_params)
 
 
-def get_response_param_mappings(response: SchemaProperties, response_mappings):
+def get_response_param_mappings(response: SchemaProperties, response_mappings: dict[str, SchemaProperties]) -> None:
     if response is None:
         return
 
@@ -193,8 +201,14 @@ def get_response_param_mappings(response: SchemaProperties, response_mappings):
         get_response_param_mappings(response.items, response_mappings)
 
 
-def get_request_body_params(operation_body: Dict[str, SchemaProperties]) -> Dict[str, List[str]]:
-    return {k: get_body_params(v) for k, v in operation_body.items()} if operation_body is not None else {}
+def get_request_body_params(
+    operation_body: Dict[str, SchemaProperties],
+) -> Dict[str, List[str]]:
+    return (
+        {k: get_body_params(v) for k, v in operation_body.items()}
+        if operation_body is not None
+        else {}
+    )
 
 
 def split_parameter_values(
@@ -274,8 +288,9 @@ def attempt_fix_json(invalid_json_str: str):
 
     language_model = OpenAILanguageModel(temperature=CONFIG.strict_temperature)
     json_prompt = compose_json_fix_prompt(invalid_json_str)
-    fixed_json = language_model.query(user_message=json_prompt, system_message=FIX_JSON_SYSTEM_MESSAGE,
-                                      json_mode=True)
+    fixed_json = language_model.query(
+        user_message=json_prompt, system_message=FIX_JSON_SYSTEM_MESSAGE, json_mode=True
+    )
     try:
         fixed_json = json.loads(fixed_json)
         return fixed_json
@@ -312,10 +327,14 @@ def _dispatch_request_inner(
     Internal helper that performs a single HTTP request.
     """
     if not body:
-        return select_method(full_url, params=params, headers=headers or None, cookies=cookies)
+        return select_method(
+            full_url, params=params, headers=headers or None, cookies=cookies
+        )
 
     if not isinstance(body, dict):
-        return select_method(full_url, params=params, data=body, headers=headers or None, cookies=cookies)
+        return select_method(
+            full_url, params=params, data=body, headers=headers or None, cookies=cookies
+        )
 
     # Use the first provided MIME type; bodies are expected to be singular.
     mime_type, payload = next(iter(body.items()))
@@ -324,31 +343,65 @@ def _dispatch_request_inner(
     if _is_json_mime(mime_type):
         headers.setdefault("Content-Type", mime_type)
         if payload is not None:
-            return select_method(full_url, params=params, json=payload, headers=headers or None, cookies=cookies)
-        return select_method(full_url, params=params, headers=headers or None, cookies=cookies)
+            return select_method(
+                full_url,
+                params=params,
+                json=payload,
+                headers=headers or None,
+                cookies=cookies,
+            )
+        return select_method(
+            full_url, params=params, headers=headers or None, cookies=cookies
+        )
 
     if "x-www-form-urlencoded" in mime_lower:
         headers.setdefault("Content-Type", mime_type)
         body_data = get_object_shallow_mappings(payload)
         if not body_data or not isinstance(body_data, dict):
             body_data = {"data": payload}
-        return select_method(full_url, params=params, data=body_data, headers=headers or None, cookies=cookies)
+        return select_method(
+            full_url,
+            params=params,
+            data=body_data,
+            headers=headers or None,
+            cookies=cookies,
+        )
 
     if mime_lower.startswith("multipart/"):
         # Let requests set the multipart boundary automatically.
-        return select_method(full_url, params=params, files=payload, headers=headers or None, cookies=cookies)
+        return select_method(
+            full_url,
+            params=params,
+            files=payload,
+            headers=headers or None,
+            cookies=cookies,
+        )
 
     if mime_lower.startswith("text/"):
         headers.setdefault("Content-Type", mime_type)
         if not isinstance(payload, str):
             payload = str(payload)
-        return select_method(full_url, params=params, data=payload, headers=headers or None, cookies=cookies)
+        return select_method(
+            full_url,
+            params=params,
+            data=payload,
+            headers=headers or None,
+            cookies=cookies,
+        )
 
     # Fallback: send whatever the MIME type is with a best-effort serializer.
     headers.setdefault("Content-Type", mime_type)
     if isinstance(payload, (dict, list)):
-        return select_method(full_url, params=params, json=payload, headers=headers or None, cookies=cookies)
-    return select_method(full_url, params=params, data=payload, headers=headers or None, cookies=cookies)
+        return select_method(
+            full_url,
+            params=params,
+            json=payload,
+            headers=headers or None,
+            cookies=cookies,
+        )
+    return select_method(
+        full_url, params=params, data=payload, headers=headers or None, cookies=cookies
+    )
 
 
 def dispatch_request(
@@ -381,11 +434,13 @@ def dispatch_request(
         if response.status_code == 429:
             if attempt < max_retries:
                 # Exponential backoff: 1s, 2s, 4s + random jitter (0-1s)
-                delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                delay = base_delay * (2**attempt) + random.uniform(0, 1)
                 retry_after = response.headers.get("Retry-After")
                 if retry_after and retry_after.isdigit():
                     delay = max(delay, int(retry_after))
-                print(f"Rate limited (429). Retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                print(
+                    f"Rate limited (429). Retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})"
+                )
                 time.sleep(delay)
                 continue
 
@@ -413,14 +468,14 @@ INPUT_COST_PER_TOKEN = {
     "gpt-4o": 2.5e-6,
     "gpt-4o-mini": 0.15e-6,
     "o1": 15e-6,
-    "o1-mini": 3e-6
+    "o1-mini": 3e-6,
 }
 
 OUTPUT_COST_PER_TOKEN = {
     "gpt-4o": 10e-6,
     "gpt-4o-mini": 0.6e-6,
     "o1": 60e-6,
-    "o1-mini": 12e-6
+    "o1-mini": 12e-6,
 }
 
 

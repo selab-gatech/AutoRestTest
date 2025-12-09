@@ -1,5 +1,5 @@
 import random
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from scipy.spatial.distance import cosine
@@ -7,6 +7,7 @@ from scipy.spatial.distance import cosine
 from .base_agent import BaseAgent
 
 from autoresttest.graph import OperationGraph
+from autoresttest.models import ParameterKey
 from autoresttest.utils import get_body_params
 
 if TYPE_CHECKING:
@@ -14,10 +15,18 @@ if TYPE_CHECKING:
 
 
 class DependencyAgent(BaseAgent):
+    """
+    Agent that learns inter-operation parameter dependencies.
+
+    Q-table structure: operation_id -> {"params": {...}, "body": {...}}
+    - "params" dict uses ParameterKey tuples as keys (for operation parameters)
+    - "body" dict uses str keys (for request body property names)
+    ParameterKey | str is intentional to support both key types in the same structure.
+    """
     def __init__(
-        self, operation_graph: OperationGraph, alpha=0.1, gamma=0.9, epsilon=0.1
-    ):
-        self.q_table = {}
+        self, operation_graph: OperationGraph, alpha: float = 0.1, gamma: float = 0.9, epsilon: float = 0.1
+    ) -> None:
+        self.q_table: dict[str, dict[str, dict[ParameterKey | str, dict[str, dict[str, dict[str, float]]]]]] = {}
         self.operation_graph = operation_graph
         self.alpha = alpha
         self.gamma = gamma
@@ -37,10 +46,10 @@ class DependencyAgent(BaseAgent):
         return "params"
 
     @staticmethod
-    def _param_label(param_key):
+    def _param_label(param_key: ParameterKey | str) -> str:
         return param_key[0] if isinstance(param_key, tuple) else param_key
 
-    def initialize_q_table(self):
+    def initialize_q_table(self) -> None:
         # NOTE: Could flip dependent operation id and curr parameter name around to group by operation if need-be
         for (
             operation_id,
@@ -104,7 +113,9 @@ class DependencyAgent(BaseAgent):
                                 destination
                             ][dest_bucket][dependent_parameter] = 0
 
-    def get_action(self, operation_id, qlearning):
+    def get_action(
+        self, operation_id: str, qlearning: "QLearning"
+    ) -> tuple[str, dict[ParameterKey | str, Any], dict[str, Any]]:
         if operation_id not in self.q_table:
             raise ValueError(f"Operation '{operation_id}' not found in the Q-table for DependencyAgent.")
         has_success = any(
@@ -122,7 +133,9 @@ class DependencyAgent(BaseAgent):
 
         return self.get_best_action(operation_id, qlearning)
 
-    def get_best_action(self, operation_id, qlearning):
+    def get_best_action(
+        self, operation_id: str, qlearning: "QLearning"
+    ) -> tuple[str, dict[ParameterKey | str, Any], dict[str, Any]]:
         successful_responses = qlearning.successful_responses
         successful_params = qlearning.successful_parameters
         successful_body = qlearning.successful_bodies
@@ -233,8 +246,9 @@ class DependencyAgent(BaseAgent):
 
         return "BEST", best_params, best_body
 
-    def get_random_action(self, operation_id, qlearning):
-
+    def get_random_action(
+        self, operation_id: str, qlearning: "QLearning"
+    ) -> tuple[str, dict[ParameterKey | str, Any], dict[str, Any]]:
         successful_responses = qlearning.successful_responses
         successful_params = qlearning.successful_parameters
         successful_body = qlearning.successful_bodies
@@ -359,7 +373,13 @@ class DependencyAgent(BaseAgent):
 
         return "EXPLORE", random_params, random_body
 
-    def update_q_table(self, operation_id, dependent_params, dependent_body, reward):
+    def update_q_table(
+        self,
+        operation_id: str,
+        dependent_params: dict[ParameterKey | str, dict[str, Any]] | None,
+        dependent_body: dict[str, dict[str, Any]] | None,
+        reward: float,
+    ) -> None:
         if operation_id not in self.q_table:
             return
         if dependent_params:
@@ -420,9 +440,14 @@ class DependencyAgent(BaseAgent):
                                 dependent["dependent_operation"]
                             ][location][dependent_param] = new_q
 
-    def get_Q_next(self, operation_id, dependent_params, dependent_body):
-        best_next_q_params = []
-        best_next_q_body = []
+    def get_Q_next(
+        self,
+        operation_id: str,
+        dependent_params: dict[ParameterKey | str, dict[str, Any]] | None,
+        dependent_body: dict[str, dict[str, Any]] | None,
+    ) -> tuple[list[float], list[float]]:
+        best_next_q_params: list[float] = []
+        best_next_q_body: list[float] = []
 
         if operation_id not in self.q_table:
             return best_next_q_params, best_next_q_body
@@ -461,9 +486,14 @@ class DependencyAgent(BaseAgent):
 
         return best_next_q_params, best_next_q_body
 
-    def get_Q_curr(self, operation_id, dependent_params, dependent_body):
-        current_Q_params = []
-        current_Q_body = []
+    def get_Q_curr(
+        self,
+        operation_id: str,
+        dependent_params: dict[ParameterKey | str, dict[str, Any]] | None,
+        dependent_body: dict[str, dict[str, Any]] | None,
+    ) -> tuple[list[float], list[float]]:
+        current_Q_params: list[float] = []
+        current_Q_body: list[float] = []
 
         if operation_id not in self.q_table:
             return current_Q_params, current_Q_body
@@ -504,7 +534,13 @@ class DependencyAgent(BaseAgent):
 
         return current_Q_params, current_Q_body
 
-    def update_Q_item(self, operation_id, dependent_params, dependent_body, td_error):
+    def update_Q_item(
+        self,
+        operation_id: str,
+        dependent_params: dict[ParameterKey | str, dict[str, Any]] | None,
+        dependent_body: dict[str, dict[str, Any]] | None,
+        td_error: float,
+    ) -> None:
         if operation_id not in self.q_table:
             return
         if dependent_params:
@@ -541,7 +577,7 @@ class DependencyAgent(BaseAgent):
                                 dependent["dependent_operation"]
                             ][location][dependent_param] += (self.alpha * td_error)
 
-    def add_undocumented_responses(self, new_operation_response_id, new_property):
+    def add_undocumented_responses(self, new_operation_response_id: str, new_property: str) -> bool:
         updated_tables = False
         dependency_comparator = self.operation_graph.dependency_comparator
         embedding_model = self.operation_graph.embedding_model
@@ -586,13 +622,13 @@ class DependencyAgent(BaseAgent):
 
     def add_new_dependency(
         self,
-        operation_id,
-        param_location,
-        operation_param,
-        dependent_operation_id,
-        dependent_location,
-        dependent_param,
-    ):
+        operation_id: str,
+        param_location: str,
+        operation_param: ParameterKey | str,
+        dependent_operation_id: str,
+        dependent_location: str,
+        dependent_param: str,
+    ) -> None:
         if operation_param not in self.q_table[operation_id][param_location]:
             self.q_table[operation_id][param_location][operation_param] = {}
         if (
@@ -636,8 +672,8 @@ class DependencyAgent(BaseAgent):
 
     # Get a random value from the successful operations to test dependencies
     def assign_random_dependency_from_successful(
-        self, operation_id, qlearning: "QLearning"
-    ):
+        self, operation_id: str, qlearning: "QLearning"
+    ) -> tuple[str, dict[ParameterKey | str, Any], dict[str, Any]]:
         possible_options = []
 
         for (
@@ -719,7 +755,7 @@ class DependencyAgent(BaseAgent):
 
         return "RANDOM", parameter_dependency_assignment, body_dependency_assignment
 
-    def number_of_zeros(self, operation_id):
+    def number_of_zeros(self, operation_id: str) -> int:
         if operation_id not in self.q_table:
             return 0
         zeros = 0

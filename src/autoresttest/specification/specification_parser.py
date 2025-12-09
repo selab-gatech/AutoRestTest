@@ -3,7 +3,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set
 
 from prance import ResolvingParser, ValidationError as PranceValidationError
 from openapi_spec_validator.validation.exceptions import (
@@ -34,7 +34,7 @@ def json_spec_output(output_directory: Path, file_name: str, spec: Dict):
 CONFIG = get_config()
 
 
-def default_recursive_limit_handler(limit, parsed_url, recursions=()):
+def default_recursive_limit_handler(limit: int, parsed_url: Any, recursions: tuple[str, ...] = ()) -> dict[str, Any]:
     """
     Prance invokes this handler when a circular/self-reference exceeds the recursion_limit.
 
@@ -54,7 +54,7 @@ def default_recursive_limit_handler(limit, parsed_url, recursions=()):
         "type": "object",
         "title": f"Circular Reference: {ref_name}",
         "description": f"circular_self_reference:{ref_name}",
-        "properties": {}
+        "properties": {},
     }
 
 
@@ -65,10 +65,15 @@ class LenientResolvingParser(ResolvingParser):
     2. BaseParser._validate(self) -> openapi-spec-validator
     Override _validate to provide error on incorrect schemas instead of crashing
     """
+
     def _validate(self):
         try:
             super()._validate()
-        except (PranceValidationError, OASValidationError, OpenAPIValidationError) as exc:
+        except (
+            PranceValidationError,
+            OASValidationError,
+            OpenAPIValidationError,
+        ) as exc:
             logging.warning(
                 "OpenAPI validation failed for %s; continuing with unvalidated "
                 "specs. Error: %s",
@@ -90,12 +95,18 @@ class SpecificationParser:
             raise ValueError("No specification path provided.")
 
         self.resolving_parser = self._build_resolving_parser(spec_path)
-        self.directory_path = "specs/aratrl-openapi/" # DEPRECATED - NOT USED IN EXECUTION
+        if self.resolving_parser.specification is None:
+            raise ValueError("An error occurred during Prance specification parsing.")
+
+        self.directory_path = (
+            "specs/aratrl-openapi/"  # DEPRECATED - NOT USED IN EXECUTION
+        )
         self.all_specs = {}
 
-
     def _build_resolving_parser(self, spec_path):
-        parser_cls = ResolvingParser if CONFIG.strict_validation else LenientResolvingParser
+        parser_cls = (
+            ResolvingParser if CONFIG.strict_validation else LenientResolvingParser
+        )
         return parser_cls(
             spec_path,
             backend="openapi-spec-validator",  # AutoRestTest supports OAS 3.x
@@ -120,7 +131,7 @@ class SpecificationParser:
         return self.resolving_parser.specification.get("info", {}).get("title")
 
     def process_parameter_object_properties(
-            self, properties: Dict
+        self, properties: Dict
     ) -> Dict[str, SchemaProperties]:
         """
         Process the properties of a parameter of type object to return a dictionary of all the properties and their
@@ -136,7 +147,7 @@ class SpecificationParser:
         return object_properties
 
     def process_parameter_schema(
-            self, schema: Dict, description: str = None
+        self, schema: Dict, description: str = None
     ) -> SchemaProperties:
         """
         Process the schema of a parameter to return a ValueProperties object
@@ -197,7 +208,9 @@ class SpecificationParser:
             )
         return parameter_properties
 
-    def process_parameters(self, parameter_list) -> Dict[ParameterKey, ParameterProperties]:
+    def process_parameters(
+        self, parameter_list
+    ) -> Dict[ParameterKey, ParameterProperties]:
         """
         Process the parameters list to return a Dictionary with all its properties and values.
         """
@@ -255,12 +268,12 @@ class SpecificationParser:
         return response_properties
 
     def process_operation_details(
-            self,
-            http_method: str,
-            endpoint_path: str,
-            operation_details: Dict,
-            operation_id: str,
-            merged_parameters: List[Dict],
+        self,
+        http_method: str,
+        endpoint_path: str,
+        operation_details: Dict,
+        operation_id: str,
+        merged_parameters: List[Dict],
     ) -> OperationProperties:
         """
         Process the parameters and request body details within a given operation to return as OperationProperties object.
@@ -299,11 +312,11 @@ class SpecificationParser:
         return normalized or "root"
 
     def _resolve_operation_id(
-            self,
-            http_method: str,
-            endpoint_path: str,
-            operation_details: Dict,
-            seen_ids: Set[str],
+        self,
+        http_method: str,
+        endpoint_path: str,
+        operation_details: Dict,
+        seen_ids: Set[str],
     ) -> str:
         """
         Use provided operationId when available; otherwise construct a unique, deterministic fallback.
@@ -334,7 +347,7 @@ class SpecificationParser:
         return candidate
 
     def _merge_parameters(
-            self, path_parameters: List[Dict], operation_parameters: List[Dict]
+        self, path_parameters: List[Dict], operation_parameters: List[Dict]
     ) -> List[Dict]:
         """
         Merge path-level and operation-level parameters, letting operation-level definitions override
@@ -380,7 +393,7 @@ class SpecificationParser:
                     operation_collection[operation_id] = operation_properties
         return operation_collection
 
-    def parse_all_specifications(self) -> dict:
+    def parse_all_specifications(self) -> dict[str, dict[str, OperationProperties]]:
         """
         Parse all the specification files in the directory to return a dictionary of all the operations and their properties.
         """

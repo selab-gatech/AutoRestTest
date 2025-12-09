@@ -44,7 +44,7 @@ class BodyObjAgent(BaseAgent):
                         }
                         self.q_table[operation_id][mime]["None"] = 0
 
-    def get_action(self, operation_id: str, mime: str):
+    def get_action(self, operation_id: str, mime: str) -> tuple[str, ...] | str | None:
         if operation_id not in self.q_table:
             raise ValueError(f"Operation '{operation_id}' not found in the Q-table for BodyObjAgent.")
         if mime not in self.q_table.get(operation_id, {}):
@@ -53,7 +53,7 @@ class BodyObjAgent(BaseAgent):
             return self.get_random_action(operation_id, mime)
         return self.get_best_action(operation_id, mime)
 
-    def get_best_action(self, operation_id: str, mime: str):
+    def get_best_action(self, operation_id: str, mime: str) -> tuple[str, ...] | str | None:
         required_obj_params = get_required_body_params(
             self.operation_graph.operation_nodes[
                 operation_id
@@ -77,7 +77,7 @@ class BodyObjAgent(BaseAgent):
             best_action = None
         return best_action
 
-    def get_random_action(self, operation_id: str, mime: str):
+    def get_random_action(self, operation_id: str, mime: str) -> tuple[str, ...] | str | None:
         action = (
             random.choice(list(self.q_table[operation_id][mime].keys()))
             if self.q_table[operation_id][mime]
@@ -88,7 +88,7 @@ class BodyObjAgent(BaseAgent):
         return action
 
     def update_q_table(
-        self, operation_id: str, mime: str, action, reward: float
+        self, operation_id: str, mime: str, action: tuple[str, ...] | str | None, reward: float
     ) -> None:
         if action is None:
             action = "None"
@@ -114,7 +114,7 @@ class BodyObjAgent(BaseAgent):
             else 0.0
         )
 
-    def get_Q_curr(self, operation_id: str, mime: str, action) -> float:
+    def get_Q_curr(self, operation_id: str, mime: str, action: tuple[str, ...] | str | None) -> float:
         if action is None:
             action = "None"
         if operation_id not in self.q_table or mime not in self.q_table.get(operation_id, {}):
@@ -126,7 +126,7 @@ class BodyObjAgent(BaseAgent):
         )
 
     def update_Q_item(
-        self, operation_id: str, mime: str, action, td_error: float
+        self, operation_id: str, mime: str, action: tuple[str, ...] | str | None, td_error: float
     ) -> None:
         if action is None:
             action = "None"

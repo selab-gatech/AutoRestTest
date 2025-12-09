@@ -5,7 +5,7 @@ import random
 import time
 from collections import defaultdict
 from dataclasses import asdict
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import numpy as np
 import requests
@@ -40,6 +40,7 @@ from autoresttest.llm import (
     random_generator,
     randomize_object,
 )
+from autoresttest.models import ParameterKey
 
 CONFIG = get_config()
 
@@ -47,14 +48,14 @@ CONFIG = get_config()
 class QLearning:
     def __init__(
             self,
-            operation_graph,
-            alpha=0.1,
-            gamma=0.9,
-            epsilon=0.3,
-            time_duration=600,
-            mutation_rate=0.3,
-    ):
-        self.q_table = {}
+            operation_graph: OperationGraph,
+            alpha: float = 0.1,
+            gamma: float = 0.9,
+            epsilon: float = 0.3,
+            time_duration: int = 600,
+            mutation_rate: float = 0.3,
+    ) -> None:
+        self.q_table: dict[str, Any] = {}
         self.operation_graph: OperationGraph = operation_graph
         self.api_url = operation_graph.request_generator.api_url
         self.alpha = alpha
@@ -69,15 +70,15 @@ class QLearning:
         self.data_source_agent = DataSourceAgent(operation_graph, alpha, gamma, 0.7)
         self.dependency_agent = DependencyAgent(operation_graph, alpha, gamma, epsilon)
         self.time_duration = time_duration
-        self.responses = defaultdict(int)
+        self.responses: dict[int, int] = defaultdict(int)
 
-        self.errors = {}
-        self.unique_errors = {}
-        self.successful_parameters = {}
-        self.successful_bodies = {}
-        self.successful_responses = {}
-        self.successful_primitives = {}
-        self.operation_response_counter = {}
+        self.errors: dict[str, int] = {}
+        self.unique_errors: dict[str, list[dict[str, Any]]] = {}
+        self.successful_parameters: dict[str, dict[str, list[Any]]] = {}
+        self.successful_bodies: dict[str, dict[str, list[Any]]] = {}
+        self.successful_responses: dict[str, dict[str, list[Any]]] = {}
+        self.successful_primitives: dict[str, dict[str, list[Any]]] = {}
+        self.operation_response_counter: dict[str, dict[int, int]] = {}
         self._init_parameter_tracking()
         self._init_body_tracking()
         self._init_response_tracking()
@@ -88,7 +89,9 @@ class QLearning:
         print("PARAMETER Q-TABLE: ", self.parameter_agent.q_table)
         print("VALUE Q-TABLE: ", self.value_agent.q_table)
 
-    def get_mapping(self, select_params, select_values):
+    def get_mapping(
+        self, select_params: tuple[ParameterKey, ...] | None, select_values: dict[ParameterKey, Any] | None
+    ) -> dict[ParameterKey, Any] | None:
         if not select_params or not select_values:
             return None
         return {
@@ -97,7 +100,7 @@ class QLearning:
             if param in select_values
         }
 
-    def get_mutated_value(self, param_type):
+    def get_mutated_value(self, param_type: str | None) -> Any:
         if not param_type:
             return None
         avail_types = ["integer", "number", "string", "boolean", "array", "object"]

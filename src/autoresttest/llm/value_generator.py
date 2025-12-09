@@ -252,6 +252,16 @@ class SmartValueGenerator:
         self.parameters_reqs: Dict[str, Any] = self.parameter_requirements_labels
 
     def _format_param_dict_for_prompt(self, params: Optional[Dict]) -> Dict:
+        """
+        Convert a parameter dict to a format suitable for LLM prompts.
+
+        Accepts dicts with either:
+        - ParameterKey tuples as keys (converted via param_key_to_label)
+        - String keys (used as-is, e.g., for body property names)
+
+        This dual-type support is intentional since the codebase uses ParameterKey
+        for operation parameters but strings for request body properties.
+        """
         if not params:
             return {}
         formatted = {}

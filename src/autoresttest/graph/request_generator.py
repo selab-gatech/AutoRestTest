@@ -235,10 +235,8 @@ class RequestGenerator:
         params = get_param_combinations(operation_node.operation_properties.parameters)
         if not is_body:
             for param in params:
-                param_names = {
-                    p[0] if isinstance(p, tuple) else p
-                    for p in param
-                }
+                # param is a tuple of ParameterKey tuples; p[0] extracts the parameter name
+                param_names = {p[0] for p in param}
                 if set(param_auth_info.values()).issubset(param_names):
                     param_q_table["params"][param] = 0
         else:

@@ -11,7 +11,10 @@ from autoresttest.graph import OperationGraph
 from autoresttest.models import ParameterKey, ValueAction
 
 # Type alias for ValueAgent Q-table structure:
-# - Operation ID -> {"params": {ParameterKey: [[value, score], ...]}, "body": {mime_str: [[body, score], ...]}}
+# Structure: Operation ID -> {"params": {...}, "body": {...}}
+# - "params" dict uses ParameterKey tuples as keys (parameter name, in_value)
+# - "body" dict uses str keys (MIME types like "application/json")
+# Union[ParameterKey, str] is intentional to support both key types in the same dict
 ValueQTable = Dict[str, Dict[str, Dict[Union[ParameterKey, str], List[List[Any]]]]]
 
 
@@ -32,6 +35,9 @@ class ValueAgent(BaseAgent):
     def initialize_q_table(self) -> None:
         config = get_config()
         request_generator = self.operation_graph.request_generator
+
+        if request_generator is None:
+            raise Exception("Request generator failed to initialize...")
 
         if config.parallelize_value_generation:
             # Parallel processing using thread pool
@@ -55,7 +61,9 @@ class ValueAgent(BaseAgent):
 
     def get_action(self, operation_id: str) -> ValueAction:
         if operation_id not in self.q_table:
-            raise ValueError(f"Operation '{operation_id}' not found in the Q-table for ValueAgent.")
+            raise ValueError(
+                f"Operation '{operation_id}' not found in the Q-table for ValueAgent."
+            )
         if random.random() < self.epsilon:
             return self.get_random_action(operation_id)
         return self.get_best_action(operation_id)
@@ -144,9 +152,11 @@ class ValueAgent(BaseAgent):
                     if mapping[0] == body:
                         mapping[1] = new_q
 
-    def get_Q_next(self, operation_id: str, filtered_action: ValueAction):
-        best_Q_next_params = []
-        best_Q_next_body = []
+    def get_Q_next(
+        self, operation_id: str, filtered_action: ValueAction
+    ) -> tuple[list[float], list[float]]:
+        best_Q_next_params: list[float] = []
+        best_Q_next_body: list[float] = []
         if operation_id not in self.q_table:
             return best_Q_next_params, best_Q_next_body
         if filtered_action.param_mappings:
@@ -167,9 +177,11 @@ class ValueAgent(BaseAgent):
                 best_Q_next_body.append(best_next_q)
         return best_Q_next_params, best_Q_next_body
 
-    def get_Q_curr(self, operation_id: str, filtered_action: ValueAction):
-        current_Q_params = []
-        current_Q_body = []
+    def get_Q_curr(
+        self, operation_id: str, filtered_action: ValueAction
+    ) -> tuple[list[float], list[float]]:
+        current_Q_params: list[float] = []
+        current_Q_body: list[float] = []
         if operation_id not in self.q_table:
             return current_Q_params, current_Q_body
         if filtered_action.param_mappings:
