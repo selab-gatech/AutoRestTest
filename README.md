@@ -95,8 +95,8 @@ If you intend to use your own OpenAPI Specification file as described in the Ins
 
 Only `.yaml` and `.json` files are supported (OpenAPI 3.0). Example: `aratrl-openapi/market2.yaml`.
 
-Specification parsing is handled by [Prance](https://github.com/jfinkhaeuser/prance). If your spec has recursive `$ref` chains or circular references, you can tune the resolver depth with:
-- `[spec].recursion_limit` (default: `5`) — limits how deep circular references are resolved; increase this value if your specification has longer reference chains.
+Specification parsing is handled by [Prance](https://github.com/jfinkhaeuser/prance). If your spec has circular/self-referencing `$ref` chains, you can tune the resolver behavior with:
+- `[spec].recursion_limit` (default: `1`) — the maximum number of times a circular reference may appear in the resolution stack before a placeholder schema is substituted; a value of 1 means a self-referencing element is resolved once before being replaced.
 - `[spec].strict_validation` (default: `true`) — when `true`, the OpenAPI spec is strictly validated and parsing stops on errors; when `false`, invalid sections are skipped where possible so execution can continue.
 
 #### 2. Configuring Reinforcement Learning Parameters

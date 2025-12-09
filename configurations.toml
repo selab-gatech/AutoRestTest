@@ -7,8 +7,9 @@
 # Only .yaml and .json are supported; file MUST be OpenAPI 3.0.
 location = "aratrl-openapi/market2.yaml"
 
-# Maximum depth for resolving recursive references in the OpenAPI specification.
-recursion_limit = 5
+# Maximum times a circular/self-reference may appear in the resolution stack.
+# A value of 1 means an element may be referred to exactly once before triggering the handler.
+recursion_limit = 1
 
 # Validate the OpenAPI spec strictly (errors will abort) when true; allow lenient parsing when false.
 strict_validation = false
