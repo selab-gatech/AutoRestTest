@@ -138,7 +138,7 @@ class RequestRequirements:
     """Captures dependencies required to satisfy a request edge."""
 
     edge: "OperationEdge"
-    parameter_requirements: Dict[str, Any] = field(default_factory=dict)
+    parameter_requirements: Dict[ParameterKey, Any] = field(default_factory=dict)
     request_body_requirements: Dict[str, Any] = field(default_factory=dict)
 
     def generate_combinations(self) -> List["RequestRequirements"]:
@@ -220,8 +220,8 @@ class RequestResponse:
 class ValueAction:
     """Represents an action taken by the value agent."""
 
-    param_mappings: Optional[Dict[str, object]]
-    body_mappings: Optional[Dict[str, object]]
+    param_mappings: Optional[Dict[ParameterKey, Any]]
+    body_mappings: Optional[Dict[str, Any]]
 
 
 @dataclass

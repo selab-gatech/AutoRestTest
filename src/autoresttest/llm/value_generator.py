@@ -473,7 +473,7 @@ class SmartValueGenerator:
             )
             return self._compose_parameter_gen_prompt(prompt_data, necessary=True)
 
-    def _validate_parameters(self, schema: Dict) -> Optional[Dict]:
+    def _validate_parameters(self, schema: Dict) -> Optional[Dict[ParameterKey, Any]]:
         if schema is None:
             return None
         parameters: Dict[ParameterKey, Any] = {}
@@ -484,7 +484,7 @@ class SmartValueGenerator:
         parameters.update(self.parameter_requirements_raw)
         return parameters
 
-    def generate_parameters(self, necessary=False) -> Optional[Dict[str, Any]]:
+    def generate_parameters(self, necessary=False) -> Optional[Dict[ParameterKey, Any]]:
         """
         Uses the OpenAI language model to generate values for the parameters using JSON outputs
         :return: A dictionary of the generated parameters
@@ -633,10 +633,10 @@ class SmartValueGenerator:
             auth_parameters = attempt_fix_json(auth_parameters)
         return auth_parameters.get("authentication_parameters")
 
-    def _validate_value_params(self, schema: Dict) -> Dict[Any, List]:
+    def _validate_value_params(self, schema: Dict) -> Dict[ParameterKey, List[Any]]:
         if schema is None:
             return {}
-        param_mappings: Dict[ParameterKey, List] = defaultdict(list)
+        param_mappings: Dict[ParameterKey, List[Any]] = defaultdict(list)
         for param_name, param_values in schema.items():
             param_key = self.parameter_lookup.get(param_name)
             if param_key in self.parameters_raw:
@@ -644,7 +644,7 @@ class SmartValueGenerator:
                     param_mappings[param_key].append(param_value)
         return param_mappings
 
-    def generate_value_agent_params(self, num_values: int) -> Optional[Dict[str, List]]:
+    def generate_value_agent_params(self, num_values: int) -> Dict[ParameterKey, List[Any]]:
         """
 
         :param num_values:
@@ -741,7 +741,7 @@ class SmartValueGenerator:
 
     def generate_informed_value_agent_params(
             self, num_values: int, responses: List[RequestResponse]
-    ):
+    ) -> Dict[ParameterKey, List[Any]]:
         if self.parameters is None or len(self.parameters) == 0:
             return {}
 

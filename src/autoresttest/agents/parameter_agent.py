@@ -7,12 +7,13 @@ import numpy as np
 from .base_agent import BaseAgent
 
 from autoresttest.graph import OperationGraph
+from autoresttest.models import ParameterKey
 from autoresttest.utils import get_param_combinations, get_required_params
 
 
 @dataclass
 class ParameterAction:
-    req_params: Optional[List]
+    req_params: Optional[Tuple[ParameterKey, ...]]
     mime_type: Optional[str]
 
 

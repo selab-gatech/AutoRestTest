@@ -465,7 +465,7 @@ class RequestGenerator:
         self,
         curr_node: "OperationNode",
         parameter_mappings: Dict,
-        req_param_mappings: Dict[str, List[Any]],
+        req_param_mappings: Dict[ParameterKey, List[Any]],
         req_body_mappings: Dict[str, List[Any]],
         occurrences: Dict,
     ):

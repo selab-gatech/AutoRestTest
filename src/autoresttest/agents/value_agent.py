@@ -1,6 +1,6 @@
 import random
 from collections import defaultdict
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 
@@ -8,7 +8,11 @@ from .base_agent import BaseAgent
 
 from autoresttest.config import get_config
 from autoresttest.graph import OperationGraph
-from autoresttest.models import ValueAction
+from autoresttest.models import ParameterKey, ValueAction
+
+# Type alias for ValueAgent Q-table structure:
+# - Operation ID -> {"params": {ParameterKey: [[value, score], ...]}, "body": {mime_str: [[body, score], ...]}}
+ValueQTable = Dict[str, Dict[str, Dict[Union[ParameterKey, str], List[List[Any]]]]]
 
 
 class ValueAgent(BaseAgent):
@@ -19,7 +23,7 @@ class ValueAgent(BaseAgent):
         gamma: float = 0.9,
         epsilon: float = 0.1,
     ):
-        self.q_table: Dict[str, Dict[str, Dict[str, list]]] = {}
+        self.q_table: ValueQTable = {}
         self.operation_graph = operation_graph
         self.alpha = alpha
         self.gamma = gamma
