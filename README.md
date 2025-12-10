@@ -112,18 +112,31 @@ Instead of limiting episodes, the program limits RL iterations using a time budg
 > [!NOTE]
 > This time budget applies only to the MARL (Q-learning) phase. The initial value table generation phase, which runs before Q-learning begins, is not time-limited and will process all operations in the specification.
 
-To control how many parameter/body combinations are generated (and keep Q-tables manageable), adjust:
-- `[agent].max_combinations` (default: `10`)
+#### Parameter Combination Sampling
+
+For APIs with many parameters, generating all possible combinations would cause memory exhaustion. AutoRestTest uses depth-weighted stratified sampling to bound combinations while prioritizing smaller (more diagnostic) combinations. Configure under `[agent]`:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `max_combinations` | `12` | Maximum optional parameters per combination. Required parameters are always included. |
+| `max_total_combinations` | `3000` | Hard cap on combinations per operation. Smaller combinations are kept when truncating. |
+| `base_samples_per_size` | `200` | Sample count at size=1; decays for larger sizes (e.g., size=5 gets ~60 samples). |
+| `combination_seed` | `42` | Seed for reproducible random sampling. Change for different samples. |
+
+Example distribution for an operation with 30 parameters:
+- Size 1-2: All combinations enumerated (30 + 435 = 465)
+- Size 3-12: Random samples (~700 total)
+- Total: ~1,200 unique combinations (well under 3K cap)
 
 > [!TIP]
-> The above steps alter the variables across all four agents used within the software. If the user desires to change
+> The above steps alter the variables across all agents used within the software. If the user desires to change
 > the individual agent parameters, they can navigate to the `src/autoresttest/agents` files and change the parameters.
 
 #### 3. Parallel Value Table Generation
 
 The Value Agent's Q-table initialization can be parallelized using a thread pool, which significantly speeds up startup for APIs with many operations. Configure this under `[agent.value]`:
 - `[agent.value].parallelize` (default: `true`) — when `true`, operations are processed concurrently using a thread pool; when `false`, the original sequential depth-first traversal is used.
-- `[agent.value].max_workers` (default: `4`) — number of worker threads for parallel generation (ignored if `parallelize` is `false`).
+- `[agent.value].max_workers` (default: `4`) — number of worker threads for parallel generation (ignored if `parallelize` is `false`). Set to match your CPU core count for optimal performance.
 
 > [!NOTE]
 > Rate-limited responses (HTTP 429) are automatically retried with exponential backoff.
@@ -181,6 +194,28 @@ ACCESS_TOKEN=your_bearer_token
 
 > [!CAUTION]
 > If you enable the Header Agent (`[agents.header].enabled = true`) alongside custom headers, be aware that the Header Agent may override your `Authorization` header during testing. The Header Agent uses Basic Authentication tokens and has higher priority than custom static headers. For Bearer token or API key authentication, keep the Header Agent disabled.
+
+#### 8. Custom API URL Override
+
+By default, AutoRestTest extracts the API base URL from the `servers` field in your OpenAPI specification. If you need to target a different host (e.g., a local development server or staging environment), you can override this behavior in the `[api]` section:
+
+```toml
+[api]
+override_url = true
+host = "localhost"
+port = 8080
+```
+
+When `override_url` is set to `true`, the tool constructs the API URL as `http://{host}:{port}/` instead of using the specification's server URL.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `override_url` | `false` | When `false`, uses the URL from the OpenAPI spec. When `true`, uses the custom host and port. |
+| `host` | `localhost` | The hostname for the custom API URL. |
+| `port` | `8080` | The port number for the custom API URL. |
+
+> [!TIP]
+> This is useful when testing local services that run on a different port than specified in the OpenAPI spec, or when the spec contains a production URL but you want to test against a local or staging environment.
 
 ## Execution
 

@@ -49,11 +49,6 @@ def parse_args():
         help="Specifies the number of specifications: 'one' or 'many'",
     )
     parser.add_argument(
-        "local_test",
-        type=lambda x: (str(x).lower() == "true"),
-        help="Specifies whether the test is local (true/false)",
-    )
-    parser.add_argument(
         "-s",
         "--spec_name",
         type=str,
@@ -178,7 +173,7 @@ def output_report(
         "Percentage of Successfully Processed Operations": str(
             round(
                 len(unique_processed_200s)
-                / len(q_learning.operation_agent.q_table)
+                / max(len(q_learning.operation_agent.q_table), 1)
                 * 100,
                 2,
             )
@@ -200,7 +195,6 @@ def parse_specification_location(spec_loc: str):
 class AutoRestTest:
     def __init__(self, spec_dir: Union[Path, str]):
         self.spec_dir = Path(spec_dir).expanduser()
-        self.local_test = True
         self.is_naive = False
         construct_db_dir()
         self.use_cached_graph = CONFIG.cache.use_cached_graph
@@ -212,10 +206,18 @@ class AutoRestTest:
         spec_path: Union[Path, str],
         embedding_model: EmbeddingModel,
     ) -> OperationGraph:
+
         print(f"Parsing OpenAPI specification: {spec_path}...")
         spec_parser = SpecificationParser(spec_path=str(spec_path), spec_name=spec_name)
         print("Specification parsed successfully!")
-        api_url = get_api_url(spec_parser, self.local_test)
+
+        if CONFIG.api.override_url:
+            api_url = CONFIG.custom_api_url
+            print(f"Using custom API URL from config: {api_url}")
+        else:
+            api_url = get_api_url(spec_parser)
+            print(f"Using API URL from specification: {api_url}")
+
         operation_graph = OperationGraph(
             spec_path=str(spec_path),
             spec_name=spec_name,
@@ -225,34 +227,37 @@ class AutoRestTest:
         request_generator = RequestGenerator(
             operation_graph=operation_graph, api_url=api_url, is_naive=self.is_naive
         )
+
         operation_graph.assign_request_generator(request_generator)
         return operation_graph
 
-    def generate_graph(self, spec_name: str, ext: str, embedding_model: EmbeddingModel):
+    def generate_graph(
+        self, spec_name: str, ext: str, embedding_model: EmbeddingModel
+    ) -> OperationGraph:
         spec_path = self.spec_dir / f"{spec_name}{ext}"
         db_graph = get_graph_cache_path(spec_name)
         print("CREATING SEMANTIC OPERATION DEPENDECY GRAPH...")
-        with shelve.open(str(db_graph)) as db:
 
+        # Always initialize the graph first
+        operation_graph = self.init_graph(spec_name, spec_path, embedding_model)
+
+        with shelve.open(str(db_graph)) as db:
             loaded_from_shelf = False
+
             if spec_name in db and self.use_cached_graph:
                 print(f"Loading graph for {spec_name} from shelve.")
-                operation_graph = self.init_graph(spec_name, spec_path, embedding_model)
-
                 try:
                     graph_properties = db[spec_name]
                     operation_graph.operation_edges = graph_properties["edges"]
                     operation_graph.operation_nodes = graph_properties["nodes"]
                     print(f"Loaded graph for {spec_name} from shelve.")
                     loaded_from_shelf = True
-
                 except Exception as e:
-                    print("Error loading graph from shelve.")
-                    loaded_from_shelf = False
+                    print(f"Error loading graph from shelve: {e}")
+                    # Fall through to create new graph
 
             if not loaded_from_shelf:
                 print(f"Initializing new graph for {spec_name}.")
-                operation_graph = self.init_graph(spec_name, spec_path, embedding_model)
                 operation_graph.create_graph()
 
                 graph_properties = {
@@ -263,9 +268,10 @@ class AutoRestTest:
                 try:
                     db[spec_name] = graph_properties
                 except Exception as e:
-                    print("Error saving graph to shelve.")
+                    print(f"Error saving graph to shelve: {e}")
 
                 print(f"Initialized new graph for {spec_name}.")
+
         print("GRAPH CREATED!!!")
         return operation_graph
 
@@ -331,15 +337,19 @@ class AutoRestTest:
                 q_learning.value_agent.initialize_q_table()
                 print(f"Initialized new value agent Q-table for {spec_name}.")
                 token_counter = OpenAILanguageModel.get_tokens()
-                print(f"Value table generation tokens - Input: {token_counter.input_tokens}, Output: {token_counter.output_tokens}")
+                print(
+                    f"Value table generation tokens - Input: {token_counter.input_tokens}, Output: {token_counter.output_tokens}"
+                )
 
             if CONFIG.enable_header_agent and not loaded_header_from_shelf:
                 q_learning.header_agent.initialize_q_table()
                 print(f"Initialized new header agent Q-table for {spec_name}.")
                 token_counter = OpenAILanguageModel.get_tokens()
-                print(f"Header table generation tokens - Input: {token_counter.input_tokens}, Output: {token_counter.output_tokens}")
+                print(
+                    f"Header table generation tokens - Input: {token_counter.input_tokens}, Output: {token_counter.output_tokens}"
+                )
             elif not CONFIG.enable_header_agent:
-                q_learning.header_agent.q_table = None
+                q_learning.header_agent.q_table = {}
 
             try:
                 db[spec_name] = {
@@ -386,7 +396,7 @@ class AutoRestTest:
 
 def main():
     specification_directory, specification_name, ext = parse_specification_location(
-        PROJECT_ROOT / CONFIG.specification_location
+        str(PROJECT_ROOT / CONFIG.specification_location)
     )
     auto_rest_test = AutoRestTest(spec_dir=specification_directory)
     auto_rest_test.run_single(specification_name, ext)

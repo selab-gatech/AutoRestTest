@@ -1,5 +1,4 @@
 import random
-from typing import Dict, Optional
 
 import numpy as np
 
@@ -17,7 +16,8 @@ class BodyObjAgent(BaseAgent):
         gamma: float = 0.9,
         epsilon: float = 0.1,
     ):
-        self.q_table: Dict[str, Dict[str, Dict[Optional[str], float]]] = {}
+        # Q-table maps the operation ID to a dictionary that maps the MIME type to a dictionary where the key is the body property combinations, or "None", and the value is a float
+        self.q_table: dict[str, dict[str, dict[tuple[str, ...] | str, float]]] = {}
         self.operation_graph = operation_graph
         self.alpha = alpha
         self.gamma = gamma
@@ -35,61 +35,76 @@ class BodyObjAgent(BaseAgent):
                     mime,
                     body_properties,
                 ) in operation_node.operation_properties.request_body.items():
-                    if body_properties.type == "object":
+                    if body_properties.type == "object" and body_properties.properties:
+                        required_body = get_required_body_params(body_properties)
                         body_obj_combinations = get_combinations(
-                            body_properties.properties.keys()
+                            body_properties.properties.keys(),
+                            required=required_body,
+                            seed=f"{operation_id}:{mime}",
                         )
                         self.q_table[operation_id][mime] = {
-                            body_obj: 0 for body_obj in body_obj_combinations
+                            body_obj: 0.0 for body_obj in body_obj_combinations
                         }
-                        self.q_table[operation_id][mime]["None"] = 0
+                        self.q_table[operation_id][mime]["None"] = 0.0
 
-    def get_action(self, operation_id: str, mime: str):
+    def get_action(self, operation_id: str, mime: str) -> tuple[str, ...] | None:
+        if operation_id not in self.q_table:
+            raise ValueError(
+                f"Operation '{operation_id}' not found in the Q-table for BodyObjAgent."
+            )
+        if mime not in self.q_table.get(operation_id, {}):
+            raise ValueError(
+                f"MIME type '{mime}' not found for operation '{operation_id}' in the Q-table for BodyObjAgent."
+            )
         if random.random() < self.epsilon:
             return self.get_random_action(operation_id, mime)
         return self.get_best_action(operation_id, mime)
 
-    def get_best_action(self, operation_id: str, mime: str):
-        required_obj_params = get_required_body_params(
-            self.operation_graph.operation_nodes[
-                operation_id
-            ].operation_properties.request_body[mime]
-        )
-        best_action = (None, -np.inf)
+    def get_best_action(self, operation_id: str, mime: str) -> tuple[str, ...] | None:
+        request_body = self.operation_graph.operation_nodes[
+            operation_id
+        ].operation_properties.request_body
+        if request_body is None:
+            return None
+        required_obj_params = get_required_body_params(request_body[mime])
+        result: tuple[str, ...] | None = None
         if required_obj_params:
+            best_value = -np.inf
             for body_obj, value in self.q_table[operation_id][mime].items():
-                if value > best_action[1] and required_obj_params.issubset(
-                    set(body_obj)
+                if (
+                    isinstance(body_obj, tuple)
+                    and value > best_value
+                    and required_obj_params.issubset(set(body_obj))
                 ):
-                    best_action = (body_obj, value)
-            best_action = best_action[0]  # Extract just the body_obj key
+                    result = body_obj
+                    best_value = value
         else:
-            best_action = (
-                max(self.q_table[operation_id][mime].items(), key=lambda x: x[1])[0]
-                if self.q_table[operation_id][mime]
-                else None
-            )
-        if best_action == "None":
-            best_action = None
-        return best_action
+            if self.q_table[operation_id][mime]:
+                best_key = max(
+                    self.q_table[operation_id][mime].items(), key=lambda x: x[1]
+                )[0]
+                if isinstance(best_key, tuple):
+                    result = best_key
+        return result
 
-    def get_random_action(self, operation_id: str, mime: str):
-        action = (
-            random.choice(list(self.q_table[operation_id][mime].keys()))
-            if self.q_table[operation_id][mime]
-            else None
-        )
-        if action == "None":
-            action = None
-        return action
+    def get_random_action(self, operation_id: str, mime: str) -> tuple[str, ...] | None:
+        if not self.q_table[operation_id][mime]:
+            return None
+        action = random.choice(list(self.q_table[operation_id][mime].keys()))
+        if isinstance(action, tuple):
+            return action
+        return None
 
     def update_q_table(
-        self, operation_id: str, mime: str, action, reward: float
+        self,
+        operation_id: str,
+        mime: str,
+        action: tuple[str, ...] | None,
+        reward: float,
     ) -> None:
-        if action is None:
-            action = "None"
+        key: tuple[str, ...] | str = action if action is not None else "None"
         current_q = (
-            self.q_table[operation_id][mime][action]
+            self.q_table[operation_id][mime][key]
             if self.q_table[operation_id][mime]
             else 0.0
         )
@@ -99,30 +114,48 @@ class BodyObjAgent(BaseAgent):
             else 0.0
         )
         new_q = current_q + self.alpha * (reward + self.gamma * best_next_q - current_q)
-        self.q_table[operation_id][mime][action] = new_q
+        self.q_table[operation_id][mime][key] = new_q
 
     def get_Q_next(self, operation_id: str, mime: str) -> float:
+        if operation_id not in self.q_table or mime not in self.q_table.get(
+            operation_id, {}
+        ):
+            return 0.0
         return (
             max(self.q_table[operation_id][mime].values())
             if self.q_table[operation_id][mime]
             else 0.0
         )
 
-    def get_Q_curr(self, operation_id: str, mime: str, action) -> float:
-        if action is None:
-            action = "None"
+    def get_Q_curr(
+        self, operation_id: str, mime: str, action: tuple[str, ...] | None
+    ) -> float:
+        key: tuple[str, ...] | str = action if action is not None else "None"
+        if operation_id not in self.q_table or mime not in self.q_table.get(
+            operation_id, {}
+        ):
+            return 0.0
         return (
-            self.q_table[operation_id][mime].get(action, 0.0)
+            self.q_table[operation_id][mime].get(key, 0.0)
             if self.q_table[operation_id][mime]
             else 0.0
         )
 
     def update_Q_item(
-        self, operation_id: str, mime: str, action, td_error: float
+        self,
+        operation_id: str,
+        mime: str,
+        action: tuple[str, ...] | None,
+        td_error: float,
     ) -> None:
-        if action is None:
-            action = "None"
-        self.q_table[operation_id][mime][action] += self.alpha * td_error
+        key: tuple[str, ...] | str = action if action is not None else "None"
+        if operation_id not in self.q_table or mime not in self.q_table.get(
+            operation_id, {}
+        ):
+            return
+        if key not in self.q_table[operation_id][mime]:
+            return
+        self.q_table[operation_id][mime][key] += self.alpha * td_error
 
     def number_of_zeros(self, operation_id: str) -> int:
         zeros = 0

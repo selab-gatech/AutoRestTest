@@ -1,17 +1,18 @@
 import base64
 import hashlib
 import json
+import math
 import random
 import time
-from typing import Iterable, Dict, List, Any, Optional, Tuple, Set
+from typing import Iterable, Dict, List, Any, Optional, Tuple, Set, cast
 import itertools
 from pathlib import Path
 
 from gensim.downloader import load
+from gensim.models import KeyedVectors
 import numpy as np
 
 from dotenv import load_dotenv
-import os
 
 from autoresttest.config import get_config
 from autoresttest.specification import SpecificationParser
@@ -27,8 +28,8 @@ Q_TABLE_CACHE_DIR = CACHE_ROOT / "q_tables"
 GRAPH_CACHE_DIR = CACHE_ROOT / "graphs"
 
 
-def remove_nulls(item):
-    if hasattr(item, 'to_dict'):
+def remove_nulls(item: Any) -> Any:
+    if hasattr(item, "to_dict"):
         return item.to_dict()
     elif isinstance(item, dict):
         cleaned = {k: remove_nulls(v) for k, v in item.items() if v}
@@ -40,7 +41,7 @@ def remove_nulls(item):
         return item
 
 
-def make_param_key(name: Optional[str], in_value: Optional[str]) -> ParameterKey:
+def make_param_key(name: str | None, in_value: str | None) -> ParameterKey:
     """
     Build a canonical parameter key from name and in_value.
     """
@@ -69,56 +70,124 @@ def label_to_param_key(label: str) -> ParameterKey:
 
 
 def get_param_combinations(
-    operation_parameters: Dict[ParameterKey, ParameterProperties]
+    operation_parameters: Dict[ParameterKey, ParameterProperties],
+    required_params: Optional[Set[ParameterKey]] = None,
+    seed: Optional[str] = None,
 ) -> List[Tuple[ParameterKey, ...]]:
     param_list = get_params(operation_parameters)
-    return get_combinations(param_list)
+    return get_combinations(param_list, required=required_params, seed=seed)
 
 
-def get_body_combinations(operation_body: Dict[str, SchemaProperties]) -> Dict[str, List[Tuple[str]]]:
-    return {k: get_combinations(v) for k, v in get_request_body_params(operation_body).items()}
+def get_body_combinations(
+    operation_body: Dict[str, SchemaProperties],
+) -> Dict[str, List[Tuple[str]]]:
+    return {
+        k: get_combinations(v)
+        for k, v in get_request_body_params(operation_body).items()
+    }
 
 
-def get_body_object_combinations(body_schema: SchemaProperties) -> List[Tuple[str]]:
-    return get_combinations(get_body_params(body_schema))
+def get_body_object_combinations(
+    body_schema: SchemaProperties,
+    required_body_params: Optional[Set[str]] = None,
+    seed: Optional[str] = None,
+) -> List[Tuple[str, ...]]:
+    return get_combinations(
+        get_body_params(body_schema), required=required_body_params, seed=seed
+    )
 
 
-def get_combinations(arr: Iterable[Any]) -> List[Tuple[Any, ...]]:
+def get_combinations(
+    arr: Iterable[Any],
+    required: Optional[Set[Any]] = None,
+    seed: Optional[str] = None,
+) -> List[Tuple[Any, ...]]:
     """
-    Generate combinations from any iterable of parameters.
+    Generate bounded parameter combinations with depth-weighted sampling.
+
+    Uses stratified sampling that prioritizes smaller combinations while ensuring
+    required parameters are always included. For large parameter sets, random
+    sampling is used with seeded RNG for reproducibility.
+
+    Args:
+        arr: All parameters to combine.
+        required: Parameters that must appear in every combination.
+        seed: Seed string for reproducible randomness (e.g., operation ID).
+
+    Returns:
+        List of parameter combination tuples.
     """
     arr = list(arr) if arr is not None else []
-    combinations = []
-    max_size = CONFIG.max_combinations
-    # Empirically determined - 16 is max number before size grows too large; configurable for tuning storage size.
+    required = required or set()
+    optional = [p for p in arr if p not in required]
+    required_tuple = tuple(p for p in arr if p in required)  # Preserve order
 
-    if len(arr) >= max_size:
-        for i in range(0, len(arr) - max_size):
-            subset = arr[i: i + max_size]
-            combinations.extend(
-                itertools.chain.from_iterable(
-                    itertools.combinations(subset, j) for j in range(1, max_size + 1)
-                )
-            )
-        for size in range(max_size + 1, len(arr) + 1):
-            for i in range(0, len(arr) - size + 1):
-                subset = arr[i: i + size]
-                combinations.extend([tuple(subset)])
+    max_optional_size = CONFIG.max_combinations
+    max_total = CONFIG.max_total_combinations
+    base_samples = CONFIG.base_samples_per_size
+
+    # Seeded RNG for reproducibility
+    if seed:
+        seed_int = int(hashlib.md5(seed.encode()).hexdigest(), 16) % (2**32)
+        rng = random.Random(seed_int)
     else:
-        combinations.extend(
-            itertools.chain.from_iterable(
-                itertools.combinations(arr, i) for i in range(1, len(arr) + 1)
-            )
-        )
+        rng = random.Random(CONFIG.combination_seed)
 
-    return combinations
+    combinations: Set[Tuple[Any, ...]] = set()
+    n_optional = len(optional)
+
+    # Always include: required-only and all-params
+    combinations.add(required_tuple)
+    if optional:
+        combinations.add(required_tuple + tuple(optional))
+
+    if n_optional <= max_optional_size:
+        # Small enough: exhaustive enumeration of optional params
+        for size in range(1, n_optional + 1):
+            for combo in itertools.combinations(optional, size):
+                combinations.add(required_tuple + combo)
+    else:
+        # Large: depth-weighted sampling (smaller sizes get more samples)
+        for size in range(1, min(max_optional_size, n_optional) + 1):
+            # Exponential decay: size=1 gets base_samples, larger sizes get fewer
+            samples_for_size = max(10, int(base_samples / (size**0.7)))
+            total_possible = math.comb(n_optional, size)
+
+            if total_possible <= samples_for_size:
+                # Small enough to enumerate all
+                for combo in itertools.combinations(optional, size):
+                    combinations.add(required_tuple + combo)
+            else:
+                # Random sample with seeded RNG
+                sampled: Set[Tuple[Any, ...]] = set()
+                attempts = 0
+                max_attempts = samples_for_size * 20
+                while len(sampled) < samples_for_size and attempts < max_attempts:
+                    indices = rng.sample(range(n_optional), size)
+                    combo = tuple(optional[i] for i in sorted(indices))
+                    sampled.add(combo)
+                    attempts += 1
+                for combo in sampled:
+                    combinations.add(required_tuple + combo)
+
+    # Enforce hard cap (deterministic order: sort by size, then content)
+    result = sorted(combinations, key=lambda x: (len(x), x))
+    if len(result) > max_total:
+        # Keep smallest combinations (most valuable for issue isolation)
+        result = result[:max_total]
+
+    return result
 
 
-def get_params(operation_parameters: Dict[ParameterKey, ParameterProperties]) -> List[ParameterKey]:
+def get_params(
+    operation_parameters: Dict[ParameterKey, ParameterProperties],
+) -> List[ParameterKey]:
     return list(operation_parameters.keys()) if operation_parameters is not None else []
 
 
-def get_required_params(operation_parameters: Dict[ParameterKey, ParameterProperties]) -> Set[ParameterKey]:
+def get_required_params(
+    operation_parameters: Dict[ParameterKey, ParameterProperties],
+) -> Set[ParameterKey]:
     required_parameters = set()
     for parameter, parameter_properties in operation_parameters.items():
         if parameter_properties.required:
@@ -133,7 +202,8 @@ def get_required_body_params(operation_body: SchemaProperties) -> Optional[Set]:
 
     if operation_body.properties and operation_body.type == "object":
         for key, value in operation_body.properties.items():
-            if value.required:
+            # Check if key is in the PARENT's required list (not child's required field)
+            if operation_body.required and key in operation_body.required:
                 required_body.add(key)
 
     elif operation_body.items and operation_body.type == "array":
@@ -165,7 +235,7 @@ def get_body_params(body: SchemaProperties) -> List[str]:
     return []
 
 
-def get_response_params(response: SchemaProperties, response_params: List):
+def get_response_params(response: SchemaProperties, response_params: list[str]) -> None:
     if response is None:
         return
 
@@ -179,7 +249,9 @@ def get_response_params(response: SchemaProperties, response_params: List):
         get_response_params(response.items, response_params)
 
 
-def get_response_param_mappings(response: SchemaProperties, response_mappings):
+def get_response_param_mappings(
+    response: SchemaProperties, response_mappings: dict[str, SchemaProperties]
+) -> None:
     if response is None:
         return
 
@@ -192,8 +264,14 @@ def get_response_param_mappings(response: SchemaProperties, response_mappings):
         get_response_param_mappings(response.items, response_mappings)
 
 
-def get_request_body_params(operation_body: Dict[str, SchemaProperties]) -> Dict[str, List[str]]:
-    return {k: get_body_params(v) for k, v in operation_body.items()} if operation_body is not None else {}
+def get_request_body_params(
+    operation_body: Dict[str, SchemaProperties],
+) -> Dict[str, List[str]]:
+    return (
+        {k: get_body_params(v) for k, v in operation_body.items()}
+        if operation_body is not None
+        else {}
+    )
 
 
 def split_parameter_values(
@@ -273,8 +351,9 @@ def attempt_fix_json(invalid_json_str: str):
 
     language_model = OpenAILanguageModel(temperature=CONFIG.strict_temperature)
     json_prompt = compose_json_fix_prompt(invalid_json_str)
-    fixed_json = language_model.query(user_message=json_prompt, system_message=FIX_JSON_SYSTEM_MESSAGE,
-                                      json_mode=True)
+    fixed_json = language_model.query(
+        user_message=json_prompt, system_message=FIX_JSON_SYSTEM_MESSAGE, json_mode=True
+    )
     try:
         fixed_json = json.loads(fixed_json)
         return fixed_json
@@ -299,11 +378,25 @@ def _is_json_mime(mime_type: str) -> bool:
     )
 
 
+def get_accept_header(responses: dict | None) -> str | None:
+    """Extract Accept header from operation responses.
+
+    Returns comma-separated MIME types from 2xx responses, or None.
+    """
+    if not responses:
+        return None
+    mime_types = set()
+    for status_code, response_props in responses.items():
+        if status_code and status_code.startswith("2") and response_props.content:
+            mime_types.update(response_props.content.keys())
+    return ", ".join(sorted(mime_types)) if mime_types else None
+
+
 def _dispatch_request_inner(
     select_method,
     full_url: str,
     params: Dict,
-    body: Dict,
+    body: Dict[str, Any] | None,
     headers: Dict,
     cookies: Optional[Dict],
 ):
@@ -311,10 +404,14 @@ def _dispatch_request_inner(
     Internal helper that performs a single HTTP request.
     """
     if not body:
-        return select_method(full_url, params=params, headers=headers or None, cookies=cookies)
+        return select_method(
+            full_url, params=params, headers=headers or None, cookies=cookies
+        )
 
     if not isinstance(body, dict):
-        return select_method(full_url, params=params, data=body, headers=headers or None, cookies=cookies)
+        return select_method(
+            full_url, params=params, data=body, headers=headers or None, cookies=cookies
+        )
 
     # Use the first provided MIME type; bodies are expected to be singular.
     mime_type, payload = next(iter(body.items()))
@@ -323,42 +420,94 @@ def _dispatch_request_inner(
     if _is_json_mime(mime_type):
         headers.setdefault("Content-Type", mime_type)
         if payload is not None:
-            return select_method(full_url, params=params, json=payload, headers=headers or None, cookies=cookies)
-        return select_method(full_url, params=params, headers=headers or None, cookies=cookies)
+            return select_method(
+                full_url,
+                params=params,
+                json=payload,
+                headers=headers or None,
+                cookies=cookies,
+            )
+        return select_method(
+            full_url, params=params, headers=headers or None, cookies=cookies
+        )
 
     if "x-www-form-urlencoded" in mime_lower:
         headers.setdefault("Content-Type", mime_type)
         body_data = get_object_shallow_mappings(payload)
         if not body_data or not isinstance(body_data, dict):
             body_data = {"data": payload}
-        return select_method(full_url, params=params, data=body_data, headers=headers or None, cookies=cookies)
+        return select_method(
+            full_url,
+            params=params,
+            data=body_data,
+            headers=headers or None,
+            cookies=cookies,
+        )
 
     if mime_lower.startswith("multipart/"):
-        # Let requests set the multipart boundary automatically.
-        return select_method(full_url, params=params, files=payload, headers=headers or None, cookies=cookies)
+        # Convert payload to proper files format for requests.
+        # Each field must be a tuple: (filename, data) or (filename, data, content_type)
+        # Using None as filename indicates a form field (not a file upload).
+        files_data = {}
+        if isinstance(payload, dict):
+            for field_name, field_value in payload.items():
+                if field_value is None:
+                    continue
+                # Serialize non-string/bytes values to JSON
+                if isinstance(field_value, (str, bytes)):
+                    serialized = field_value
+                else:
+                    serialized = json.dumps(field_value)
+                files_data[field_name] = (None, serialized)
+        else:
+            # Non-dict payload: serialize entire thing
+            files_data = {"data": (None, json.dumps(payload) if payload else "")}
+
+        return select_method(
+            full_url,
+            params=params,
+            files=files_data,
+            headers=headers or None,
+            cookies=cookies,
+        )
 
     if mime_lower.startswith("text/"):
         headers.setdefault("Content-Type", mime_type)
         if not isinstance(payload, str):
             payload = str(payload)
-        return select_method(full_url, params=params, data=payload, headers=headers or None, cookies=cookies)
+        return select_method(
+            full_url,
+            params=params,
+            data=payload,
+            headers=headers or None,
+            cookies=cookies,
+        )
 
     # Fallback: send whatever the MIME type is with a best-effort serializer.
     headers.setdefault("Content-Type", mime_type)
     if isinstance(payload, (dict, list)):
-        return select_method(full_url, params=params, json=payload, headers=headers or None, cookies=cookies)
-    return select_method(full_url, params=params, data=payload, headers=headers or None, cookies=cookies)
+        return select_method(
+            full_url,
+            params=params,
+            json=payload,
+            headers=headers or None,
+            cookies=cookies,
+        )
+    return select_method(
+        full_url, params=params, data=payload, headers=headers or None, cookies=cookies
+    )
 
 
 def dispatch_request(
     select_method,
     full_url: str,
     params: Dict,
-    body: Dict,
+    body: Dict[str, Any] | None,
     header: Optional[Dict] = None,
     cookies: Optional[Dict] = None,
     max_retries: int = 3,
     base_delay: float = 1.0,
+    accept: str | None = None,
 ):
     """
     Send a request with sensible handling for the provided body and MIME type key (if any).
@@ -367,7 +516,10 @@ def dispatch_request(
     params = params or {}
     headers = header.copy() if header is not None else {}
     cookies = cookies or None
+    if accept:
+        headers.setdefault("Accept", accept)
 
+    response = None
     for attempt in range(max_retries + 1):
         response = _dispatch_request_inner(
             select_method, full_url, params, body, headers.copy(), cookies
@@ -380,11 +532,13 @@ def dispatch_request(
         if response.status_code == 429:
             if attempt < max_retries:
                 # Exponential backoff: 1s, 2s, 4s + random jitter (0-1s)
-                delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                delay = base_delay * (2**attempt) + random.uniform(0, 1)
                 retry_after = response.headers.get("Retry-After")
                 if retry_after and retry_after.isdigit():
                     delay = max(delay, int(retry_after))
-                print(f"Rate limited (429). Retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                print(
+                    f"Rate limited (429). Retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})"
+                )
                 time.sleep(delay)
                 continue
 
@@ -412,20 +566,20 @@ INPUT_COST_PER_TOKEN = {
     "gpt-4o": 2.5e-6,
     "gpt-4o-mini": 0.15e-6,
     "o1": 15e-6,
-    "o1-mini": 3e-6
+    "o1-mini": 3e-6,
 }
 
 OUTPUT_COST_PER_TOKEN = {
     "gpt-4o": 10e-6,
     "gpt-4o-mini": 0.6e-6,
     "o1": 60e-6,
-    "o1-mini": 12e-6
+    "o1-mini": 12e-6,
 }
 
 
 class EmbeddingModel:
     def __init__(self):
-        self.model = load("glove-wiki-gigaword-50")
+        self.model: KeyedVectors = cast(KeyedVectors, load("glove-wiki-gigaword-50"))
         self.threshold = 0.8
         self._embedding_cache: Dict[str, Optional[np.ndarray]] = {}
 
@@ -434,7 +588,9 @@ class EmbeddingModel:
             return self._embedding_cache[thing]
 
         words = thing.split(" ")
-        word_vectors = [self.model[word] for word in words if word in self.model]
+        word_vectors: list[np.ndarray] = [
+            self.model[word] for word in words if word in self.model
+        ]
         result = np.mean(word_vectors, axis=0) if word_vectors else None
         self._embedding_cache[thing] = result
         return result
@@ -481,9 +637,5 @@ def construct_basic_token(token):
     return f"Basic {encoded_str}"
 
 
-def get_api_url(spec_parser: SpecificationParser, local_test: bool):
-    api_url = spec_parser.get_api_url()
-    if not local_test:
-        api_url = api_url.replace("localhost", os.getenv("EC2_ADDRESS"))
-        api_url = api_url.replace(":9", ":8")
-    return api_url
+def get_api_url(spec_parser: SpecificationParser):
+    return spec_parser.get_api_url()

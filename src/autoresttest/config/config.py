@@ -47,7 +47,10 @@ class ValueAgentConfig(BaseModel):
 
 
 class AgentCombinationConfig(BaseModel):
-    max_combinations: int = 10
+    max_combinations: int = 12
+    max_total_combinations: int = 3000
+    base_samples_per_size: int = 200
+    combination_seed: int = 42
     value: ValueAgentConfig = ValueAgentConfig()
 
 
@@ -65,6 +68,13 @@ class QLearningConfig(BaseModel):
 class RequestGenerationConfig(BaseModel):
     time_duration: int
     mutation_rate: float
+
+
+class ApiConfig(BaseModel):
+    """API URL configuration. Override the spec URL with custom host/port."""
+    override_url: bool = False
+    host: str = "localhost"
+    port: int = 8080
 
 
 class CustomHeadersConfig(BaseModel):
@@ -92,6 +102,7 @@ class Config(BaseModel):
     cache: CacheConfig
     q_learning: QLearningConfig
     request_generation: RequestGenerationConfig
+    api: ApiConfig = ApiConfig()
     custom_headers: CustomHeadersConfig = CustomHeadersConfig()
 
     model_config = ConfigDict(frozen=True)
@@ -129,6 +140,18 @@ class Config(BaseModel):
         return self.agent.max_combinations
 
     @property
+    def max_total_combinations(self) -> int:
+        return self.agent.max_total_combinations
+
+    @property
+    def base_samples_per_size(self) -> int:
+        return self.agent.base_samples_per_size
+
+    @property
+    def combination_seed(self) -> int:
+        return self.agent.combination_seed
+
+    @property
     def parallelize_value_generation(self) -> bool:
         return self.agent.value.parallelize
 
@@ -140,6 +163,11 @@ class Config(BaseModel):
     def static_headers(self) -> Dict[str, str]:
         """Return custom headers with env var interpolation applied."""
         return self.custom_headers.get_headers()
+
+    @property
+    def custom_api_url(self) -> str:
+        """Construct API URL from host and port."""
+        return f"http://{self.api.host}:{self.api.port}/"
 
 
 def _load_raw_config() -> Dict[str, Any]:

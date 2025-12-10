@@ -317,10 +317,10 @@ Here is the incorrect JSON string you returned. Fix the JSON object and return t
 
 def template_gen_prompt(summary: str, schema: Dict) -> str:
     try:
-        schema = json.dumps(schema, indent=2)
+        schema_str = json.dumps(schema, indent=2)
     except (TypeError, ValueError):
-        schema = str(schema)
-    return f"SUMMARY: {summary}\nSPECIFICATION:\n {schema}\n"
+        schema_str = str(schema)
+    return f"SUMMARY: {summary}\nSPECIFICATION:\n {schema_str}\n"
 
 def get_value_agent_body_prompt(num: int) -> str:
     return VALUE_AGENT_BODY_PROMPT.replace("[insert number]", str(num))

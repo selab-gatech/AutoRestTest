@@ -2,7 +2,17 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    TypeAlias,
+    Union,
+    TYPE_CHECKING,
+)
 
 import requests
 
@@ -33,7 +43,17 @@ def to_dict_helper(item: Any) -> Any:
 
 
 # Key used for identifying parameters uniquely by (name, in)
-ParameterKey = Tuple[str, Optional[str]]
+ParameterKey: TypeAlias = tuple[str, str | None]
+
+
+def is_parameter_key(value: Any) -> bool:
+    """
+    Check if a value is essentially a ParameterKey (tuple of length 2 with str, str|None).
+    """
+    if not isinstance(value, tuple) or len(value) != 2:
+        return False
+    name, in_value = value
+    return isinstance(name, str) and (in_value is None or isinstance(in_value, str))
 
 
 @dataclass
@@ -127,8 +147,8 @@ class RequestData:
 
     endpoint_path: str
     http_method: str
-    parameters: Dict[ParameterKey, Any]
-    request_body: Dict[str, Any]
+    parameters: Dict[ParameterKey, Any] | None
+    request_body: Dict[str, Any] | None
     operation_properties: OperationProperties
     requirements: Optional["RequestRequirements"] = None
 
@@ -138,17 +158,17 @@ class RequestRequirements:
     """Captures dependencies required to satisfy a request edge."""
 
     edge: "OperationEdge"
-    parameter_requirements: Dict[str, Any] = field(default_factory=dict)
+    parameter_requirements: Dict[ParameterKey, Any] = field(default_factory=dict)
     request_body_requirements: Dict[str, Any] = field(default_factory=dict)
 
     def generate_combinations(self) -> List["RequestRequirements"]:
         combinations: List[RequestRequirements] = []
 
-        param_combinations: List[Dict[str, Any]] = []
+        param_combinations: List[Dict[ParameterKey, Any]] = []
         if self.parameter_requirements:
             for i in range(1, len(self.parameter_requirements) + 1):
                 for subset in itertools.combinations(
-                        self.parameter_requirements.keys(), i
+                    self.parameter_requirements.keys(), i
                 ):
                     param_combinations.append(
                         {key: self.parameter_requirements[key] for key in subset}
@@ -158,7 +178,7 @@ class RequestRequirements:
         if self.request_body_requirements:
             for i in range(1, len(self.request_body_requirements) + 1):
                 for subset in itertools.combinations(
-                        self.request_body_requirements.keys(), i
+                    self.request_body_requirements.keys(), i
                 ):
                     body_combinations.append(
                         {key: self.request_body_requirements[key] for key in subset}
@@ -201,7 +221,7 @@ class RequestRequirements:
 
         combinations.sort(
             key=lambda req: len(req.parameter_requirements)
-                            + len(req.request_body_requirements),
+            + len(req.request_body_requirements),
             reverse=True,
         )
         return combinations
@@ -220,8 +240,8 @@ class RequestResponse:
 class ValueAction:
     """Represents an action taken by the value agent."""
 
-    param_mappings: Optional[Dict[str, object]]
-    body_mappings: Optional[Dict[str, object]]
+    param_mappings: Optional[Dict[ParameterKey, Any]]
+    body_mappings: Optional[Dict[str, Any]]
 
 
 @dataclass
@@ -246,6 +266,7 @@ __all__ = [
     "SchemaProperties",
     "ParameterProperties",
     "ParameterKey",
+    "is_parameter_key",
     "OperationProperties",
     "RequestData",
     "RequestRequirements",

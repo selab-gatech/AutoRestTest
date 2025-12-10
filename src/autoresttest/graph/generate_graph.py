@@ -1,6 +1,5 @@
 import heapq
 import logging
-from typing import List, Dict, Tuple, Optional
 
 from tqdm import tqdm
 
@@ -16,8 +15,8 @@ class OperationNode:
     def __init__(self, operation_properties: OperationProperties):
         self.operation_id = operation_properties.operation_id
         self.operation_properties: OperationProperties = operation_properties
-        self.outgoing_edges: List[OperationEdge] = []
-        self.tentative_edges: List[OperationEdge] = []
+        self.outgoing_edges: list[OperationEdge] = []
+        self.tentative_edges: list[OperationEdge] = []
 
 
 class OperationEdge:
@@ -25,13 +24,13 @@ class OperationEdge:
         self,
         source: OperationNode,
         destination: OperationNode,
-        similar_parameters: Dict[ParameterKey, List[SimilarityValue]] = None,
+        similar_parameters: dict[str | ParameterKey, list[SimilarityValue]],
     ):
         if similar_parameters is None:
             similar_parameters = {}
         self.source: OperationNode = source
         self.destination: OperationNode = destination
-        self.similar_parameters: Dict[ParameterKey, List[SimilarityValue]] = (
+        self.similar_parameters: dict[str | ParameterKey, list[SimilarityValue]] = (
             similar_parameters  # have parameters as the key (similarity value has response param and in_value)
         )
 
@@ -40,16 +39,16 @@ class OperationGraph:
     def __init__(
         self,
         spec_path,
-        spec_name=None,
-        spec_parser: SpecificationParser = None,
-        embedding_model=None,
+        spec_name,
+        spec_parser: SpecificationParser,
+        embedding_model,
     ):
         self.spec_path = spec_path
         self.spec_name = spec_name
         self.spec_parser = spec_parser
-        self.request_generator: Optional[RequestGenerator] = None
-        self.operation_nodes: Dict[str, OperationNode] = {}
-        self.operation_edges: List[OperationEdge] = []
+        self.request_generator: RequestGenerator | None = None
+        self.operation_nodes: dict[str, OperationNode] = {}
+        self.operation_edges: list[OperationEdge] = []
         self.next_most_similar_count = 3
         self.embedding_model: EmbeddingModel = embedding_model
         self.dependency_comparator = OperationDependencyComparator(
@@ -90,12 +89,14 @@ class OperationGraph:
         self,
         operation_id: str,
         dependent_operation_id: str,
-        parameters: Dict[ParameterKey, List[SimilarityValue]],
+        parameters: dict[str | ParameterKey, list[SimilarityValue]],
     ):
         if operation_id not in self.operation_nodes:
             raise ValueError(f"Operation {operation_id} not found in the graph")
         if dependent_operation_id not in self.operation_nodes:
-            raise ValueError(f"Dependent operation {dependent_operation_id} not found in the graph")
+            raise ValueError(
+                f"Dependent operation {dependent_operation_id} not found in the graph"
+            )
         source_node = self.operation_nodes[operation_id]
         destination_node = self.operation_nodes[dependent_operation_id]
         edge = OperationEdge(
@@ -111,16 +112,18 @@ class OperationGraph:
         self,
         operation_id: str,
         dependent_operation_id: str,
-        next_closest_similarities: List[Tuple[str, SimilarityValue]],
+        next_closest_similarities: list[tuple[str | ParameterKey, SimilarityValue]],
     ):
         # TODO: Update tentative edge handling for lists
         if operation_id not in self.operation_nodes:
             raise ValueError(f"Operation {operation_id} not found in the graph")
         if dependent_operation_id not in self.operation_nodes:
-            raise ValueError(f"Dependent operation {dependent_operation_id} not found in the graph")
+            raise ValueError(
+                f"Dependent operation {dependent_operation_id} not found in the graph"
+            )
         source_node = self.operation_nodes[operation_id]
         destination_node = self.operation_nodes[dependent_operation_id]
-        similar_parameters = {}
+        similar_parameters: dict[str | ParameterKey, list[SimilarityValue]] = {}
         # recall that next_closest_similarities is a list matching params in operation to params in dependent_operation
         for next_closest_similarity in next_closest_similarities:
             if next_closest_similarity[0] not in similar_parameters:
@@ -138,15 +141,17 @@ class OperationGraph:
         source_node.tentative_edges = heapq.nlargest(
             self.next_most_similar_count,
             [e for e in source_node.tentative_edges if e.similar_parameters],
-            key=lambda x: next(iter(x.similar_parameters.values())).similarity,
+            key=lambda x: max(
+                sv.similarity for sv in next(iter(x.similar_parameters.values()))
+            ),
         )  # small n so efficient
 
     def update_operation_dependencies(
         self,
         operation_id: str,
         dependent_operation_id: str,
-        similar_parameters: Dict[str, List[SimilarityValue]],
-        next_closest_similarities: List[Tuple[str, SimilarityValue]],
+        similar_parameters: dict[str | ParameterKey, list[SimilarityValue]],
+        next_closest_similarities: list[tuple[str | ParameterKey, SimilarityValue]],
     ):
         if operation_id not in self.operation_nodes:
             raise ValueError(f"Operation {operation_id} not found in the graph")
@@ -173,11 +178,13 @@ class OperationGraph:
             source_node.outgoing_edges.remove(edge_to_remove)
             self.operation_edges.remove(edge_to_remove)
 
-    def determine_dependencies(self, operations):
+    def determine_dependencies(
+        self, operations: dict[str, OperationProperties]
+    ) -> None:
         for operation_id, operation_properties in tqdm(
             operations.items(),
             desc="Building operation dependency graph",
-            unit="operations"
+            unit="operations",
         ):
             for (
                 dependent_operation_id,
@@ -206,8 +213,8 @@ class OperationGraph:
                     self.operation_nodes[operation_id].tentative_edges
                 )
 
-    def create_graph(self, auto_validate=True):
-        operations: Dict[str, OperationProperties] = (
+    def create_graph(self, auto_validate: bool = True) -> None:
+        operations: dict[str, OperationProperties] = (
             self.spec_parser.parse_specification()
         )
         print(f"Parsed specification ({len(operations)} operations)")

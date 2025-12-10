@@ -34,6 +34,7 @@ from autoresttest.utils import (
     get_required_params,
     get_body_object_combinations,
     dispatch_request,
+    get_accept_header,
 )
 from autoresttest.llm import NaiveValueGenerator, SmartValueGenerator
 
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
     from .generate_graph import OperationGraph, OperationNode, OperationEdge
 
 CONFIG = get_config()
+
 
 @dataclass
 class StatusCode:
@@ -67,7 +69,7 @@ class RequestGenerator:
     @staticmethod
     def generate_naive_values(
         parameters: Dict[ParameterKey, ParameterProperties],
-        request_body: Dict[str, SchemaProperties],
+        request_body: Dict[str, SchemaProperties] | None,
     ):
         value_generator = NaiveValueGenerator(
             parameters=parameters, request_body=request_body
@@ -79,7 +81,7 @@ class RequestGenerator:
     @staticmethod
     def generate_smart_values(
         operation_properties: OperationProperties,
-        requirements: RequestRequirements = None,
+        requirements: RequestRequirements | None = None,
     ):
         """
         Generate smart values for parameters and request body using LLMs
@@ -98,7 +100,7 @@ class RequestGenerator:
     def make_request_data(
         self,
         operation_properties: OperationProperties,
-        requirements: RequestRequirements = None,
+        requirements: RequestRequirements | None = None,
     ) -> RequestData:
         """
         Process the operation properties by preparing request data for queries with mapping values to parameters and request body
@@ -156,13 +158,13 @@ class RequestGenerator:
         permitted_retries: int = 1,
     ) -> Optional[RequestResponse]:
         retry_data = self.make_request_retry_data(request_data, response)
-        response = self.send_operation_request(
+        retry_response = self.send_operation_request(
             retry_data,
             retry_nums=curr_retry + 1,
             allow_retry=True,
             permitted_retries=permitted_retries,
         )
-        return response
+        return retry_response
 
     def _determine_auth_mappings(
         self, request_val: Any, auth_parameters: Dict, auth_mappings
@@ -235,10 +237,8 @@ class RequestGenerator:
         params = get_param_combinations(operation_node.operation_properties.parameters)
         if not is_body:
             for param in params:
-                param_names = {
-                    p[0] if isinstance(p, tuple) else p
-                    for p in param
-                }
+                # param is a tuple of ParameterKey tuples; p[0] extracts the parameter name
+                param_names = {p[0] for p in param}
                 if set(param_auth_info.values()).issubset(param_names):
                     param_q_table["params"][param] = 0
         else:
@@ -248,13 +248,11 @@ class RequestGenerator:
             if operation_node.operation_properties.request_body
             else None
         )
-        body_properties = (
-            get_body_object_combinations(
+        body_properties: List = []
+        if select_mime and operation_node.operation_properties.request_body:
+            body_properties = get_body_object_combinations(
                 operation_node.operation_properties.request_body[select_mime]
             )
-            if select_mime
-            else []
-        )
         if is_body:
             for body in body_properties:
                 if set(param_auth_info.values()).issubset(set(body)):
@@ -411,8 +409,10 @@ class RequestGenerator:
         request_body = request_data.request_body
         processed_parameters = copy.deepcopy(parameters) or {}
 
-        path_params, query_params, header_params, cookie_params = split_parameter_values(
-            request_data.operation_properties.parameters, processed_parameters
+        path_params, query_params, header_params, cookie_params = (
+            split_parameter_values(
+                request_data.operation_properties.parameters, processed_parameters
+            )
         )
 
         for name, value in path_params.items():
@@ -428,6 +428,9 @@ class RequestGenerator:
             merged_headers = header_params.copy()
             merged_headers.update(get_config().static_headers)
 
+            accept_header = get_accept_header(
+                request_data.operation_properties.responses
+            )
             response = dispatch_request(
                 select_method=select_method,
                 full_url=full_url,
@@ -435,6 +438,7 @@ class RequestGenerator:
                 body=request_body,
                 header=merged_headers,
                 cookies=cookie_params,
+                accept=accept_header,
             )
             if response is not None:
                 if not response.ok and retry_nums < permitted_retries and allow_retry:
@@ -465,7 +469,7 @@ class RequestGenerator:
         self,
         curr_node: "OperationNode",
         parameter_mappings: Dict,
-        req_param_mappings: Dict[str, List[Any]],
+        req_param_mappings: Dict[ParameterKey, List[Any]],
         req_body_mappings: Dict[str, List[Any]],
         occurrences: Dict,
     ):
@@ -590,6 +594,7 @@ class RequestGenerator:
         max_workers: int = 4,
     ) -> None:
         """Generate value tables for all operations in parallel using a thread pool."""
+        # parameter_mappings corresponds to q_table
         visited_lock = threading.Lock()
         mappings_lock = threading.Lock()
         visited: Set[str] = set()
@@ -646,7 +651,11 @@ class RequestGenerator:
                 # Thread-safe update to parameter_mappings
                 with mappings_lock:
                     self._validate_value_mappings(
-                        operation_node, parameter_mappings, parameters, request_body, occurrences
+                        operation_node,
+                        parameter_mappings,
+                        parameters,
+                        request_body,
+                        occurrences,
                     )
 
             print(f"Completed value table generation for operation: {operation_id}")
@@ -668,14 +677,14 @@ class RequestGenerator:
     def create_and_send_request(
         self,
         curr_node: "OperationNode",
-        requirement: RequestRequirements = None,
+        requirement: RequestRequirements | None = None,
         allow_retry: bool = False,
         permitted_retries: int = 1,
-    ) -> RequestResponse:
+    ) -> Optional[RequestResponse]:
         request_data: RequestData = self.make_request_data(
             curr_node.operation_properties, requirement
         )
-        response: RequestResponse = self.send_operation_request(
+        response: Optional[RequestResponse] = self.send_operation_request(
             request_data, allow_retry=allow_retry, permitted_retries=permitted_retries
         )
         return response

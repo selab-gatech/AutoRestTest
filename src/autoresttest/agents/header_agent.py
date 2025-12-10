@@ -25,6 +25,8 @@ class HeaderAgent(BaseAgent):
 
     def initialize_q_table(self) -> None:
         request_generator = self.operation_graph.request_generator
+        if request_generator is None:
+            return
         token_list: List = []
         for operation_node in self.operation_graph.operation_nodes.values():
             token_info = request_generator.get_auth_info(operation_node, 5)
@@ -39,6 +41,8 @@ class HeaderAgent(BaseAgent):
             self.q_table[operation_id].append([None, 0])
 
     def get_action(self, operation_id: str) -> Optional[str]:
+        if operation_id not in self.q_table:
+            raise ValueError(f"Operation '{operation_id}' not found in the Q-table for HeaderAgent.")
         if random.random() < self.epsilon:
             return self.get_random_action(operation_id)
         return self.get_best_action(operation_id)
@@ -54,6 +58,8 @@ class HeaderAgent(BaseAgent):
     def update_q_table(
         self, operation_id: str, action: Optional[str], reward: float
     ) -> None:
+        if operation_id not in self.q_table:
+            return
         current_q = 0.0
         best_next_q = -np.inf
         for mapping in self.q_table[operation_id]:
@@ -66,12 +72,16 @@ class HeaderAgent(BaseAgent):
                 mapping[1] = new_q
 
     def get_Q_next(self, operation_id: str) -> float:
+        if operation_id not in self.q_table:
+            return 0.0
         best_next_q = -np.inf
         for mapping in self.q_table[operation_id]:
             best_next_q = max(best_next_q, mapping[1])
         return best_next_q
 
     def get_Q_curr(self, operation_id: str, token: Optional[str]) -> float:
+        if operation_id not in self.q_table:
+            return 0.0
         current_q = 0.0
         for mapping in self.q_table[operation_id]:
             if mapping[0] == token:
@@ -81,6 +91,8 @@ class HeaderAgent(BaseAgent):
     def update_Q_item(
         self, operation_id: str, token: Optional[str], td_error: float
     ) -> None:
+        if operation_id not in self.q_table:
+            return
         for mapping in self.q_table[operation_id]:
             if mapping[0] == token:
                 mapping[1] += self.alpha * td_error

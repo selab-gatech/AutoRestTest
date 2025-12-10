@@ -29,3 +29,16 @@ autoresttest = "autoresttest.autoresttest:main"
 [build-system]
 requires = ["poetry-core>=1.8.0"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "mypy (>=1.19.0,<2.0.0)",
+    "pyright (>=1.1.407,<2.0.0)"
+]
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
+reportMissingImports = true
+reportMissingTypeStubs = false

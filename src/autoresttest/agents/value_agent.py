@@ -1,6 +1,6 @@
 import random
 from collections import defaultdict
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional, Union, cast
 
 import numpy as np
 
@@ -8,7 +8,14 @@ from .base_agent import BaseAgent
 
 from autoresttest.config import get_config
 from autoresttest.graph import OperationGraph
-from autoresttest.models import ValueAction
+from autoresttest.models import ParameterKey, ValueAction
+
+# Type alias for ValueAgent Q-table structure:
+# Structure: Operation ID -> {"params": {...}, "body": {...}}
+# - "params" dict uses ParameterKey tuples as keys (parameter name, in_value)
+# - "body" dict uses str keys (MIME types like "application/json")
+# Union[ParameterKey, str] is intentional to support both key types in the same dict
+ValueQTable = dict[str, dict[str, dict[ParameterKey | str, list[list[Any]]]]]
 
 
 class ValueAgent(BaseAgent):
@@ -19,7 +26,7 @@ class ValueAgent(BaseAgent):
         gamma: float = 0.9,
         epsilon: float = 0.1,
     ):
-        self.q_table: Dict[str, Dict[str, Dict[str, list]]] = {}
+        self.q_table: ValueQTable = {}
         self.operation_graph = operation_graph
         self.alpha = alpha
         self.gamma = gamma
@@ -28,6 +35,9 @@ class ValueAgent(BaseAgent):
     def initialize_q_table(self) -> None:
         config = get_config()
         request_generator = self.operation_graph.request_generator
+
+        if request_generator is None:
+            raise Exception("Request generator failed to initialize...")
 
         if config.parallelize_value_generation:
             # Parallel processing using thread pool
@@ -50,6 +60,10 @@ class ValueAgent(BaseAgent):
                     )
 
     def get_action(self, operation_id: str) -> ValueAction:
+        if operation_id not in self.q_table:
+            raise ValueError(
+                f"Operation '{operation_id}' not found in the Q-table for ValueAgent."
+            )
         if random.random() < self.epsilon:
             return self.get_random_action(operation_id)
         return self.get_best_action(operation_id)
@@ -57,7 +71,7 @@ class ValueAgent(BaseAgent):
     def get_best_action(self, operation_id: str) -> ValueAction:
         param_mappings = (
             {
-                param: max(param_mappings, key=lambda pm: pm[1])[0]
+                cast(ParameterKey, param): max(param_mappings, key=lambda pm: pm[1])[0]
                 for param, param_mappings in self.q_table[operation_id][
                     "params"
                 ].items()
@@ -68,7 +82,7 @@ class ValueAgent(BaseAgent):
         )
         body_mappings = (
             {
-                mime: max(body_mappings, key=lambda bm: bm[1])[0]
+                cast(str, mime): max(body_mappings, key=lambda bm: bm[1])[0]
                 for mime, body_mappings in self.q_table[operation_id]["body"].items()
                 if body_mappings and len(body_mappings) > 0
             }
@@ -80,7 +94,7 @@ class ValueAgent(BaseAgent):
     def get_random_action(self, operation_id: str) -> ValueAction:
         param_mappings = (
             {
-                param: random.choice(param_mappings)[0]
+                cast(ParameterKey, param): random.choice(param_mappings)[0]
                 for param, param_mappings in self.q_table[operation_id][
                     "params"
                 ].items()
@@ -91,7 +105,7 @@ class ValueAgent(BaseAgent):
         )
         body_mappings = (
             {
-                mime: random.choice(body_mappings)[0]
+                cast(str, mime): random.choice(body_mappings)[0]
                 for mime, body_mappings in self.q_table[operation_id]["body"].items()
                 if body_mappings
             }
@@ -103,8 +117,12 @@ class ValueAgent(BaseAgent):
     def update_q_table(
         self, operation_id: str, filtered_action: ValueAction, reward: float
     ) -> None:
+        if operation_id not in self.q_table:
+            return
         if filtered_action.param_mappings:
             for param, value in filtered_action.param_mappings.items():
+                if param not in self.q_table[operation_id].get("params", {}):
+                    continue
                 current_q = 0.0
                 best_next_q = -np.inf
                 for mapping in self.q_table[operation_id]["params"][param]:
@@ -119,6 +137,8 @@ class ValueAgent(BaseAgent):
                         mapping[1] = new_q
         if filtered_action.body_mappings:
             for mime, body in filtered_action.body_mappings.items():
+                if mime not in self.q_table[operation_id].get("body", {}):
+                    continue
                 current_q = 0.0
                 best_next_q = -np.inf
                 for mapping in self.q_table[operation_id]["body"][mime]:
@@ -132,28 +152,42 @@ class ValueAgent(BaseAgent):
                     if mapping[0] == body:
                         mapping[1] = new_q
 
-    def get_Q_next(self, operation_id: str, filtered_action: ValueAction):
-        best_Q_next_params = []
-        best_Q_next_body = []
+    def get_Q_next(
+        self, operation_id: str, filtered_action: ValueAction
+    ) -> tuple[list[float], list[float]]:
+        best_Q_next_params: list[float] = []
+        best_Q_next_body: list[float] = []
+        if operation_id not in self.q_table:
+            return best_Q_next_params, best_Q_next_body
         if filtered_action.param_mappings:
             best_next_q = -np.inf
             for param, value in filtered_action.param_mappings.items():
+                if param not in self.q_table[operation_id].get("params", {}):
+                    continue
                 for mapping in self.q_table[operation_id]["params"][param]:
                     best_next_q = max(best_next_q, mapping[1])
                 best_Q_next_params.append(best_next_q)
         if filtered_action.body_mappings:
             best_next_q = -np.inf
             for mime, body in filtered_action.body_mappings.items():
+                if mime not in self.q_table[operation_id].get("body", {}):
+                    continue
                 for mapping in self.q_table[operation_id]["body"][mime]:
                     best_next_q = max(best_next_q, mapping[1])
                 best_Q_next_body.append(best_next_q)
         return best_Q_next_params, best_Q_next_body
 
-    def get_Q_curr(self, operation_id: str, filtered_action: ValueAction):
-        current_Q_params = []
-        current_Q_body = []
+    def get_Q_curr(
+        self, operation_id: str, filtered_action: ValueAction
+    ) -> tuple[list[float], list[float]]:
+        current_Q_params: list[float] = []
+        current_Q_body: list[float] = []
+        if operation_id not in self.q_table:
+            return current_Q_params, current_Q_body
         if filtered_action.param_mappings:
             for param, value in filtered_action.param_mappings.items():
+                if param not in self.q_table[operation_id].get("params", {}):
+                    continue
                 current_q = 0.0
                 for mapping in self.q_table[operation_id]["params"][param]:
                     if mapping[0] == value:
@@ -161,6 +195,8 @@ class ValueAgent(BaseAgent):
                 current_Q_params.append(current_q)
         if filtered_action.body_mappings:
             for mime, body in filtered_action.body_mappings.items():
+                if mime not in self.q_table[operation_id].get("body", {}):
+                    continue
                 current_q = 0.0
                 for mapping in self.q_table[operation_id]["body"][mime]:
                     if mapping[0] == body:
@@ -171,13 +207,19 @@ class ValueAgent(BaseAgent):
     def update_Q_item(
         self, operation_id: str, action: ValueAction, td_error: float
     ) -> None:
+        if operation_id not in self.q_table:
+            return
         if action.param_mappings:
             for param, value in action.param_mappings.items():
+                if param not in self.q_table[operation_id].get("params", {}):
+                    continue
                 for mapping in self.q_table[operation_id]["params"][param]:
                     if mapping[0] == value:
                         mapping[1] += self.alpha * td_error
         if action.body_mappings:
             for mime, body in action.body_mappings.items():
+                if mime not in self.q_table[operation_id].get("body", {}):
+                    continue
                 for mapping in self.q_table[operation_id]["body"][mime]:
                     if mapping[0] == body:
                         mapping[1] += self.alpha * td_error
