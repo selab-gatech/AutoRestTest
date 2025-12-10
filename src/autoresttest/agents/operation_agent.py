@@ -1,5 +1,4 @@
 import random
-from typing import Dict
 
 from .base_agent import BaseAgent
 
@@ -18,7 +17,7 @@ class OperationAgent(BaseAgent):
         self.gamma = gamma
         self.epsilon = epsilon
         self.operation_graph = operation_graph
-        self.q_table: Dict[str, float] = {}
+        self.q_table: dict[str, float] = {}
 
     def initialize_q_table(self) -> None:
         operation_ids = self.operation_graph.operation_nodes.keys()
@@ -31,12 +30,16 @@ class OperationAgent(BaseAgent):
 
     def get_best_action(self) -> str:
         if not self.q_table:
-            raise ValueError("No operations were parsed from the specification for OperationAgent.")
+            raise ValueError(
+                "No operations were parsed from the specification for OperationAgent."
+            )
         return max(self.q_table.items(), key=lambda x: x[1])[0]
 
     def get_random_action(self) -> str:
         if not self.q_table:
-            raise ValueError("No operations were parsed from the specification for OperationAgent.")
+            raise ValueError(
+                "No operations were parsed from the specification for OperationAgent."
+            )
         return random.choice(list(self.q_table.keys()))
 
     def update_q_table(self, operation_id: str, reward: float) -> None:

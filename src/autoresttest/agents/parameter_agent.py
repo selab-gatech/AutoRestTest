@@ -25,7 +25,10 @@ class ParameterAgent(BaseAgent):
         gamma: float = 0.9,
         epsilon: float = 0.1,
     ):
-        self.q_table: Dict[str, Dict[str, Dict]] = {}
+        # Q-table maps the operation IDs to a dictionary containing a location key (e.g., "params") mapped to the parameter combinations
+        self.q_table: dict[
+            str, dict[str, dict[tuple[ParameterKey, ...] | str, float]]
+        ] = {}
         self.operation_graph = operation_graph
         self.alpha = alpha
         self.gamma = gamma
@@ -41,7 +44,7 @@ class ParameterAgent(BaseAgent):
             params = get_param_combinations(
                 operation_node.operation_properties.parameters
             )
-            self.q_table[operation_id]["params"] = {param: 0 for param in params}
+            self.q_table[operation_id]["params"] = {param: 0.0 for param in params}
             mimes = (
                 list(operation_node.operation_properties.request_body.keys())
                 if operation_node.operation_properties.request_body
@@ -53,64 +56,67 @@ class ParameterAgent(BaseAgent):
 
     def get_action(self, operation_id: str) -> ParameterAction:
         if operation_id not in self.q_table:
-            raise ValueError(f"Operation '{operation_id}' not found in the Q-table for ParameterAgent.")
+            raise ValueError(
+                f"Operation '{operation_id}' not found in the Q-table for ParameterAgent."
+            )
         if operation_id not in self.operation_graph.operation_nodes:
-            raise ValueError(f"Operation '{operation_id}' not found in the operation graph.")
+            raise ValueError(
+                f"Operation '{operation_id}' not found in the operation graph."
+            )
         if random.random() < self.epsilon:
             return self.get_random_action(operation_id)
         return self.get_best_action(operation_id)
 
     def get_random_action(self, operation_id: str) -> ParameterAction:
-        random_params = (
-            random.choice(list(self.q_table[operation_id]["params"].keys()))
-            if self.q_table[operation_id]["params"]
-            else None
-        )
-        random_mime = (
-            random.choice(list(self.q_table[operation_id]["body"].keys()))
-            if self.q_table[operation_id]["body"]
-            else None
-        )
-        if random_params == "None":
-            random_params = None
-        if random_mime == "None":
-            random_mime = None
+        random_params: tuple[ParameterKey, ...] | None = None
+        if self.q_table[operation_id]["params"]:
+            key = random.choice(list(self.q_table[operation_id]["params"].keys()))
+            if key != "None" and isinstance(key, tuple):
+                random_params = key
+
+        random_mime: str | None = None
+        if self.q_table[operation_id]["body"]:
+            key = random.choice(list(self.q_table[operation_id]["body"].keys()))
+            if key != "None" and isinstance(key, str):
+                random_mime = key
+
         return ParameterAction(req_params=random_params, mime_type=random_mime)
 
     def get_best_action(self, operation_id: str) -> ParameterAction:
-        required_params = get_required_params(
+        required_params: set[ParameterKey] = get_required_params(
             self.operation_graph.operation_nodes[
                 operation_id
             ].operation_properties.parameters
         )
-        best_params: Tuple[Optional[List[str]], float] = (None, -np.inf)
+
+        best_params: tuple[ParameterKey, ...] | None = None
+        best_params_score: float = -np.inf
+
         if self.q_table[operation_id]["params"] and required_params:
             for params, score in self.q_table[operation_id]["params"].items():
                 if (
-                    params
+                    params != "None"
+                    and isinstance(params, tuple)
                     and required_params.issubset(set(params))
-                    and score > best_params[1]
+                    and score > best_params_score
                 ):
-                    best_params = (params, score)
-            best_params = best_params[0]
-        else:
-            best_params = (
-                max(self.q_table[operation_id]["params"].items(), key=lambda x: x[1])[0]
-                if self.q_table[operation_id]["params"]
-                else None
-            )
+                    best_params = params
+                    best_params_score = score
+        elif self.q_table[operation_id]["params"]:
+            best_key = max(
+                self.q_table[operation_id]["params"].items(), key=lambda x: x[1]
+            )[0]
+            if best_key != "None" and isinstance(best_key, tuple):
+                best_params = best_key
 
-        best_body: Tuple[Optional[str], float] = (None, -np.inf)
+        best_body: str | None = None
+        best_body_score: float = -np.inf
+
         if self.q_table[operation_id]["body"]:
             for mime, score in self.q_table[operation_id]["body"].items():
-                if mime != "None" and score > best_body[1]:
-                    best_body = (mime, score)
-        best_body = best_body[0]
-
-        if best_params == "None":
-            best_params = None
-        if best_body == "None":
-            best_body = None
+                if mime != "None" and isinstance(mime, str) and score > best_body_score:
+                    best_body = mime
+                    best_body_score = score
 
         return ParameterAction(req_params=best_params, mime_type=best_body)
 
@@ -155,14 +161,18 @@ class ParameterAgent(BaseAgent):
             return
         req_params_key = action.req_params if action.req_params is not None else "None"
         mime_type_key = action.mime_type if action.mime_type is not None else "None"
-        if self.q_table[operation_id]["params"] and req_params_key in self.q_table[operation_id]["params"]:
+        if (
+            self.q_table[operation_id]["params"]
+            and req_params_key in self.q_table[operation_id]["params"]
+        ):
             self.q_table[operation_id]["params"][req_params_key] += (
                 self.alpha * td_error
             )
-        if self.q_table[operation_id]["body"] and mime_type_key in self.q_table[operation_id]["body"]:
-            self.q_table[operation_id]["body"][mime_type_key] += (
-                self.alpha * td_error
-            )
+        if (
+            self.q_table[operation_id]["body"]
+            and mime_type_key in self.q_table[operation_id]["body"]
+        ):
+            self.q_table[operation_id]["body"][mime_type_key] += self.alpha * td_error
 
     def update_q_table(
         self, operation_id: str, action: ParameterAction, reward: float
@@ -197,9 +207,15 @@ class ParameterAgent(BaseAgent):
         new_q_body = current_q_body + self.alpha * (
             reward + self.gamma * best_next_q_body - current_q_body
         )
-        if self.q_table[operation_id]["params"] and req_params_key in self.q_table[operation_id]["params"]:
+        if (
+            self.q_table[operation_id]["params"]
+            and req_params_key in self.q_table[operation_id]["params"]
+        ):
             self.q_table[operation_id]["params"][req_params_key] = new_q_params
-        if self.q_table[operation_id]["body"] and mime_type_key in self.q_table[operation_id]["body"]:
+        if (
+            self.q_table[operation_id]["body"]
+            and mime_type_key in self.q_table[operation_id]["body"]
+        ):
             self.q_table[operation_id]["body"][mime_type_key] = new_q_body
 
     def number_of_zeros(self, operation_id: str) -> int:

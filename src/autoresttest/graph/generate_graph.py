@@ -1,6 +1,5 @@
 import heapq
 import logging
-from typing import List, Dict, Tuple, Optional
 
 from tqdm import tqdm
 
@@ -16,8 +15,8 @@ class OperationNode:
     def __init__(self, operation_properties: OperationProperties):
         self.operation_id = operation_properties.operation_id
         self.operation_properties: OperationProperties = operation_properties
-        self.outgoing_edges: List[OperationEdge] = []
-        self.tentative_edges: List[OperationEdge] = []
+        self.outgoing_edges: list[OperationEdge] = []
+        self.tentative_edges: list[OperationEdge] = []
 
 
 class OperationEdge:
@@ -25,13 +24,13 @@ class OperationEdge:
         self,
         source: OperationNode,
         destination: OperationNode,
-        similar_parameters: Dict[ParameterKey, List[SimilarityValue]],
+        similar_parameters: dict[str | ParameterKey, list[SimilarityValue]],
     ):
         if similar_parameters is None:
             similar_parameters = {}
         self.source: OperationNode = source
         self.destination: OperationNode = destination
-        self.similar_parameters: Dict[ParameterKey, List[SimilarityValue]] = (
+        self.similar_parameters: dict[str | ParameterKey, list[SimilarityValue]] = (
             similar_parameters  # have parameters as the key (similarity value has response param and in_value)
         )
 
@@ -47,9 +46,9 @@ class OperationGraph:
         self.spec_path = spec_path
         self.spec_name = spec_name
         self.spec_parser = spec_parser
-        self.request_generator: Optional[RequestGenerator] = None
-        self.operation_nodes: Dict[str, OperationNode] = {}
-        self.operation_edges: List[OperationEdge] = []
+        self.request_generator: RequestGenerator | None = None
+        self.operation_nodes: dict[str, OperationNode] = {}
+        self.operation_edges: list[OperationEdge] = []
         self.next_most_similar_count = 3
         self.embedding_model: EmbeddingModel = embedding_model
         self.dependency_comparator = OperationDependencyComparator(
@@ -90,7 +89,7 @@ class OperationGraph:
         self,
         operation_id: str,
         dependent_operation_id: str,
-        parameters: Dict[ParameterKey, List[SimilarityValue]],
+        parameters: dict[str | ParameterKey, list[SimilarityValue]],
     ):
         if operation_id not in self.operation_nodes:
             raise ValueError(f"Operation {operation_id} not found in the graph")
@@ -113,7 +112,7 @@ class OperationGraph:
         self,
         operation_id: str,
         dependent_operation_id: str,
-        next_closest_similarities: List[Tuple[ParameterKey, SimilarityValue]],
+        next_closest_similarities: list[tuple[str | ParameterKey, SimilarityValue]],
     ):
         # TODO: Update tentative edge handling for lists
         if operation_id not in self.operation_nodes:
@@ -124,7 +123,7 @@ class OperationGraph:
             )
         source_node = self.operation_nodes[operation_id]
         destination_node = self.operation_nodes[dependent_operation_id]
-        similar_parameters = {}
+        similar_parameters: dict[str | ParameterKey, list[SimilarityValue]] = {}
         # recall that next_closest_similarities is a list matching params in operation to params in dependent_operation
         for next_closest_similarity in next_closest_similarities:
             if next_closest_similarity[0] not in similar_parameters:
@@ -151,8 +150,8 @@ class OperationGraph:
         self,
         operation_id: str,
         dependent_operation_id: str,
-        similar_parameters: Dict[ParameterKey, List[SimilarityValue]],
-        next_closest_similarities: List[Tuple[ParameterKey, SimilarityValue]],
+        similar_parameters: dict[str | ParameterKey, list[SimilarityValue]],
+        next_closest_similarities: list[tuple[str | ParameterKey, SimilarityValue]],
     ):
         if operation_id not in self.operation_nodes:
             raise ValueError(f"Operation {operation_id} not found in the graph")
@@ -215,7 +214,7 @@ class OperationGraph:
                 )
 
     def create_graph(self, auto_validate: bool = True) -> None:
-        operations: Dict[str, OperationProperties] = (
+        operations: dict[str, OperationProperties] = (
             self.spec_parser.parse_specification()
         )
         print(f"Parsed specification ({len(operations)} operations)")

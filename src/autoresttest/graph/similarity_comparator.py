@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Dict, List, Tuple
+from collections.abc import Sequence
 
 import numpy as np
 from gensim.downloader import load
@@ -24,16 +24,17 @@ class OperationDependencyComparator:
 
     def get_parameter_list(
         self, operation: OperationProperties
-    ) -> List[Tuple[str, ParameterKey, str]]:
-        if operation.parameters is None:
+    ) -> list[tuple[str, ParameterKey, str]]:
+        """Returns a list of the parameter name, its ParmaeterKey (name, location), and the location"""
+        if not operation.parameters:
             return []
-        parameter_list: List[Tuple[str, ParameterKey, str]] = []
+        parameter_list: list[tuple[str, ParameterKey, str]] = []
         for parameter_key, parameter_details in operation.parameters.items():
-            processed = self.model.handle_word_cases(parameter_details.name)
+            processed_name = self.model.handle_word_cases(parameter_details.name)
             location = parameter_key[1] if isinstance(parameter_key, tuple) else None
             parameter_list.append(
                 (
-                    processed,
+                    processed_name,
                     parameter_key,
                     location or parameter_details.in_value or "query",
                 )
@@ -41,8 +42,9 @@ class OperationDependencyComparator:
         return parameter_list
 
     def handle_response_params(
-        self, response: SchemaProperties, response_params: List[Dict[str, str]]
+        self, response: SchemaProperties, response_params: list[dict[str, str]]
     ) -> None:
+        """In-place adds to a list where each item is a mapping of the processed item to its original name in the response spec."""
         if response.properties:
             for item, item_details in response.properties.items():
                 if {self.model.handle_word_cases(item): item} not in response_params:
@@ -53,8 +55,9 @@ class OperationDependencyComparator:
         else:
             return
 
-    def handle_body_params(self, body: SchemaProperties) -> List[Tuple[str, str]]:
-        object_params: List[Tuple[str, str]] = []
+    def handle_body_params(self, body: SchemaProperties) -> list[tuple[str, str]]:
+        """Returns a tuple of the processed body parameter name and its original name."""
+        object_params: list[tuple[str, str]] = []
         if body.properties:
             object_params = [
                 (self.model.handle_word_cases(item), item)
@@ -66,7 +69,7 @@ class OperationDependencyComparator:
 
     def get_request_body_list(
         self, operation: OperationProperties
-    ) -> List[Tuple[str, str, str]]:
+    ) -> list[tuple[str, str, str]]:
         if operation.request_body is None:
             return []
         request_body_list = []
@@ -82,7 +85,7 @@ class OperationDependencyComparator:
 
     def get_response_list(
         self, operation: OperationProperties
-    ) -> List[Tuple[str, str, str]]:
+    ) -> list[tuple[str, str, str]]:
         if operation.responses is None:
             return []
         response_list = []
@@ -100,13 +103,13 @@ class OperationDependencyComparator:
 
     def cosine_similarity(
         self,
-        operation1_vals: List[Tuple[str, ParameterKey, str]],
-        operation2_vals: List[Tuple[str, object, str]],
-    ) -> Dict[ParameterKey, List[SimilarityValue]]:
+        operation1_vals: Sequence[tuple[str, ParameterKey | str, str]],
+        operation2_vals: Sequence[tuple[str, ParameterKey | str, str]],
+    ) -> dict[str | ParameterKey, list[SimilarityValue]]:
         """
-        Returns parameters that might map between operations
+        Returns parameters or body properties (str or ParameterKey) that might map to parameters or body properties or responses (str or ParameterKey) in other operations.
         """
-        param_param_similarity = {}
+        param_param_similarity: dict[str | ParameterKey, list[SimilarityValue]] = {}
         for processed_parameter, parameter_key, parameter_loc in operation1_vals:
             param_param_similarity.setdefault(parameter_key, [])
             for processed_dependency, dependency_key, dependency_loc in operation2_vals:
@@ -117,7 +120,9 @@ class OperationDependencyComparator:
                     processed_dependency
                 )
                 if param_embedding is not None and dependency_embedding is not None:
-                    similarity = 1 - cosine(param_embedding, dependency_embedding)
+                    similarity: float = 1.0 - float(
+                        cosine(param_embedding, dependency_embedding)
+                    )
                     param_param_similarity[parameter_key].append(
                         SimilarityValue(
                             dependent_val=dependency_key,
@@ -130,18 +135,35 @@ class OperationDependencyComparator:
 
     def compare_cosine(
         self, operation1: OperationProperties, operation2: OperationProperties
-    ) -> Tuple[
-        Dict[ParameterKey, List[SimilarityValue]], List[Tuple[ParameterKey, SimilarityValue]]
+    ) -> tuple[
+        dict[str | ParameterKey, list[SimilarityValue]],
+        list[tuple[str | ParameterKey, SimilarityValue]],
     ]:
-        parameter_matchings: Dict[ParameterKey, List[SimilarityValue]] = {}
-        similar_parameters: Dict[ParameterKey, List[SimilarityValue]] = {}
-        next_most_similar_parameters: List[Tuple[ParameterKey, SimilarityValue]] = []
+        parameter_matchings: dict[str | ParameterKey, list[SimilarityValue]] = {}
+        similar_parameters: dict[str | ParameterKey, list[SimilarityValue]] = {}
+        next_most_similar_parameters: list[
+            tuple[str | ParameterKey, SimilarityValue]
+        ] = []
 
-        operation1_parameters = self.get_parameter_list(operation1)
-        operation1_body = self.get_request_body_list(operation1)
-        operation2_parameters = self.get_parameter_list(operation2)
-        operation2_body = self.get_request_body_list(operation2)
-        operation2_responses = self.get_response_list(operation2)
+        operation1_parameters: list[tuple[str, ParameterKey, str]] = (
+            self.get_parameter_list(operation1)
+        )
+        operation1_body: list[tuple[str, str, str]] = self.get_request_body_list(
+            operation1
+        )
+        operation2_parameters: list[tuple[str, ParameterKey, str]] = (
+            self.get_parameter_list(operation2)
+        )
+        operation2_body: list[tuple[str, str, str]] = self.get_request_body_list(
+            operation2
+        )
+        operation2_responses: list[tuple[str, str, str]] = self.get_response_list(
+            operation2
+        )
+
+        # Each parameter is the (processed_name, parameter key (name, location), and location)
+        # Each body is the (processed body property, original body property, and "body")
+        # Each response is the (processed response property, original reponse property, and "body")
 
         if operation1.parameters:
             if operation2.parameters:

@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Set
 
 from prance import ResolvingParser, ValidationError as PranceValidationError
 from openapi_spec_validator.validation.exceptions import (
-    ValidationError as OASValidationError,
+    ValidationError as OASValidationError,  # type: ignore[attr-defined]
     OpenAPIValidationError,
 )
 
@@ -34,7 +34,9 @@ def json_spec_output(output_directory: Path, file_name: str, spec: Dict):
 CONFIG = get_config()
 
 
-def default_recursive_limit_handler(limit: int, parsed_url: Any, recursions: tuple[str, ...] = ()) -> dict[str, Any]:
+def default_recursive_limit_handler(
+    limit: int, parsed_url: Any, recursions: tuple[str, ...] = ()
+) -> dict[str, Any]:
     """
     Prance invokes this handler when a circular/self-reference exceeds the recursion_limit.
 
@@ -119,20 +121,36 @@ class SpecificationParser:
         """
         Extract the server URL from the specification file.
         """
-        servers = self.resolving_parser.specification.get("servers")
+        spec = self.resolving_parser.specification
+        if spec is None:
+            raise ValueError("Specification not initialized successfully.")
+        servers = spec.get("servers")
         if not servers:
-            raise ValueError("No servers defined in the OpenAPI specification")
-        return servers[0].get("url")
+            raise ValueError("No servers defined in the OpenAPI specification.")
+        first_server = servers[0]
+        if not isinstance(first_server, dict):
+            raise ValueError("Invalid server definition in the OpenAPI specification.")
+        url = first_server.get("url")
+        if not url:
+            raise ValueError("Server URL is missing in the OpenAPI specification.")
+        return url
 
-    def get_api_title(self) -> str:
+    def get_api_title(self) -> str | None:
         """
         Extract the title of the API from the specification file.
         """
-        return self.resolving_parser.specification.get("info", {}).get("title")
+        spec = self.resolving_parser.specification
+        if spec is None:
+            return None
+        info = spec.get("info")
+        if not isinstance(info, dict):
+            return None
+        title = info.get("title")
+        return title if isinstance(title, str) else None
 
     def process_parameter_object_properties(
-        self, properties: Dict
-    ) -> Dict[str, SchemaProperties]:
+        self, properties: Dict | None
+    ) -> Dict[str, SchemaProperties] | None:
         """
         Process the properties of a parameter of type object to return a dictionary of all the properties and their
         corresponding parameter values.
@@ -144,11 +162,53 @@ class SpecificationParser:
             object_properties.setdefault(
                 name, self.process_parameter_schema(values)
             )  # check if this is correct, or if it should be process_parameter
-        return object_properties
+        # Filter out None values from nested schema processing
+        return {k: v for k, v in object_properties.items() if v is not None}
+
+    def _infer_schema_type(self, schema: Dict) -> str | None:
+        """Infer schema type from context when not explicitly provided."""
+        if schema.get("type"):
+            return schema.get("type")
+
+        # Array indicators
+        if schema.get("items") is not None:
+            return "array"
+
+        # Object indicators
+        if schema.get("properties") is not None:
+            return "object"
+        if schema.get("additionalProperties") is not None:
+            return "object"
+
+        # Infer from enum values
+        enum = schema.get("enum")
+        if enum and len(enum) > 0:
+            first_val = enum[0]
+            if isinstance(first_val, bool):
+                return "boolean"
+            if isinstance(first_val, int):
+                return "integer"
+            if isinstance(first_val, float):
+                return "number"
+            if isinstance(first_val, str):
+                return "string"
+
+        # Numeric constraint indicators
+        if any(
+            schema.get(k) is not None
+            for k in ("minimum", "maximum", "multipleOf", "exclusiveMinimum", "exclusiveMaximum")
+        ):
+            return "number"
+
+        # String constraint indicators
+        if any(schema.get(k) is not None for k in ("minLength", "maxLength", "pattern")):
+            return "string"
+
+        return None
 
     def process_parameter_schema(
-        self, schema: Dict, description: str = None
-    ) -> SchemaProperties:
+        self, schema: Dict | None, description: str | None = None
+    ) -> SchemaProperties | None:
         """
         Process the schema of a parameter to return a ValueProperties object
         """
@@ -156,7 +216,7 @@ class SpecificationParser:
             return None
 
         value_properties = SchemaProperties(
-            type=schema.get("type"),
+            type=self._infer_schema_type(schema),
             format=schema.get("format"),
             description=schema.get("description") if not description else description,
             items=self.process_parameter_schema(
@@ -165,9 +225,9 @@ class SpecificationParser:
             properties=self.process_parameter_object_properties(
                 schema.get("properties")
             ),
-            required=schema.get("required"),
+            required=schema.get("required") or [],
             default=schema.get("default"),
-            enum=schema.get("enum"),
+            enum=schema.get("enum") or [],
             minimum=schema.get("minimum"),
             maximum=schema.get("maximum"),
             min_length=schema.get("minLength"),
@@ -181,18 +241,18 @@ class SpecificationParser:
             read_only=schema.get("readOnly"),
             write_only=schema.get("writeOnly"),
             example=schema.get("example"),
-            examples=schema.get("examples"),
+            examples=schema.get("examples") or [],
         )
         return value_properties
 
-    def process_parameter(self, parameter) -> ParameterProperties:
+    def process_parameter(self, parameter: Any) -> ParameterProperties:
         """
         Process an individual parameter to return a ParameterProperties object.
         """
         if not isinstance(parameter, dict):
             return ParameterProperties()
         parameter_properties = ParameterProperties(
-            name=parameter.get("name"),
+            name=parameter.get("name") or "",
             in_value=parameter.get("in"),
             description=parameter.get("description"),
             required=parameter.get("required"),
@@ -356,10 +416,14 @@ class SpecificationParser:
         merged: Dict[ParameterKey, Dict] = {}
         for raw_param in path_parameters or []:
             if isinstance(raw_param, dict):
-                merged[(raw_param.get("name"), raw_param.get("in"))] = raw_param
+                name = raw_param.get("name")
+                if name is not None:
+                    merged[(name, raw_param.get("in"))] = raw_param
         for raw_param in operation_parameters or []:
             if isinstance(raw_param, dict):
-                merged[(raw_param.get("name"), raw_param.get("in"))] = raw_param
+                name = raw_param.get("name")
+                if name is not None:
+                    merged[(name, raw_param.get("in"))] = raw_param
         return list(merged.values())
 
     def parse_specification(self) -> Dict[str, OperationProperties]:
@@ -371,8 +435,13 @@ class SpecificationParser:
         supported_methods = {"get", "post", "put", "delete", "head", "options", "patch"}
         operation_collection = {}
         seen_ids: Set[str] = set()
-        spec_paths = self.resolving_parser.specification.get("paths", {})
+        spec = self.resolving_parser.specification
+        if spec is None:
+            return operation_collection
+        spec_paths: dict = spec.get("paths", {})
         for endpoint_path, endpoint_details in spec_paths.items():
+            if not isinstance(endpoint_details, dict):
+                continue
             path_level_parameters = endpoint_details.get("parameters", [])
             for http_method, operation_details in endpoint_details.items():
                 if http_method in supported_methods:
@@ -425,7 +494,8 @@ class SpecificationParser:
         output_directory = Path("./testing_output")
         output_directory.mkdir(parents=True, exist_ok=True)
         output = self.parse_specification()
-        json_spec_output(output_directory, self.spec_name, to_dict_helper(output))
+        file_name = self.spec_name if self.spec_name else "spec_output.json"
+        json_spec_output(output_directory, file_name, to_dict_helper(output))
 
 
 if __name__ == "__main__":

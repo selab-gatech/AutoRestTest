@@ -42,6 +42,7 @@ if TYPE_CHECKING:
 
 CONFIG = get_config()
 
+
 @dataclass
 class StatusCode:
     status_code: int
@@ -67,7 +68,7 @@ class RequestGenerator:
     @staticmethod
     def generate_naive_values(
         parameters: Dict[ParameterKey, ParameterProperties],
-        request_body: Dict[str, SchemaProperties],
+        request_body: Dict[str, SchemaProperties] | None,
     ):
         value_generator = NaiveValueGenerator(
             parameters=parameters, request_body=request_body
@@ -98,7 +99,7 @@ class RequestGenerator:
     def make_request_data(
         self,
         operation_properties: OperationProperties,
-        requirements: RequestRequirements = None,
+        requirements: RequestRequirements | None = None,
     ) -> RequestData:
         """
         Process the operation properties by preparing request data for queries with mapping values to parameters and request body
@@ -409,8 +410,10 @@ class RequestGenerator:
         request_body = request_data.request_body
         processed_parameters = copy.deepcopy(parameters) or {}
 
-        path_params, query_params, header_params, cookie_params = split_parameter_values(
-            request_data.operation_properties.parameters, processed_parameters
+        path_params, query_params, header_params, cookie_params = (
+            split_parameter_values(
+                request_data.operation_properties.parameters, processed_parameters
+            )
         )
 
         for name, value in path_params.items():
@@ -588,6 +591,7 @@ class RequestGenerator:
         max_workers: int = 4,
     ) -> None:
         """Generate value tables for all operations in parallel using a thread pool."""
+        # parameter_mappings corresponds to q_table
         visited_lock = threading.Lock()
         mappings_lock = threading.Lock()
         visited: Set[str] = set()
@@ -644,7 +648,11 @@ class RequestGenerator:
                 # Thread-safe update to parameter_mappings
                 with mappings_lock:
                     self._validate_value_mappings(
-                        operation_node, parameter_mappings, parameters, request_body, occurrences
+                        operation_node,
+                        parameter_mappings,
+                        parameters,
+                        request_body,
+                        occurrences,
                     )
 
             print(f"Completed value table generation for operation: {operation_id}")
@@ -666,7 +674,7 @@ class RequestGenerator:
     def create_and_send_request(
         self,
         curr_node: "OperationNode",
-        requirement: RequestRequirements = None,
+        requirement: RequestRequirements | None = None,
         allow_retry: bool = False,
         permitted_retries: int = 1,
     ) -> RequestResponse:

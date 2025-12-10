@@ -319,7 +319,7 @@ def _dispatch_request_inner(
     select_method,
     full_url: str,
     params: Dict,
-    body: Dict,
+    body: Dict[str, Any] | None,
     headers: Dict,
     cookies: Optional[Dict],
 ):
@@ -408,7 +408,7 @@ def dispatch_request(
     select_method,
     full_url: str,
     params: Dict,
-    body: Dict,
+    body: Dict[str, Any] | None,
     header: Optional[Dict] = None,
     cookies: Optional[Dict] = None,
     max_retries: int = 3,

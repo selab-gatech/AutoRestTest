@@ -1,5 +1,5 @@
 import random
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import numpy as np
 from scipy.spatial.distance import cosine
@@ -7,11 +7,31 @@ from scipy.spatial.distance import cosine
 from .base_agent import BaseAgent
 
 from autoresttest.graph import OperationGraph
-from autoresttest.models import ParameterKey
+from autoresttest.models import ParameterKey, is_parameter_key
 from autoresttest.utils import get_body_params
+
+
+class DependentInfo(TypedDict):
+    """Type for dependency information returned by get_best_action and get_random_action."""
+
+    dependent_val: ParameterKey | str | None
+    dependent_operation: str | None
+    value: float
+    in_value: str | None
+
 
 if TYPE_CHECKING:
     from autoresttest.marl import QLearning
+
+# Type alias for the inner Q-table structure: dependent_param -> Q-value
+# dependent_param can be either str (body property or response) or ParameterKey (parameter)
+DepParamDict = dict[ParameterKey | str, float]
+# Type alias for location bucket: location -> {dependent_param -> Q-value}
+LocBucketDict = dict[str, DepParamDict]
+# Type alias for dependent operation: operation_id -> {location -> {dependent_param -> Q-value}}
+DepOpDict = dict[str, LocBucketDict]
+# Type alias for parameter level: ParameterKey|str -> {operation_id -> ...}
+ParamLevelDict = dict[ParameterKey | str, DepOpDict]
 
 
 class DependencyAgent(BaseAgent):
@@ -23,10 +43,15 @@ class DependencyAgent(BaseAgent):
     - "body" dict uses str keys (for request body property names)
     ParameterKey | str is intentional to support both key types in the same structure.
     """
+
     def __init__(
-        self, operation_graph: OperationGraph, alpha: float = 0.1, gamma: float = 0.9, epsilon: float = 0.1
+        self,
+        operation_graph: OperationGraph,
+        alpha: float = 0.1,
+        gamma: float = 0.9,
+        epsilon: float = 0.1,
     ) -> None:
-        self.q_table: dict[str, dict[str, dict[ParameterKey | str, dict[str, dict[str, dict[str, float]]]]]] = {}
+        self.q_table: dict[str, dict[str, ParamLevelDict]] = {}
         self.operation_graph = operation_graph
         self.alpha = alpha
         self.gamma = gamma
@@ -56,10 +81,13 @@ class DependencyAgent(BaseAgent):
             operation_node,
         ) in self.operation_graph.operation_nodes.items():
             if operation_id not in self.q_table:
-                self.q_table[operation_id] = {"params": {}, "body": {}}
+                params_dict: ParamLevelDict = {}
+                body_dict: ParamLevelDict = {}
+                self.q_table[operation_id] = {"params": params_dict, "body": body_dict}
 
             for edge in operation_node.outgoing_edges:
                 for parameter, similarities in edge.similar_parameters.items():
+                    # parameter can be either "str" (body property) or "ParameterKey" (parameter)
                     for similarity in similarities:
                         processed_in_val = similarity.in_value.split(" to ")
                         src_loc = processed_in_val[0] if processed_in_val else "params"
@@ -69,6 +97,7 @@ class DependencyAgent(BaseAgent):
                             else "params"
                         )
                         dependent_parameter = similarity.dependent_val
+                        # dependent_parameter can either be a "str" (body property or response) or "ParameterKey" (parameter)
                         destination = edge.destination.operation_id
 
                         # Note: Body should be nested
@@ -80,44 +109,58 @@ class DependencyAgent(BaseAgent):
                             source_bucket == "params"
                             and parameter not in self.q_table[operation_id]["params"]
                         ):
-                            self.q_table[operation_id]["params"][parameter] = {}
+                            dep_op: DepOpDict = {}
+                            self.q_table[operation_id]["params"][parameter] = dep_op
                         elif (
                             source_bucket == "body"
                             and parameter not in self.q_table[operation_id]["body"]
                         ):
-                            self.q_table[operation_id]["body"][parameter] = {}
+                            dep_op_body: DepOpDict = {}
+                            self.q_table[operation_id]["body"][parameter] = dep_op_body
 
                         if (
                             source_bucket == "params"
                             and destination
                             not in self.q_table[operation_id]["params"][parameter]
                         ):
+                            loc_bucket: LocBucketDict = {
+                                "params": {},
+                                "body": {},
+                                "response": {},
+                            }
                             self.q_table[operation_id]["params"][parameter][
                                 destination
-                            ] = {"params": {}, "body": {}, "response": {}}
+                            ] = loc_bucket
                         elif (
                             source_bucket == "body"
                             and destination
                             not in self.q_table[operation_id]["body"][parameter]
                         ):
+                            loc_bucket_body: LocBucketDict = {
+                                "params": {},
+                                "body": {},
+                                "response": {},
+                            }
                             self.q_table[operation_id]["body"][parameter][
                                 destination
-                            ] = {"params": {}, "body": {}, "response": {}}
+                            ] = loc_bucket_body
 
                         if source_bucket == "params":
                             self.q_table[operation_id]["params"][parameter][
                                 destination
                             ][dest_bucket][dependent_parameter] = 0
                         elif source_bucket == "body":
-                            self.q_table[operation_id]["body"][parameter][
-                                destination
-                            ][dest_bucket][dependent_parameter] = 0
+                            self.q_table[operation_id]["body"][parameter][destination][
+                                dest_bucket
+                            ][dependent_parameter] = 0
 
     def get_action(
         self, operation_id: str, qlearning: "QLearning"
-    ) -> tuple[str, dict[ParameterKey | str, Any], dict[str, Any]]:
+    ) -> tuple[str, dict[ParameterKey, Any], dict[str, Any]]:
         if operation_id not in self.q_table:
-            raise ValueError(f"Operation '{operation_id}' not found in the Q-table for DependencyAgent.")
+            raise ValueError(
+                f"Operation '{operation_id}' not found in the Q-table for DependencyAgent."
+            )
         has_success = any(
             status_code // 100 == 2
             for status_codes in qlearning.operation_response_counter.values()
@@ -135,22 +178,23 @@ class DependencyAgent(BaseAgent):
 
     def get_best_action(
         self, operation_id: str, qlearning: "QLearning"
-    ) -> tuple[str, dict[ParameterKey | str, Any], dict[str, Any]]:
+    ) -> tuple[str, dict[ParameterKey, Any], dict[str, Any]]:
+        """ "Returns 'BEST', the parameter mapping, and body mapping."""
         successful_responses = qlearning.successful_responses
         successful_params = qlearning.successful_parameters
         successful_body = qlearning.successful_bodies
 
-        best_params = {}
+        best_params: dict[ParameterKey, DependentInfo] = {}
         for param, dependent_ops in self.q_table[operation_id]["params"].items():
-            best_dependent = {
+            best_dependent: DependentInfo = {
                 "dependent_val": None,
                 "dependent_operation": None,
-                "value": -np.inf,
+                "value": float(-np.inf),
                 "in_value": None,
             }
             for dependent_op, value_dict in dependent_ops.items():
-                for location, dependent_params in value_dict.items():
-                    for dependent_param, value in dependent_params.items():
+                for location, loc_params in value_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if (
                             value > best_dependent["value"]
                             and location == "response"
@@ -190,75 +234,78 @@ class DependencyAgent(BaseAgent):
                                 "value": value,
                                 "in_value": location,
                             }
-            best_params[param] = best_dependent
+            # Param for "params" should always be ParameterKey type
+            best_params[cast(ParameterKey, param)] = best_dependent
 
-        best_body = {}
+        best_body: dict[str, DependentInfo] = {}
         for param, dependent_ops in self.q_table[operation_id]["body"].items():
-            best_dependent = {
+            best_dependent_body: DependentInfo = {
                 "dependent_val": None,
                 "dependent_operation": None,
-                "value": -np.inf,
+                "value": float(-np.inf),
                 "in_value": None,
             }
             for dependent_op, value_dict in dependent_ops.items():
-                for location, dependent_params in value_dict.items():
-                    for dependent_param, value in dependent_params.items():
+                for location, loc_params in value_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if (
-                            value > best_dependent["value"]
+                            value > best_dependent_body["value"]
                             and location == "response"
                             and dependent_op in successful_responses
                             and dependent_param in successful_responses[dependent_op]
                             and successful_responses[dependent_op][dependent_param]
                         ):
-                            best_dependent = {
+                            best_dependent_body = {
                                 "dependent_val": dependent_param,
                                 "dependent_operation": dependent_op,
                                 "value": value,
                                 "in_value": location,
                             }
                         elif (
-                            value > best_dependent["value"]
+                            value > best_dependent_body["value"]
                             and location == "params"
                             and dependent_op in successful_params
                             and dependent_param in successful_params[dependent_op]
                             and successful_params[dependent_op][dependent_param]
                         ):
-                            best_dependent = {
+                            best_dependent_body = {
                                 "dependent_val": dependent_param,
                                 "dependent_operation": dependent_op,
                                 "value": value,
                                 "in_value": location,
                             }
                         elif (
-                            value > best_dependent["value"]
+                            value > best_dependent_body["value"]
                             and location == "body"
                             and dependent_op in successful_body
                             and dependent_param in successful_body[dependent_op]
                             and successful_body[dependent_op][dependent_param]
                         ):
-                            best_dependent = {
+                            best_dependent_body = {
                                 "dependent_val": dependent_param,
                                 "dependent_operation": dependent_op,
                                 "value": value,
                                 "in_value": location,
                             }
-            best_body[param] = best_dependent
+            # param for body should always be string
+            best_body[cast(str, param)] = best_dependent_body
 
         return "BEST", best_params, best_body
 
     def get_random_action(
         self, operation_id: str, qlearning: "QLearning"
-    ) -> tuple[str, dict[ParameterKey | str, Any], dict[str, Any]]:
+    ) -> tuple[str, dict[ParameterKey, Any], dict[str, Any]]:
+        """ "Returns 'EXPLORE', the parameter mapping, and body mapping."""
         successful_responses = qlearning.successful_responses
         successful_params = qlearning.successful_parameters
         successful_body = qlearning.successful_bodies
 
-        random_params = {}
+        random_params: dict[ParameterKey, DependentInfo] = {}
         for param, dependent_ops in self.q_table[operation_id]["params"].items():
-            random_dependencies = []
+            random_dependencies: list[DependentInfo] = []
             for dependent_op, value_dict in dependent_ops.items():
-                for location, dependent_params in value_dict.items():
-                    for dependent_param, value in dependent_params.items():
+                for location, loc_params in value_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if (
                             location == "response"
                             and dependent_op in successful_responses
@@ -301,30 +348,31 @@ class DependencyAgent(BaseAgent):
                                     "in_value": location,
                                 }
                             )
-            random_params[param] = (
+            default_dep: DependentInfo = {
+                "dependent_val": None,
+                "dependent_operation": None,
+                "value": 0.0,
+                "in_value": None,
+            }
+            random_params[cast(ParameterKey, param)] = (
                 random.choice(random_dependencies)
                 if random_dependencies
-                else {
-                    "dependent_val": None,
-                    "dependent_operation": None,
-                    "value": 0,
-                    "in_value": None,
-                }
+                else default_dep
             )
 
-        random_body = {}
+        random_body: dict[str, DependentInfo] = {}
         for param, dependent_ops in self.q_table[operation_id]["body"].items():
-            random_dependencies = []
+            random_dependencies_body: list[DependentInfo] = []
             for dependent_op, value_dict in dependent_ops.items():
-                for location, dependent_params in value_dict.items():
-                    for dependent_param, value in dependent_params.items():
+                for location, loc_params in value_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if (
                             location == "response"
                             and dependent_op in successful_responses
                             and dependent_param in successful_responses[dependent_op]
                             and successful_responses[dependent_op][dependent_param]
                         ):
-                            random_dependencies.append(
+                            random_dependencies_body.append(
                                 {
                                     "dependent_val": dependent_param,
                                     "dependent_operation": dependent_op,
@@ -338,7 +386,7 @@ class DependencyAgent(BaseAgent):
                             and dependent_param in successful_params[dependent_op]
                             and successful_params[dependent_op][dependent_param]
                         ):
-                            random_dependencies.append(
+                            random_dependencies_body.append(
                                 {
                                     "dependent_val": dependent_param,
                                     "dependent_operation": dependent_op,
@@ -352,7 +400,7 @@ class DependencyAgent(BaseAgent):
                             and dependent_param in successful_body[dependent_op]
                             and successful_body[dependent_op][dependent_param]
                         ):
-                            random_dependencies.append(
+                            random_dependencies_body.append(
                                 {
                                     "dependent_val": dependent_param,
                                     "dependent_operation": dependent_op,
@@ -360,15 +408,16 @@ class DependencyAgent(BaseAgent):
                                     "in_value": location,
                                 }
                             )
-            random_body[param] = (
-                random.choice(random_dependencies)
-                if random_dependencies
-                else {
-                    "dependent_val": None,
-                    "dependent_operation": None,
-                    "value": 0,
-                    "in_value": None,
-                }
+            default_dep_body: DependentInfo = {
+                "dependent_val": None,
+                "dependent_operation": None,
+                "value": 0.0,
+                "in_value": None,
+            }
+            random_body[cast(str, param)] = (
+                random.choice(random_dependencies_body)
+                if random_dependencies_body
+                else default_dep_body
             )
 
         return "EXPLORE", random_params, random_body
@@ -384,28 +433,30 @@ class DependencyAgent(BaseAgent):
             return
         if dependent_params:
             for param, dependent in dependent_params.items():
-                current_q = 0
-                best_next_q = -np.inf
+                current_q: float = 0
+                best_next_q: float = -np.inf
                 if not dependent["dependent_operation"]:
                     continue
                 if param not in self.q_table[operation_id].get("params", {}):
                     continue
-                if dependent["dependent_operation"] not in self.q_table[operation_id]["params"][param]:
+                if (
+                    dependent["dependent_operation"]
+                    not in self.q_table[operation_id]["params"][param]
+                ):
                     continue
-                for location, dependent_params in self.q_table[operation_id]["params"][
-                    param
-                ][dependent["dependent_operation"]].items():
-                    for dependent_param, value in dependent_params.items():
+                dep_op_dict = self.q_table[operation_id]["params"][param][
+                    dependent["dependent_operation"]
+                ]
+                for location, loc_params in dep_op_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if dependent_param == dependent["dependent_val"]:
                             current_q = value
                         best_next_q = max(best_next_q, value)
                 new_q = current_q + self.alpha * (
                     reward + self.gamma * best_next_q - current_q
                 )
-                for location, dependent_params in self.q_table[operation_id]["params"][
-                    param
-                ][dependent["dependent_operation"]].items():
-                    for dependent_param, value in dependent_params.items():
+                for location, loc_params in dep_op_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if dependent_param == dependent["dependent_val"]:
                             self.q_table[operation_id]["params"][param][
                                 dependent["dependent_operation"]
@@ -413,28 +464,30 @@ class DependencyAgent(BaseAgent):
 
         if dependent_body:
             for param, dependent in dependent_body.items():
-                current_q = 0
-                best_next_q = -np.inf
+                current_q = 0.0
+                best_next_q = float(-np.inf)
                 if not dependent["dependent_operation"]:
                     continue
                 if param not in self.q_table[operation_id].get("body", {}):
                     continue
-                if dependent["dependent_operation"] not in self.q_table[operation_id]["body"][param]:
+                if (
+                    dependent["dependent_operation"]
+                    not in self.q_table[operation_id]["body"][param]
+                ):
                     continue
-                for location, dependent_params in self.q_table[operation_id]["body"][
-                    param
-                ][dependent["dependent_operation"]].items():
-                    for dependent_param, value in dependent_params.items():
+                dep_op_dict = self.q_table[operation_id]["body"][param][
+                    dependent["dependent_operation"]
+                ]
+                for location, loc_params in dep_op_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if dependent_param == dependent["dependent_val"]:
                             current_q = value
                         best_next_q = max(best_next_q, value)
                 new_q = current_q + self.alpha * (
                     reward + self.gamma * best_next_q - current_q
                 )
-                for location, dependent_params in self.q_table[operation_id]["body"][
-                    param
-                ][dependent["dependent_operation"]].items():
-                    for dependent_param, value in dependent_params.items():
+                for location, loc_params in dep_op_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if dependent_param == dependent["dependent_val"]:
                             self.q_table[operation_id]["body"][param][
                                 dependent["dependent_operation"]
@@ -454,33 +507,41 @@ class DependencyAgent(BaseAgent):
 
         if dependent_params:
             for param, dependent in dependent_params.items():
-                best_next_q = -np.inf
+                best_next_q: float = -np.inf
                 if not dependent["dependent_operation"]:
                     continue
                 if param not in self.q_table[operation_id].get("params", {}):
                     continue
-                if dependent["dependent_operation"] not in self.q_table[operation_id]["params"][param]:
+                if (
+                    dependent["dependent_operation"]
+                    not in self.q_table[operation_id]["params"][param]
+                ):
                     continue
-                for location, dependent_params in self.q_table[operation_id]["params"][
-                    param
-                ][dependent["dependent_operation"]].items():
-                    for dependent_param, value in dependent_params.items():
+                dep_op_dict = self.q_table[operation_id]["params"][param][
+                    dependent["dependent_operation"]
+                ]
+                for location, loc_params in dep_op_dict.items():
+                    for dependent_param, value in loc_params.items():
                         best_next_q = max(best_next_q, value)
                 best_next_q_params.append(best_next_q)
 
         if dependent_body:
             for param, dependent in dependent_body.items():
-                best_next_q = -np.inf
+                best_next_q = float(-np.inf)
                 if not dependent["dependent_operation"]:
                     continue
                 if param not in self.q_table[operation_id].get("body", {}):
                     continue
-                if dependent["dependent_operation"] not in self.q_table[operation_id]["body"][param]:
+                if (
+                    dependent["dependent_operation"]
+                    not in self.q_table[operation_id]["body"][param]
+                ):
                     continue
-                for location, dependent_params in self.q_table[operation_id]["body"][
-                    param
-                ][dependent["dependent_operation"]].items():
-                    for dependent_param, value in dependent_params.items():
+                dep_op_dict = self.q_table[operation_id]["body"][param][
+                    dependent["dependent_operation"]
+                ]
+                for location, loc_params in dep_op_dict.items():
+                    for dependent_param, value in loc_params.items():
                         best_next_q = max(best_next_q, value)
                 best_next_q_body.append(best_next_q)
 
@@ -500,34 +561,42 @@ class DependencyAgent(BaseAgent):
 
         if dependent_params:
             for param, dependent in dependent_params.items():
-                current_q = 0
+                current_q: float = 0
                 if not dependent["dependent_operation"]:
                     continue
                 if param not in self.q_table[operation_id].get("params", {}):
                     continue
-                if dependent["dependent_operation"] not in self.q_table[operation_id]["params"][param]:
+                if (
+                    dependent["dependent_operation"]
+                    not in self.q_table[operation_id]["params"][param]
+                ):
                     continue
-                for location, dependent_params in self.q_table[operation_id]["params"][
-                    param
-                ][dependent["dependent_operation"]].items():
-                    for dependent_param, value in dependent_params.items():
+                dep_op_dict = self.q_table[operation_id]["params"][param][
+                    dependent["dependent_operation"]
+                ]
+                for location, loc_params in dep_op_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if dependent_param == dependent["dependent_val"]:
                             current_q = value
                 current_Q_params.append(current_q)
 
         if dependent_body:
             for param, dependent in dependent_body.items():
-                current_q = 0
+                current_q = 0.0
                 if not dependent["dependent_operation"]:
                     continue
                 if param not in self.q_table[operation_id].get("body", {}):
                     continue
-                if dependent["dependent_operation"] not in self.q_table[operation_id]["body"][param]:
+                if (
+                    dependent["dependent_operation"]
+                    not in self.q_table[operation_id]["body"][param]
+                ):
                     continue
-                for location, dependent_params in self.q_table[operation_id]["body"][
-                    param
-                ][dependent["dependent_operation"]].items():
-                    for dependent_param, value in dependent_params.items():
+                dep_op_dict = self.q_table[operation_id]["body"][param][
+                    dependent["dependent_operation"]
+                ]
+                for location, loc_params in dep_op_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if dependent_param == dependent["dependent_val"]:
                             current_q = value
                 current_Q_body.append(current_q)
@@ -549,12 +618,16 @@ class DependencyAgent(BaseAgent):
                     continue
                 if param not in self.q_table[operation_id].get("params", {}):
                     continue
-                if dependent["dependent_operation"] not in self.q_table[operation_id]["params"][param]:
+                if (
+                    dependent["dependent_operation"]
+                    not in self.q_table[operation_id]["params"][param]
+                ):
                     continue
-                for location, dependent_params in self.q_table[operation_id]["params"][
-                    param
-                ][dependent["dependent_operation"]].items():
-                    for dependent_param, value in dependent_params.items():
+                dep_op_dict = self.q_table[operation_id]["params"][param][
+                    dependent["dependent_operation"]
+                ]
+                for location, loc_params in dep_op_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if dependent_param == dependent["dependent_val"]:
                             self.q_table[operation_id]["params"][param][
                                 dependent["dependent_operation"]
@@ -566,18 +639,24 @@ class DependencyAgent(BaseAgent):
                     continue
                 if param not in self.q_table[operation_id].get("body", {}):
                     continue
-                if dependent["dependent_operation"] not in self.q_table[operation_id]["body"][param]:
+                if (
+                    dependent["dependent_operation"]
+                    not in self.q_table[operation_id]["body"][param]
+                ):
                     continue
-                for location, dependent_params in self.q_table[operation_id]["body"][
-                    param
-                ][dependent["dependent_operation"]].items():
-                    for dependent_param, value in dependent_params.items():
+                dep_op_dict = self.q_table[operation_id]["body"][param][
+                    dependent["dependent_operation"]
+                ]
+                for location, loc_params in dep_op_dict.items():
+                    for dependent_param, value in loc_params.items():
                         if dependent_param == dependent["dependent_val"]:
                             self.q_table[operation_id]["body"][param][
                                 dependent["dependent_operation"]
                             ][location][dependent_param] += (self.alpha * td_error)
 
-    def add_undocumented_responses(self, new_operation_response_id: str, new_property: str) -> bool:
+    def add_undocumented_responses(
+        self, new_operation_response_id: str, new_property: str
+    ) -> bool:
         updated_tables = False
         dependency_comparator = self.operation_graph.dependency_comparator
         embedding_model = self.operation_graph.embedding_model
@@ -629,6 +708,18 @@ class DependencyAgent(BaseAgent):
         dependent_location: str,
         dependent_param: str,
     ) -> None:
+        # Validate type matches location to maintain Q-table invariants
+        if param_location == "params" and not is_parameter_key(operation_param):
+            print(
+                f"Warning: Expected ParameterKey for 'params', got {type(operation_param).__name__}. Skipping dependency."
+            )
+            return
+        if param_location == "body" and not isinstance(operation_param, str):
+            print(
+                f"Warning: Expected str for 'body', got {type(operation_param).__name__}. Skipping dependency."
+            )
+            return
+
         if operation_param not in self.q_table[operation_id][param_location]:
             self.q_table[operation_id][param_location][operation_param] = {}
         if (
@@ -638,12 +729,14 @@ class DependencyAgent(BaseAgent):
             self.q_table[operation_id][param_location][operation_param][
                 dependent_operation_id
             ] = {"params": {}, "body": {}, "response": {}}
-        
+
         # Ensure dependent_location is valid
         if dependent_location not in ["params", "body", "response"]:
-            print(f"Warning: Invalid dependent_location '{dependent_location}'. Skipping dependency.")
+            print(
+                f"Warning: Invalid dependent_location '{dependent_location}'. Skipping dependency."
+            )
             return
-        
+
         # Ensure the dependent_location key exists in the structure
         if (
             dependent_location
@@ -654,7 +747,7 @@ class DependencyAgent(BaseAgent):
             self.q_table[operation_id][param_location][operation_param][
                 dependent_operation_id
             ][dependent_location] = {}
-        
+
         if (
             dependent_param
             not in self.q_table[operation_id][param_location][operation_param][
@@ -673,7 +766,8 @@ class DependencyAgent(BaseAgent):
     # Get a random value from the successful operations to test dependencies
     def assign_random_dependency_from_successful(
         self, operation_id: str, qlearning: "QLearning"
-    ) -> tuple[str, dict[ParameterKey | str, Any], dict[str, Any]]:
+    ) -> tuple[str, dict[ParameterKey, Any], dict[str, Any]]:
+        """Returns 'RANDOM', the parameter mapping, and body mapping"""
         possible_options = []
 
         for (
@@ -728,27 +822,22 @@ class DependencyAgent(BaseAgent):
             return "RANDOM", {}, {}
 
         parameter_dependency_assignment = {}
-        if qlearning.operation_graph.operation_nodes[
+        op_props = qlearning.operation_graph.operation_nodes[
             operation_id
-        ].operation_properties.parameters:
+        ].operation_properties
+        if op_props.parameters:
             for (
                 parameter_name,
                 parameter_properties,
-            ) in qlearning.operation_graph.operation_nodes[
-                operation_id
-            ].operation_properties.parameters.items():
+            ) in op_props.parameters.items():
                 if parameter_properties.schema:
                     parameter_dependency_assignment[parameter_name] = random.choice(
                         possible_options
                     )
 
         body_dependency_assignment = {}
-        if qlearning.operation_graph.operation_nodes[
-            operation_id
-        ].operation_properties.request_body:
-            for mime, body_properties in qlearning.operation_graph.operation_nodes[
-                operation_id
-            ].operation_properties.request_body.items():
+        if op_props.request_body:
+            for mime, body_properties in op_props.request_body.items():
                 possible_body_params = get_body_params(body_properties)
                 for prop in possible_body_params:
                     body_dependency_assignment[prop] = random.choice(possible_options)

@@ -975,14 +975,15 @@ class QLearning:
                                             dependency["dependent_operation"]
                                         ][dependency["dependent_val"]]
                                     )
-                    for param in select_params.req_params:
-                        if param not in parameters or not parameters[param]:
-                            parameters[param] = (
-                                supplement_parameters[param]
-                                if supplement_parameters
-                                   and param in supplement_parameters
-                                else random_generator()()
-                            )
+                    if select_params.req_params:
+                        for param in select_params.req_params:
+                            if param not in parameters or not parameters[param]:
+                                parameters[param] = (
+                                    supplement_parameters[param]
+                                    if supplement_parameters
+                                       and param in supplement_parameters
+                                    else random_generator()()
+                                )
 
                 body = {}
                 if (
@@ -1086,20 +1087,23 @@ class QLearning:
             if body:
                 for mime, body_properties in body.items():
                     if type(body_properties) == dict:
-                        select_properties = self.body_object_agent.get_action(
-                            operation_id, mime
-                        )
-                        deconstructed_body = self._deconstruct_body(body_properties)
-                        if select_properties and deconstructed_body:
-                            new_bodies_properties = {
-                                prop: deconstructed_body[prop]
-                                for prop in deconstructed_body
-                                if prop in select_properties
-                            }
-                            body[mime] = new_bodies_properties
-                        else:
-                            body[mime] = None
-                        select_body_properties[mime] = select_properties
+                        # Only call body_object_agent if mime type is in its Q-table
+                        if mime in self.body_object_agent.q_table.get(operation_id, {}):
+                            select_properties = self.body_object_agent.get_action(
+                                operation_id, mime
+                            )
+                            deconstructed_body = self._deconstruct_body(body_properties)
+                            if select_properties and deconstructed_body:
+                                new_bodies_properties = {
+                                    prop: deconstructed_body[prop]
+                                    for prop in deconstructed_body
+                                    if prop in select_properties
+                                }
+                                body[mime] = new_bodies_properties
+                            else:
+                                body[mime] = None
+                            select_body_properties[mime] = select_properties
+                        # If mime not in Q-table, leave body[mime] as-is (already has generated value)
 
             # Mutate operation values
             mutate_operation = random.random() < self.mutation_rate
@@ -1222,7 +1226,7 @@ class QLearning:
                         dependency_type == "EXPLORE" or dependency_type == "BEST"
                 ):
                     used_dependent_params = {}
-                    if parameter_dependencies:
+                    if parameter_dependencies and select_params.req_params:
                         for parameter in parameters:
                             if (
                                     parameter in select_params.req_params
@@ -1235,6 +1239,7 @@ class QLearning:
                     if (
                             request_body_dependencies
                             and unconstructed_body
+                            and select_params.mime_type
                             and select_params.mime_type in select_body_properties
                             and select_body_properties[select_params.mime_type]
                     ):

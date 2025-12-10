@@ -1,6 +1,6 @@
 import random
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 import numpy as np
 
@@ -15,7 +15,7 @@ from autoresttest.models import ParameterKey, ValueAction
 # - "params" dict uses ParameterKey tuples as keys (parameter name, in_value)
 # - "body" dict uses str keys (MIME types like "application/json")
 # Union[ParameterKey, str] is intentional to support both key types in the same dict
-ValueQTable = Dict[str, Dict[str, Dict[Union[ParameterKey, str], List[List[Any]]]]]
+ValueQTable = dict[str, dict[str, dict[ParameterKey | str, list[list[Any]]]]]
 
 
 class ValueAgent(BaseAgent):
@@ -71,7 +71,7 @@ class ValueAgent(BaseAgent):
     def get_best_action(self, operation_id: str) -> ValueAction:
         param_mappings = (
             {
-                param: max(param_mappings, key=lambda pm: pm[1])[0]
+                cast(ParameterKey, param): max(param_mappings, key=lambda pm: pm[1])[0]
                 for param, param_mappings in self.q_table[operation_id][
                     "params"
                 ].items()
@@ -82,7 +82,7 @@ class ValueAgent(BaseAgent):
         )
         body_mappings = (
             {
-                mime: max(body_mappings, key=lambda bm: bm[1])[0]
+                cast(str, mime): max(body_mappings, key=lambda bm: bm[1])[0]
                 for mime, body_mappings in self.q_table[operation_id]["body"].items()
                 if body_mappings and len(body_mappings) > 0
             }
@@ -94,7 +94,7 @@ class ValueAgent(BaseAgent):
     def get_random_action(self, operation_id: str) -> ValueAction:
         param_mappings = (
             {
-                param: random.choice(param_mappings)[0]
+                cast(ParameterKey, param): random.choice(param_mappings)[0]
                 for param, param_mappings in self.q_table[operation_id][
                     "params"
                 ].items()
@@ -105,7 +105,7 @@ class ValueAgent(BaseAgent):
         )
         body_mappings = (
             {
-                mime: random.choice(body_mappings)[0]
+                cast(str, mime): random.choice(body_mappings)[0]
                 for mime, body_mappings in self.q_table[operation_id]["body"].items()
                 if body_mappings
             }

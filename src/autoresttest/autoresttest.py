@@ -206,10 +206,13 @@ class AutoRestTest:
         spec_path: Union[Path, str],
         embedding_model: EmbeddingModel,
     ) -> OperationGraph:
+
         print(f"Parsing OpenAPI specification: {spec_path}...")
         spec_parser = SpecificationParser(spec_path=str(spec_path), spec_name=spec_name)
         print("Specification parsed successfully!")
-        api_url = get_api_url(spec_parser)
+
+        api_url: str = get_api_url(spec_parser)
+
         operation_graph = OperationGraph(
             spec_path=str(spec_path),
             spec_name=spec_name,
@@ -219,6 +222,7 @@ class AutoRestTest:
         request_generator = RequestGenerator(
             operation_graph=operation_graph, api_url=api_url, is_naive=self.is_naive
         )
+
         operation_graph.assign_request_generator(request_generator)
         return operation_graph
 
