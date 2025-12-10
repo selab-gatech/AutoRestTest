@@ -34,6 +34,7 @@ from autoresttest.utils import (
     encode_dictionary,
     split_parameter_values,
     dispatch_request,
+    get_accept_header,
 )
 from autoresttest.llm import (
     identify_generator,
@@ -497,6 +498,7 @@ class QLearning:
         try:
             select_method = getattr(requests, http_method)
             full_url = self.api_url + endpoint_path
+            accept_header = get_accept_header(operation_properties.responses)
             response = dispatch_request(
                 select_method=select_method,
                 full_url=full_url,
@@ -504,6 +506,7 @@ class QLearning:
                 body=body,
                 header=merged_headers,
                 cookies=cookie_params,
+                accept=accept_header,
             )
             return response
         except requests.exceptions.RequestException as err:

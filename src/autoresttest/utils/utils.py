@@ -318,6 +318,20 @@ def _is_json_mime(mime_type: str) -> bool:
     )
 
 
+def get_accept_header(responses: dict | None) -> str | None:
+    """Extract Accept header from operation responses.
+
+    Returns comma-separated MIME types from 2xx responses, or None.
+    """
+    if not responses:
+        return None
+    mime_types = set()
+    for status_code, response_props in responses.items():
+        if status_code and status_code.startswith("2") and response_props.content:
+            mime_types.update(response_props.content.keys())
+    return ", ".join(sorted(mime_types)) if mime_types else None
+
+
 def _dispatch_request_inner(
     select_method,
     full_url: str,
@@ -433,6 +447,7 @@ def dispatch_request(
     cookies: Optional[Dict] = None,
     max_retries: int = 3,
     base_delay: float = 1.0,
+    accept: str | None = None,
 ):
     """
     Send a request with sensible handling for the provided body and MIME type key (if any).
@@ -441,6 +456,8 @@ def dispatch_request(
     params = params or {}
     headers = header.copy() if header is not None else {}
     cookies = cookies or None
+    if accept:
+        headers.setdefault("Accept", accept)
 
     response = None
     for attempt in range(max_retries + 1):

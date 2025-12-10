@@ -34,6 +34,7 @@ from autoresttest.utils import (
     get_required_params,
     get_body_object_combinations,
     dispatch_request,
+    get_accept_header,
 )
 from autoresttest.llm import NaiveValueGenerator, SmartValueGenerator
 
@@ -427,6 +428,9 @@ class RequestGenerator:
             merged_headers = header_params.copy()
             merged_headers.update(get_config().static_headers)
 
+            accept_header = get_accept_header(
+                request_data.operation_properties.responses
+            )
             response = dispatch_request(
                 select_method=select_method,
                 full_url=full_url,
@@ -434,6 +438,7 @@ class RequestGenerator:
                 body=request_body,
                 header=merged_headers,
                 cookies=cookie_params,
+                accept=accept_header,
             )
             if response is not None:
                 if not response.ok and retry_nums < permitted_retries and allow_retry:

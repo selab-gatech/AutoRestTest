@@ -33,6 +33,7 @@ from .utils import (
     remove_nulls,
     split_parameter_values,
     dispatch_request,
+    get_accept_header,
 )
 
 __all__ = [
@@ -70,4 +71,5 @@ __all__ = [
     "remove_nulls",
     "split_parameter_values",
     "dispatch_request",
+    "get_accept_header",
 ]
