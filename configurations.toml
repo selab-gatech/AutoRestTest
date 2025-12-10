@@ -26,8 +26,17 @@ creative_temperature = 1
 strict_temperature = 1
 
 [agent]
-# Upper bound on generated parameter/body combinations to keep Q-table sizes manageable.
-max_combinations = 10
+# Max number of optional parameters per combination (required params always included).
+max_combinations = 12
+
+# Hard cap on total combinations per operation to bound memory usage.
+max_total_combinations = 3000
+
+# Base sample count at size=1; decays for larger sizes (size=5 gets ~60 samples).
+base_samples_per_size = 200
+
+# Seed for reproducible combination sampling. Change to get different random samples.
+combination_seed = 42
 
 [agent.value]
 # Enable parallel value table generation using thread pool.
@@ -35,7 +44,7 @@ max_combinations = 10
 parallelize = true
 
 # Number of worker threads for parallel generation (ignored if parallelize = false).
-max_workers = 4
+max_workers = 16
 
 [agents.header]
 # Whether to enable the Header Agent (uses Basic tokens). Only helpful for APIs requiring such auth.

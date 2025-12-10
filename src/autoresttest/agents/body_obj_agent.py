@@ -36,8 +36,11 @@ class BodyObjAgent(BaseAgent):
                     body_properties,
                 ) in operation_node.operation_properties.request_body.items():
                     if body_properties.type == "object" and body_properties.properties:
+                        required_body = get_required_body_params(body_properties)
                         body_obj_combinations = get_combinations(
-                            body_properties.properties.keys()
+                            body_properties.properties.keys(),
+                            required=required_body,
+                            seed=f"{operation_id}:{mime}",
                         )
                         self.q_table[operation_id][mime] = {
                             body_obj: 0.0 for body_obj in body_obj_combinations

@@ -41,8 +41,13 @@ class ParameterAgent(BaseAgent):
         ) in self.operation_graph.operation_nodes.items():
             if operation_id not in self.q_table:
                 self.q_table[operation_id] = {"params": {}, "body": {}}
-            params = get_param_combinations(
+            required = get_required_params(
                 operation_node.operation_properties.parameters
+            )
+            params = get_param_combinations(
+                operation_node.operation_properties.parameters,
+                required_params=required,
+                seed=operation_id,
             )
             self.q_table[operation_id]["params"] = {param: 0.0 for param in params}
             mimes = (

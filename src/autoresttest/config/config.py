@@ -47,7 +47,10 @@ class ValueAgentConfig(BaseModel):
 
 
 class AgentCombinationConfig(BaseModel):
-    max_combinations: int = 10
+    max_combinations: int = 12
+    max_total_combinations: int = 3000
+    base_samples_per_size: int = 200
+    combination_seed: int = 42
     value: ValueAgentConfig = ValueAgentConfig()
 
 
@@ -135,6 +138,18 @@ class Config(BaseModel):
     @property
     def max_combinations(self) -> int:
         return self.agent.max_combinations
+
+    @property
+    def max_total_combinations(self) -> int:
+        return self.agent.max_total_combinations
+
+    @property
+    def base_samples_per_size(self) -> int:
+        return self.agent.base_samples_per_size
+
+    @property
+    def combination_seed(self) -> int:
+        return self.agent.combination_seed
 
     @property
     def parallelize_value_generation(self) -> bool:

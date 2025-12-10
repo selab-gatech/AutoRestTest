@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import math
 import random
 import time
 from typing import Iterable, Dict, List, Any, Optional, Tuple, Set, cast
@@ -70,9 +71,11 @@ def label_to_param_key(label: str) -> ParameterKey:
 
 def get_param_combinations(
     operation_parameters: Dict[ParameterKey, ParameterProperties],
+    required_params: Optional[Set[ParameterKey]] = None,
+    seed: Optional[str] = None,
 ) -> List[Tuple[ParameterKey, ...]]:
     param_list = get_params(operation_parameters)
-    return get_combinations(param_list)
+    return get_combinations(param_list, required=required_params, seed=seed)
 
 
 def get_body_combinations(
@@ -84,39 +87,96 @@ def get_body_combinations(
     }
 
 
-def get_body_object_combinations(body_schema: SchemaProperties) -> List[Tuple[str]]:
-    return get_combinations(get_body_params(body_schema))
+def get_body_object_combinations(
+    body_schema: SchemaProperties,
+    required_body_params: Optional[Set[str]] = None,
+    seed: Optional[str] = None,
+) -> List[Tuple[str, ...]]:
+    return get_combinations(
+        get_body_params(body_schema), required=required_body_params, seed=seed
+    )
 
 
-def get_combinations(arr: Iterable[Any]) -> List[Tuple[Any, ...]]:
+def get_combinations(
+    arr: Iterable[Any],
+    required: Optional[Set[Any]] = None,
+    seed: Optional[str] = None,
+) -> List[Tuple[Any, ...]]:
     """
-    Generate combinations from any iterable of parameters.
+    Generate bounded parameter combinations with depth-weighted sampling.
+
+    Uses stratified sampling that prioritizes smaller combinations while ensuring
+    required parameters are always included. For large parameter sets, random
+    sampling is used with seeded RNG for reproducibility.
+
+    Args:
+        arr: All parameters to combine.
+        required: Parameters that must appear in every combination.
+        seed: Seed string for reproducible randomness (e.g., operation ID).
+
+    Returns:
+        List of parameter combination tuples.
     """
     arr = list(arr) if arr is not None else []
-    combinations = []
-    max_size = CONFIG.max_combinations
-    # Empirically determined - 16 is max number before size grows too large; configurable for tuning storage size.
+    required = required or set()
+    optional = [p for p in arr if p not in required]
+    required_tuple = tuple(p for p in arr if p in required)  # Preserve order
 
-    if len(arr) > max_size:
-        for i in range(0, len(arr) - max_size):
-            subset = arr[i : i + max_size]
-            combinations.extend(
-                itertools.chain.from_iterable(
-                    itertools.combinations(subset, j) for j in range(1, max_size + 1)
-                )
-            )
-        for size in range(max_size + 1, len(arr) + 1):
-            for i in range(0, len(arr) - size + 1):
-                subset = arr[i : i + size]
-                combinations.extend([tuple(subset)])
+    max_optional_size = CONFIG.max_combinations
+    max_total = CONFIG.max_total_combinations
+    base_samples = CONFIG.base_samples_per_size
+
+    # Seeded RNG for reproducibility
+    if seed:
+        seed_int = int(hashlib.md5(seed.encode()).hexdigest(), 16) % (2**32)
+        rng = random.Random(seed_int)
     else:
-        combinations.extend(
-            itertools.chain.from_iterable(
-                itertools.combinations(arr, i) for i in range(1, len(arr) + 1)
-            )
-        )
+        rng = random.Random(CONFIG.combination_seed)
 
-    return combinations
+    combinations: Set[Tuple[Any, ...]] = set()
+    n_optional = len(optional)
+
+    # Always include: required-only and all-params
+    combinations.add(required_tuple)
+    if optional:
+        combinations.add(required_tuple + tuple(optional))
+
+    if n_optional <= max_optional_size:
+        # Small enough: exhaustive enumeration of optional params
+        for size in range(1, n_optional + 1):
+            for combo in itertools.combinations(optional, size):
+                combinations.add(required_tuple + combo)
+    else:
+        # Large: depth-weighted sampling (smaller sizes get more samples)
+        for size in range(1, min(max_optional_size, n_optional) + 1):
+            # Exponential decay: size=1 gets base_samples, larger sizes get fewer
+            samples_for_size = max(10, int(base_samples / (size**0.7)))
+            total_possible = math.comb(n_optional, size)
+
+            if total_possible <= samples_for_size:
+                # Small enough to enumerate all
+                for combo in itertools.combinations(optional, size):
+                    combinations.add(required_tuple + combo)
+            else:
+                # Random sample with seeded RNG
+                sampled: Set[Tuple[Any, ...]] = set()
+                attempts = 0
+                max_attempts = samples_for_size * 20
+                while len(sampled) < samples_for_size and attempts < max_attempts:
+                    indices = rng.sample(range(n_optional), size)
+                    combo = tuple(optional[i] for i in sorted(indices))
+                    sampled.add(combo)
+                    attempts += 1
+                for combo in sampled:
+                    combinations.add(required_tuple + combo)
+
+    # Enforce hard cap (deterministic order: sort by size, then content)
+    result = sorted(combinations, key=lambda x: (len(x), x))
+    if len(result) > max_total:
+        # Keep smallest combinations (most valuable for issue isolation)
+        result = result[:max_total]
+
+    return result
 
 
 def get_params(

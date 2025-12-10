@@ -112,18 +112,31 @@ Instead of limiting episodes, the program limits RL iterations using a time budg
 > [!NOTE]
 > This time budget applies only to the MARL (Q-learning) phase. The initial value table generation phase, which runs before Q-learning begins, is not time-limited and will process all operations in the specification.
 
-To control how many parameter/body combinations are generated (and keep Q-tables manageable), adjust:
-- `[agent].max_combinations` (default: `10`)
+#### Parameter Combination Sampling
+
+For APIs with many parameters, generating all possible combinations would cause memory exhaustion. AutoRestTest uses depth-weighted stratified sampling to bound combinations while prioritizing smaller (more diagnostic) combinations. Configure under `[agent]`:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `max_combinations` | `12` | Maximum optional parameters per combination. Required parameters are always included. |
+| `max_total_combinations` | `3000` | Hard cap on combinations per operation. Smaller combinations are kept when truncating. |
+| `base_samples_per_size` | `200` | Sample count at size=1; decays for larger sizes (e.g., size=5 gets ~60 samples). |
+| `combination_seed` | `42` | Seed for reproducible random sampling. Change for different samples. |
+
+Example distribution for an operation with 30 parameters:
+- Size 1-2: All combinations enumerated (30 + 435 = 465)
+- Size 3-12: Random samples (~700 total)
+- Total: ~1,200 unique combinations (well under 3K cap)
 
 > [!TIP]
-> The above steps alter the variables across all four agents used within the software. If the user desires to change
+> The above steps alter the variables across all agents used within the software. If the user desires to change
 > the individual agent parameters, they can navigate to the `src/autoresttest/agents` files and change the parameters.
 
 #### 3. Parallel Value Table Generation
 
 The Value Agent's Q-table initialization can be parallelized using a thread pool, which significantly speeds up startup for APIs with many operations. Configure this under `[agent.value]`:
 - `[agent.value].parallelize` (default: `true`) — when `true`, operations are processed concurrently using a thread pool; when `false`, the original sequential depth-first traversal is used.
-- `[agent.value].max_workers` (default: `4`) — number of worker threads for parallel generation (ignored if `parallelize` is `false`).
+- `[agent.value].max_workers` (default: `4`) — number of worker threads for parallel generation (ignored if `parallelize` is `false`). Set to match your CPU core count for optimal performance.
 
 > [!NOTE]
 > Rate-limited responses (HTTP 429) are automatically retried with exponential backoff.
