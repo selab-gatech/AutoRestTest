@@ -399,12 +399,14 @@ class SmartValueGenerator:
                 nonreq_params[param_name] = param_properties
         return nonreq_params
 
-    def _isolate_nonreq_request_body(self, schema: Dict):
-        if schema.get("properties"):
+    def _isolate_nonreq_request_body(self, schema: Dict) -> Dict:
+        properties = schema.get("properties")
+        items = schema.get("items")
+        if properties:
             # NOTE: We do not handle nested objects
-            nonreq_request_body = self._isolate_nonreq_params(schema.get("properties"))
-        elif schema.get("items"):
-            nonreq_request_body = self._isolate_nonreq_request_body(schema.get("items"))
+            nonreq_request_body = self._isolate_nonreq_params(properties)
+        elif items:
+            nonreq_request_body = self._isolate_nonreq_request_body(items)
         else:
             nonreq_request_body = self._isolate_nonreq_params(schema)
         return nonreq_request_body
@@ -483,11 +485,9 @@ class SmartValueGenerator:
             )
             return self._compose_parameter_gen_prompt(prompt_data, necessary=True)
 
-    def _validate_parameters(
-        self, schema: Optional[Dict]
-    ) -> Optional[Dict[ParameterKey, Any]]:
+    def _validate_parameters(self, schema: Optional[Dict]) -> Dict[ParameterKey, Any]:
         if schema is None:
-            return None
+            return {}
         parameters: Dict[ParameterKey, Any] = {}
         for parameter_name, parameter_value in schema.items():
             param_key = self.parameter_lookup.get(parameter_name)
@@ -521,9 +521,9 @@ class SmartValueGenerator:
         )
         return parameter_matchings
 
-    def validate_request_body(self, schema: Any):
+    def validate_request_body(self, schema: Any) -> Any:
         if schema is None:
-            return None
+            return {}
         if type(schema) is dict:
             # NOTE: We do not handle nested objects
             schema.update(self.request_body_reqs)
@@ -558,12 +558,13 @@ class SmartValueGenerator:
             validated_request_body = self.validate_request_body(
                 generated_request_body.get("request_body")
             )
-            request_body[mime_type] = validated_request_body
-        return request_body
+            if validated_request_body:  # Only add if we got valid content
+                request_body[mime_type] = validated_request_body
+        return request_body  # Returns {} if all mime types failed
 
     def generate_retry_parameters(
         self, failed_request_data: RequestData, response: requests.Response
-    ):
+    ) -> Optional[Dict[ParameterKey, Any]]:
         """
         Uses the OpenAI language model to generate values for the parameters using JSON outputs
         :return: A dictionary of the generated parameters
@@ -593,7 +594,7 @@ class SmartValueGenerator:
 
     def generate_retry_request_body(
         self, failed_request_data: RequestData, response: requests.Response
-    ):
+    ) -> Optional[Dict[str, Any]]:
         """
         Uses the OpenAI language model to generate values for the request body using JSON outputs
         :return: A dictionary of the generated request body
@@ -625,8 +626,9 @@ class SmartValueGenerator:
             validated_request_body = self.validate_request_body(
                 generated_request_body.get("request_body")
             )
-            request_body[mime_type] = validated_request_body
-        return request_body
+            if validated_request_body:  # Only add if we got valid content
+                request_body[mime_type] = validated_request_body
+        return request_body  # Returns {} if all mime types failed
 
     def determine_auth_params(self):
         """
@@ -692,7 +694,7 @@ class SmartValueGenerator:
         values = [body for body in schema.values()]
         return values
 
-    def generate_value_agent_body(self, num_values: int) -> Optional[Dict[str, List]]:
+    def generate_value_agent_body(self, num_values: int) -> Dict[str, List]:
         """
 
         :param num_values:

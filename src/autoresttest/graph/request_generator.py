@@ -80,7 +80,7 @@ class RequestGenerator:
     @staticmethod
     def generate_smart_values(
         operation_properties: OperationProperties,
-        requirements: RequestRequirements = None,
+        requirements: RequestRequirements | None = None,
     ):
         """
         Generate smart values for parameters and request body using LLMs
@@ -157,13 +157,13 @@ class RequestGenerator:
         permitted_retries: int = 1,
     ) -> Optional[RequestResponse]:
         retry_data = self.make_request_retry_data(request_data, response)
-        response = self.send_operation_request(
+        retry_response = self.send_operation_request(
             retry_data,
             retry_nums=curr_retry + 1,
             allow_retry=True,
             permitted_retries=permitted_retries,
         )
-        return response
+        return retry_response
 
     def _determine_auth_mappings(
         self, request_val: Any, auth_parameters: Dict, auth_mappings
@@ -247,13 +247,11 @@ class RequestGenerator:
             if operation_node.operation_properties.request_body
             else None
         )
-        body_properties = (
-            get_body_object_combinations(
+        body_properties: List = []
+        if select_mime and operation_node.operation_properties.request_body:
+            body_properties = get_body_object_combinations(
                 operation_node.operation_properties.request_body[select_mime]
             )
-            if select_mime
-            else []
-        )
         if is_body:
             for body in body_properties:
                 if set(param_auth_info.values()).issubset(set(body)):
@@ -677,11 +675,11 @@ class RequestGenerator:
         requirement: RequestRequirements | None = None,
         allow_retry: bool = False,
         permitted_retries: int = 1,
-    ) -> RequestResponse:
+    ) -> Optional[RequestResponse]:
         request_data: RequestData = self.make_request_data(
             curr_node.operation_properties, requirement
         )
-        response: RequestResponse = self.send_operation_request(
+        response: Optional[RequestResponse] = self.send_operation_request(
             request_data, allow_retry=allow_retry, permitted_retries=permitted_retries
         )
         return response

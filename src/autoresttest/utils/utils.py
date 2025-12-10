@@ -3,11 +3,12 @@ import hashlib
 import json
 import random
 import time
-from typing import Iterable, Dict, List, Any, Optional, Tuple, Set
+from typing import Iterable, Dict, List, Any, Optional, Tuple, Set, cast
 import itertools
 from pathlib import Path
 
 from gensim.downloader import load
+from gensim.models import KeyedVectors
 import numpy as np
 
 from dotenv import load_dotenv
@@ -188,7 +189,9 @@ def get_response_params(response: SchemaProperties, response_params: list[str]) 
         get_response_params(response.items, response_params)
 
 
-def get_response_param_mappings(response: SchemaProperties, response_mappings: dict[str, SchemaProperties]) -> None:
+def get_response_param_mappings(
+    response: SchemaProperties, response_mappings: dict[str, SchemaProperties]
+) -> None:
     if response is None:
         return
 
@@ -368,11 +371,28 @@ def _dispatch_request_inner(
         )
 
     if mime_lower.startswith("multipart/"):
-        # Let requests set the multipart boundary automatically.
+        # Convert payload to proper files format for requests.
+        # Each field must be a tuple: (filename, data) or (filename, data, content_type)
+        # Using None as filename indicates a form field (not a file upload).
+        files_data = {}
+        if isinstance(payload, dict):
+            for field_name, field_value in payload.items():
+                if field_value is None:
+                    continue
+                # Serialize non-string/bytes values to JSON
+                if isinstance(field_value, (str, bytes)):
+                    serialized = field_value
+                else:
+                    serialized = json.dumps(field_value)
+                files_data[field_name] = (None, serialized)
+        else:
+            # Non-dict payload: serialize entire thing
+            files_data = {"data": (None, json.dumps(payload) if payload else "")}
+
         return select_method(
             full_url,
             params=params,
-            files=payload,
+            files=files_data,
             headers=headers or None,
             cookies=cookies,
         )
@@ -422,6 +442,7 @@ def dispatch_request(
     headers = header.copy() if header is not None else {}
     cookies = cookies or None
 
+    response = None
     for attempt in range(max_retries + 1):
         response = _dispatch_request_inner(
             select_method, full_url, params, body, headers.copy(), cookies
@@ -481,7 +502,7 @@ OUTPUT_COST_PER_TOKEN = {
 
 class EmbeddingModel:
     def __init__(self):
-        self.model = load("glove-wiki-gigaword-50")
+        self.model: KeyedVectors = cast(KeyedVectors, load("glove-wiki-gigaword-50"))
         self.threshold = 0.8
         self._embedding_cache: Dict[str, Optional[np.ndarray]] = {}
 
@@ -490,7 +511,9 @@ class EmbeddingModel:
             return self._embedding_cache[thing]
 
         words = thing.split(" ")
-        word_vectors = [self.model[word] for word in words if word in self.model]
+        word_vectors: list[np.ndarray] = [
+            self.model[word] for word in words if word in self.model
+        ]
         result = np.mean(word_vectors, axis=0) if word_vectors else None
         self._embedding_cache[thing] = result
         return result
