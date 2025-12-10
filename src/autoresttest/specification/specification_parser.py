@@ -438,7 +438,9 @@ class SpecificationParser:
         spec = self.resolving_parser.specification
         if spec is None:
             return operation_collection
-        spec_paths: dict = spec.get("paths", {})
+        spec_paths = spec.get("paths", {})
+        if not isinstance(spec_paths, dict):
+            spec_paths = {}
         for endpoint_path, endpoint_details in spec_paths.items():
             if not isinstance(endpoint_details, dict):
                 continue

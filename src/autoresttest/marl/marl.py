@@ -29,6 +29,7 @@ from autoresttest.utils import (
     get_body_params,
     get_response_params,
     get_response_param_mappings,
+    make_param_key,
     remove_nulls,
     encode_dictionary,
     split_parameter_values,
@@ -47,16 +48,19 @@ CONFIG = get_config()
 
 class QLearning:
     def __init__(
-            self,
-            operation_graph: OperationGraph,
-            alpha: float = 0.1,
-            gamma: float = 0.9,
-            epsilon: float = 0.3,
-            time_duration: int = 600,
-            mutation_rate: float = 0.3,
+        self,
+        operation_graph: OperationGraph,
+        alpha: float = 0.1,
+        gamma: float = 0.9,
+        epsilon: float = 0.3,
+        time_duration: int = 600,
+        mutation_rate: float = 0.3,
     ) -> None:
         self.q_table: dict[str, Any] = {}
         self.operation_graph: OperationGraph = operation_graph
+        assert (
+            operation_graph.request_generator is not None
+        ), "request_generator must be set"
         self.api_url = operation_graph.request_generator.api_url
         self.alpha = alpha
         self.gamma = gamma
@@ -74,10 +78,10 @@ class QLearning:
 
         self.errors: dict[str, int] = {}
         self.unique_errors: dict[str, list[dict[str, Any]]] = {}
-        self.successful_parameters: dict[str, dict[str, list[Any]]] = {}
+        self.successful_parameters: dict[str, dict[ParameterKey, list[Any]]] = {}
         self.successful_bodies: dict[str, dict[str, list[Any]]] = {}
         self.successful_responses: dict[str, dict[str, list[Any]]] = {}
-        self.successful_primitives: dict[str, dict[str, list[Any]]] = {}
+        self.successful_primitives: dict[str, list[Any]] = {}
         self.operation_response_counter: dict[str, dict[int, int]] = {}
         self._init_parameter_tracking()
         self._init_body_tracking()
@@ -90,7 +94,9 @@ class QLearning:
         print("VALUE Q-TABLE: ", self.value_agent.q_table)
 
     def get_mapping(
-        self, select_params: tuple[ParameterKey, ...] | None, select_values: dict[ParameterKey, Any] | None
+        self,
+        select_params: tuple[ParameterKey, ...] | None,
+        select_values: dict[ParameterKey, Any] | None,
     ) -> dict[ParameterKey, Any] | None:
         if not select_params or not select_values:
             return None
@@ -100,6 +106,13 @@ class QLearning:
             if param in select_values
         }
 
+    def get_body_mapping(
+        self, mime_types: list[str] | None, body_values: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        if not mime_types or not body_values:
+            return None
+        return {mime: body_values[mime] for mime in mime_types if mime in body_values}
+
     def get_mutated_value(self, param_type: str | None) -> Any:
         if not param_type:
             return None
@@ -107,8 +120,13 @@ class QLearning:
         avail_types.remove(param_type)
         return identify_generator(random.choice(avail_types))()
 
-    # Gets a random value from the table of primative responses
-    def assign_random_from_primitives(self, parameters, body, operation_id):
+    # Gets a random value from the table of primitive responses
+    def assign_random_from_primitives(
+        self,
+        parameters: dict[ParameterKey, Any] | None,
+        body: dict[str, Any] | None,
+        operation_id: str,
+    ) -> tuple[dict[ParameterKey, Any] | None, dict[str, Any] | None]:
         possible_options = [
             val
             for key, val in self.successful_primitives.items()
@@ -116,9 +134,9 @@ class QLearning:
         ]
 
         if parameters:
-            for parameter in parameters:
+            for param_key in parameters:
                 if random.random() < 0.7 and possible_options:
-                    parameters[parameter] = random.choice(possible_options)
+                    parameters[param_key] = random.choice(possible_options)
 
         if body:
             for mime, body_properties in body.items():
@@ -143,7 +161,7 @@ class QLearning:
         return new_body
 
     def assign_random_from_successful(
-            self, parameters, body, operation_id, complete_body_mappings
+        self, parameters, body, operation_id, complete_body_mappings
     ):
 
         # DEPRECATED
@@ -189,7 +207,7 @@ class QLearning:
         if body:
             for mime, body_properties in body.items():
                 if (
-                        random.random() < 0.3 and operation_id in complete_body_mappings
+                    random.random() < 0.3 and operation_id in complete_body_mappings
                 ):  # Try to assign a random successful body object
                     body_mappings = self._deconstruct_body(body_properties)
                     if body_mappings:
@@ -204,13 +222,13 @@ class QLearning:
                     if random.random() < 0.3 and operation_id in complete_body_mappings:
                         possible_objs = []
                         for (
-                                dependent_operation,
-                                dependent_prop,
+                            dependent_operation,
+                            dependent_prop,
                         ) in complete_body_mappings[operation_id].items():
                             if (
-                                    dependent_operation in self.successful_bodies
-                                    and dependent_prop
-                                    in self.successful_bodies[dependent_operation]
+                                dependent_operation in self.successful_bodies
+                                and dependent_prop
+                                in self.successful_bodies[dependent_operation]
                             ):
                                 possible_objs.extend(
                                     self.successful_bodies[dependent_operation][
@@ -225,13 +243,13 @@ class QLearning:
                         if body_mappings:
                             possible_objs = []
                             for (
-                                    dependent_operation,
-                                    dependent_prop,
+                                dependent_operation,
+                                dependent_prop,
                             ) in complete_body_mappings[operation_id].items():
                                 if (
-                                        dependent_operation in self.successful_bodies
-                                        and dependent_prop
-                                        in self.successful_bodies[dependent_operation]
+                                    dependent_operation in self.successful_bodies
+                                    and dependent_prop
+                                    in self.successful_bodies[dependent_operation]
                                 ):
                                     possible_objs.extend(
                                         self.successful_bodies[dependent_operation][
@@ -261,37 +279,37 @@ class QLearning:
         """
         complete_body_mappings = {}
         for (
-                operation1_id,
-                operation1_node,
+            operation1_id,
+            operation1_node,
         ) in self.operation_graph.operation_nodes.items():
             for (
-                    operation2_id,
-                    operation2_node,
+                operation2_id,
+                operation2_node,
             ) in self.operation_graph.operation_nodes.items():
                 if operation1_id == operation2_id:
                     continue
                 if (
-                        operation1_node.operation_properties.request_body
-                        and operation2_node.operation_properties.responses
+                    operation1_node.operation_properties.request_body
+                    and operation2_node.operation_properties.responses
                 ):
                     for (
-                            mime_type,
-                            body_properties,
+                        mime_type,
+                        body_properties,
                     ) in operation1_node.operation_properties.request_body.items():
                         if not body_properties.properties:
                             continue
                         for (
-                                status_code,
-                                response_properties,
+                            status_code,
+                            response_properties,
                         ) in operation2_node.operation_properties.responses.items():
                             if (
-                                    status_code
-                                    and status_code[0] == "2"
-                                    and response_properties.content
+                                status_code
+                                and status_code[0] == "2"
+                                and response_properties.content
                             ):
                                 for (
-                                        content_type,
-                                        response_details,
+                                    content_type,
+                                    response_details,
                                 ) in response_properties.content.items():
                                     response_params = {}
                                     get_response_param_mappings(
@@ -305,8 +323,18 @@ class QLearning:
         return complete_body_mappings
 
     def mutate_values(
-            self, operation_properties: OperationProperties, parameters, body, header
-    ):
+        self,
+        operation_properties: OperationProperties,
+        parameters: dict[ParameterKey, Any] | None,
+        body: dict[str, Any] | None,
+        header: dict[str, str] | None,
+    ) -> tuple[
+        dict[ParameterKey, Any] | None,  # parameters
+        dict[str, Any] | None,  # body
+        dict[str, str] | None,  # header
+        str | None,  # specific_method
+        bool,  # mutated_parameter_names
+    ]:
         avail_medias = [
             "application/json",
             "application/x-www-form-urlencoded",
@@ -315,18 +343,21 @@ class QLearning:
         ]
         avail_methods = ["get", "post", "put", "delete", "patch"]
 
-        parameter_type_mutate_rate = 0.5
-        body_mutate_rate = 0.3
-        mutate_method = random.random() < 0.002 # Extremely low probability due to unimportant check
+        parameter_type_mutate_rate = 0.65
+        body_mutate_rate = 0.4
+        mutate_method = (
+            random.random() < 0.01
+        )  # Extremely low probability due to unimportant check
         mutate_media = random.random() < 0.02
-        mutate_parameter_completely = random.random() < 0.05
+        mutate_parameter_completely = random.random() < 0.1
         mutate_token = random.random() < 0.2
+        mutate_param_location = random.random() < 0.5
 
         specific_method = None
         if (
-                operation_properties.http_method
-                and mutate_method
-                and operation_properties.http_method.lower() in avail_methods
+            operation_properties.http_method
+            and mutate_method
+            and operation_properties.http_method.lower() in avail_methods
         ):
             avail_methods.remove(operation_properties.http_method.lower())
             specific_method = random.choice(avail_methods)
@@ -344,32 +375,71 @@ class QLearning:
         mutated_parameter_names = False
         if random.random() < mutate_parameter_completely:
             mutated_parameter_names = True
+            # Weighted distribution: 50% query, 30% header, 20% cookie (path excluded)
+            location_weights = {"query": 0.5, "header": 0.3, "cookie": 0.2}
             parameters = {
-                randomize_string(): random_generator()()
+                make_param_key(
+                    randomize_string(),
+                    random.choices(
+                        list(location_weights.keys()),
+                        weights=list(location_weights.values()),
+                    )[0],
+                ): random_generator()()
                 for _ in range(random.randint(2, 6))
             }
 
         if (
-                operation_properties.parameters
-                and parameters
-                and not mutate_parameter_completely
+            operation_properties.parameters
+            and parameters
+            and not mutate_parameter_completely
         ):
+            # Collect location mutations to apply after iteration (can't mutate dict keys during iteration)
+            location_mutations: list[tuple[ParameterKey, ParameterKey]] = []
+
             for (
-                    parameter_name,
-                    parameter_properties,
+                parameter_key,
+                parameter_properties,
             ) in operation_properties.parameters.items():
-                if parameter_name in parameters:
+                if parameter_key in parameters:
                     mutate_parameter_type = random.random() < parameter_type_mutate_rate
                     if parameter_properties.schema and mutate_parameter_type:
                         if parameter_properties.schema.type:
-                            parameters[parameter_name] = self.get_mutated_value(
+                            parameters[parameter_key] = self.get_mutated_value(
                                 parameter_properties.schema.type
                             )
                         else:
-                            parameters[parameter_name] = random_generator()()
+                            parameters[parameter_key] = random_generator()()
 
-                    if parameters[parameter_name] is None:
-                        parameters.pop(parameter_name, None)
+                    if parameters[parameter_key] is None:
+                        parameters.pop(parameter_key, None)
+                    else:
+                        # Mutate the "in" location when mutate_param_location is active
+                        if mutate_param_location:
+                            # Weighted distribution: 50% query, 30% header, 20% cookie (path excluded)
+                            location_weights = {
+                                "query": 0.5,
+                                "header": 0.3,
+                                "cookie": 0.2,
+                            }
+                            current_location = parameter_key[1]
+                            if current_location in location_weights:
+                                del location_weights[current_location]
+                                # Renormalize weights
+                                total = sum(location_weights.values())
+                                location_weights = {
+                                    k: v / total for k, v in location_weights.items()
+                                }
+                            new_location = random.choices(
+                                list(location_weights.keys()),
+                                weights=list(location_weights.values()),
+                            )[0]
+                            new_key = make_param_key(parameter_key[0], new_location)
+                            location_mutations.append((parameter_key, new_key))
+
+            # Apply location mutations
+            for old_key, new_key in location_mutations:
+                if old_key in parameters:
+                    parameters[new_key] = parameters.pop(old_key)
 
         if operation_properties.request_body and body:
             for mime, body_properties in operation_properties.request_body.items():
@@ -393,12 +463,12 @@ class QLearning:
         return parameters, body, header, specific_method, mutated_parameter_names
 
     def send_operation(
-            self,
-            operation_properties: OperationProperties,
-            parameters,
-            body,
-            header,
-            specific_method=None,
+        self,
+        operation_properties: OperationProperties,
+        parameters,
+        body,
+        header,
+        specific_method=None,
     ):
         endpoint_path = operation_properties.endpoint_path
         http_method = (
@@ -408,8 +478,10 @@ class QLearning:
         )
         processed_parameters = copy.deepcopy(parameters) or {}
 
-        path_params, query_params, header_params, cookie_params = split_parameter_values(
-            operation_properties.parameters, processed_parameters
+        path_params, query_params, header_params, cookie_params = (
+            split_parameter_values(
+                operation_properties.parameters, processed_parameters
+            )
         )
 
         for name, value in path_params.items():
@@ -446,7 +518,7 @@ class QLearning:
             return None
 
     def _test_send_operation(
-            self, operation_properties, parameters, body, header, specific_method
+        self, operation_properties, parameters, body, header, specific_method
     ):
         print("=============================================")
         print("Operation ID: ", operation_properties.operation_id)
@@ -535,56 +607,56 @@ class QLearning:
 
     def _init_parameter_tracking(self):
         for (
-                operation_id,
-                operation_node,
+            operation_id,
+            operation_node,
         ) in self.operation_graph.operation_nodes.items():
             if operation_id not in self.successful_parameters:
                 self.successful_parameters[operation_id] = {}
             if operation_node.operation_properties.parameters:
                 for (
-                        parameter_name
+                    parameter_key
                 ) in operation_node.operation_properties.parameters.keys():
-                    self.successful_parameters[operation_id][parameter_name] = []
+                    self.successful_parameters[operation_id][parameter_key] = []
 
     def _init_body_tracking(self):
         for (
-                operation_id,
-                operation_node,
+            operation_id,
+            operation_node,
         ) in self.operation_graph.operation_nodes.items():
             if operation_id not in self.successful_bodies:
                 self.successful_bodies[operation_id] = {}
             if operation_node.operation_properties.request_body:
                 for (
-                        mime_type,
-                        body_properties,
+                    mime_type,
+                    body_properties,
                 ) in operation_node.operation_properties.request_body.items():
                     body_params = get_body_params(body_properties)
-                    self.successful_bodies[operation_id].update({
-                        param: [] for param in body_params
-                    })
+                    self.successful_bodies[operation_id].update(
+                        {param: [] for param in body_params}
+                    )
 
     def _init_response_tracking(self):
         for (
-                operation_id,
-                operation_node,
+            operation_id,
+            operation_node,
         ) in self.operation_graph.operation_nodes.items():
             if operation_id not in self.successful_responses:
                 self.successful_responses[operation_id] = {}
             if operation_node.operation_properties.responses:
                 for (
-                        response_type,
-                        response_properties,
+                    response_type,
+                    response_properties,
                 ) in operation_node.operation_properties.responses.items():
                     if response_properties.content:
                         for (
-                                response,
-                                response_details,
+                            response,
+                            response_details,
                         ) in response_properties.content.items():
                             response_params = []
                             get_response_params(response_details, response_params)
-                            self.successful_responses[operation_id].update({
-                                param: [] for param in response_params
-                            })
+                            self.successful_responses[operation_id].update(
+                                {param: [] for param in response_params}
+                            )
 
     def _construct_body_property(self, body_property, unconstructed_body):
         if body_property.properties or body_property.type == "object":
@@ -604,11 +676,14 @@ class QLearning:
         op_props = self.operation_graph.operation_nodes[
             operation_id
         ].operation_properties
+        if not op_props.request_body:
+            return None
         for mime, body_properties in op_props.request_body.items():
             if mime == mime_type:
                 return self._construct_body_property(
                     body_properties, unconstructed_body
                 )
+        return None
 
     def _deconstruct_body(self, body):
         if body is None:
@@ -663,8 +738,8 @@ class QLearning:
             operation_id
         ].operation_properties.parameters:
             for (
-                    parameter_name,
-                    parameter_properties,
+                parameter_name,
+                parameter_properties,
             ) in self.operation_graph.operation_nodes[
                 operation_id
             ].operation_properties.parameters.items():
@@ -674,41 +749,41 @@ class QLearning:
                         parameters[parameter_name] = _safe_default(value_type)
                     elif value_type:
                         generator = identify_generator(value_type)
-                        parameters[parameter_name] = generator() if callable(generator) else random_generator()()
+                        parameters[parameter_name] = (
+                            generator() if callable(generator) else random_generator()()
+                        )
                     else:
                         parameters[parameter_name] = random_generator()()
         body = {}
-        if self.operation_graph.operation_nodes[
+        op_request_body = self.operation_graph.operation_nodes[
             operation_id
-        ].operation_properties.request_body:
-            for mime_type, body_properties in self.operation_graph.operation_nodes[
-                operation_id
-            ].operation_properties.request_body.items():
+        ].operation_properties.request_body
+        if op_request_body:
+            for mime_type, body_properties in op_request_body.items():
                 if not body_properties:
                     continue
                 if body_properties.properties:
                     for prop in body_properties.properties:
-                        prop_type = getattr(body_properties.properties[prop], "type", None)
-                        if (
-                                random.random() < 0.75
-                                and prop_type
-                        ):
-                            body[mime_type] = {
-                                prop: _safe_default(prop_type)
-                            }
+                        prop_type = getattr(
+                            body_properties.properties[prop], "type", None
+                        )
+                        if random.random() < 0.75 and prop_type:
+                            body[mime_type] = {prop: _safe_default(prop_type)}
                         elif prop_type:
                             generator = identify_generator(prop_type)
                             body[mime_type] = {
-                                prop: generator() if callable(generator) else random_generator()()
+                                prop: (
+                                    generator()
+                                    if callable(generator)
+                                    else random_generator()()
+                                )
                             }
                         else:
                             body[mime_type] = {prop: random_generator()()}
                 elif body_properties.items:
                     item_type = getattr(body_properties.items, "type", None)
                     if random.random() < 0.75 and item_type:
-                        body[mime_type] = [
-                            _safe_default(item_type)
-                        ]
+                        body[mime_type] = [_safe_default(item_type)]
                     elif item_type:
                         generator = identify_generator(item_type)
                         body[mime_type] = [
@@ -722,7 +797,9 @@ class QLearning:
                         body[mime_type] = _safe_default(mime_type_val)
                     elif mime_type_val:
                         generator = identify_generator(mime_type_val)
-                        body[mime_type] = generator() if callable(generator) else random_generator()()
+                        body[mime_type] = (
+                            generator() if callable(generator) else random_generator()()
+                        )
                     else:
                         body[mime_type] = random_generator()()
         return parameters, body
@@ -761,14 +838,14 @@ class QLearning:
         )  # 0.1 is the desired probability at 20% of the time duration
         priority_exploring_space = 0.35
         all_exploring_probability = all_exploring_base_probability + (
-                1 - all_exploring_base_probability
+            1 - all_exploring_base_probability
         ) * np.exp(-all_exploring_decay_rate * elapsed_time)
         all_exploring_probability = min(all_exploring_probability, 1)
         remaining_probability = 1 - all_exploring_probability
         num_remaining = len(agent_options) - 1
         # Distribute some space for priority exploration
         other_event_probability = (
-                (1 - priority_exploring_space) * remaining_probability / num_remaining
+            (1 - priority_exploring_space) * remaining_probability / num_remaining
         )
 
         parameter_unexplored = self.parameter_agent.number_of_zeros(
@@ -862,6 +939,9 @@ class QLearning:
                 select_values,
                 dependency_type,
             ) = (None, None, {}, None, None)
+            # Declare parameters and body with union types to handle all branches
+            parameters: dict[ParameterKey, Any] | None = None
+            body: dict[str, Any] | None = None
             if data_source == "LLM":
                 select_values = self.value_agent.get_action(operation_id)
                 parameters = (
@@ -872,7 +952,7 @@ class QLearning:
                     else None
                 )
                 body = (
-                    self.get_mapping(
+                    self.get_body_mapping(
                         [select_params.mime_type], select_values.body_mappings
                     )
                     if select_params.mime_type
@@ -888,7 +968,7 @@ class QLearning:
                     else None
                 )
                 body = (
-                    self.get_mapping([select_params.mime_type], body_mappings)
+                    self.get_body_mapping([select_params.mime_type], body_mappings)
                     if select_params.mime_type
                     else None
                 )
@@ -910,7 +990,7 @@ class QLearning:
                     else None
                 )
                 supplement_body = (
-                    self.get_mapping(
+                    self.get_body_mapping(
                         [select_params.mime_type],
                         supplement_select_values.body_mappings,
                     )
@@ -923,13 +1003,13 @@ class QLearning:
                     for parameter, dependency in parameter_dependencies.items():
                         if parameter in select_params.req_params:
                             if (
-                                    dependency["in_value"] == "params"
-                                    and dependency["dependent_operation"]
-                                    in self.successful_parameters
-                                    and dependency["dependent_val"]
-                                    in self.successful_parameters[
-                                dependency["dependent_operation"]
-                            ]
+                                dependency["in_value"] == "params"
+                                and dependency["dependent_operation"]
+                                in self.successful_parameters
+                                and dependency["dependent_val"]
+                                in self.successful_parameters[
+                                    dependency["dependent_operation"]
+                                ]
                             ):
                                 if self.successful_parameters[
                                     dependency["dependent_operation"]
@@ -941,13 +1021,13 @@ class QLearning:
                                     )
 
                             elif (
-                                    dependency["in_value"] == "body"
-                                    and dependency["dependent_operation"]
-                                    in self.successful_bodies
-                                    and dependency["dependent_val"]
-                                    in self.successful_bodies[
-                                        dependency["dependent_operation"]
-                                    ]
+                                dependency["in_value"] == "body"
+                                and dependency["dependent_operation"]
+                                in self.successful_bodies
+                                and dependency["dependent_val"]
+                                in self.successful_bodies[
+                                    dependency["dependent_operation"]
+                                ]
                             ):
                                 if self.successful_bodies[
                                     dependency["dependent_operation"]
@@ -959,13 +1039,13 @@ class QLearning:
                                     )
 
                             elif (
-                                    dependency["in_value"] == "response"
-                                    and dependency["dependent_operation"]
-                                    in self.successful_responses
-                                    and dependency["dependent_val"]
-                                    in self.successful_responses[
-                                        dependency["dependent_operation"]
-                                    ]
+                                dependency["in_value"] == "response"
+                                and dependency["dependent_operation"]
+                                in self.successful_responses
+                                and dependency["dependent_val"]
+                                in self.successful_responses[
+                                    dependency["dependent_operation"]
+                                ]
                             ):
                                 if self.successful_responses[
                                     dependency["dependent_operation"]
@@ -981,85 +1061,93 @@ class QLearning:
                                 parameters[param] = (
                                     supplement_parameters[param]
                                     if supplement_parameters
-                                       and param in supplement_parameters
+                                    and param in supplement_parameters
                                     else random_generator()()
                                 )
 
                 body = {}
-                if (
-                        select_params.mime_type
-                        and select_params.mime_type
-                        in self.operation_graph.operation_nodes[
+                dep_request_body = self.operation_graph.operation_nodes[
                     operation_id
                 ].operation_properties.request_body
+                if (
+                    select_params.mime_type
+                    and dep_request_body
+                    and select_params.mime_type in dep_request_body
                 ):
                     unconstructed_body = {}
                     possible_body_properties = get_body_params(
-                        self.operation_graph.operation_nodes[
-                            operation_id
-                        ].operation_properties.request_body[select_params.mime_type]
+                        dep_request_body[select_params.mime_type]
                     )
                     if request_body_dependencies:
-                        for body_property, dependency in request_body_dependencies.items():
+                        for (
+                            body_property,
+                            dependency,
+                        ) in request_body_dependencies.items():
                             if body_property in possible_body_properties:
                                 if (
-                                        dependency["in_value"] == "params"
-                                        and dependency["dependent_operation"]
-                                        in self.successful_parameters
-                                        and dependency["dependent_val"]
-                                        in self.successful_parameters[
-                                    dependency["dependent_operation"]
-                                ]
+                                    dependency["in_value"] == "params"
+                                    and dependency["dependent_operation"]
+                                    in self.successful_parameters
+                                    and dependency["dependent_val"]
+                                    in self.successful_parameters[
+                                        dependency["dependent_operation"]
+                                    ]
                                 ):
                                     if self.successful_parameters[
                                         dependency["dependent_operation"]
                                     ][dependency["dependent_val"]]:
-                                        unconstructed_body[body_property] = random.choice(
-                                            self.successful_parameters[
-                                                dependency["dependent_operation"]
-                                            ][dependency["dependent_val"]]
+                                        unconstructed_body[body_property] = (
+                                            random.choice(
+                                                self.successful_parameters[
+                                                    dependency["dependent_operation"]
+                                                ][dependency["dependent_val"]]
+                                            )
                                         )
 
                                 elif (
-                                        dependency["in_value"] == "body"
-                                        and dependency["dependent_operation"]
-                                        in self.successful_bodies
-                                        and dependency["dependent_val"]
-                                        in self.successful_bodies[
-                                            dependency["dependent_operation"]
-                                        ]
+                                    dependency["in_value"] == "body"
+                                    and dependency["dependent_operation"]
+                                    in self.successful_bodies
+                                    and dependency["dependent_val"]
+                                    in self.successful_bodies[
+                                        dependency["dependent_operation"]
+                                    ]
                                 ):
                                     if self.successful_bodies[
                                         dependency["dependent_operation"]
                                     ][dependency["dependent_val"]]:
-                                        unconstructed_body[body_property] = random.choice(
-                                            self.successful_bodies[
-                                                dependency["dependent_operation"]
-                                            ][dependency["dependent_val"]]
+                                        unconstructed_body[body_property] = (
+                                            random.choice(
+                                                self.successful_bodies[
+                                                    dependency["dependent_operation"]
+                                                ][dependency["dependent_val"]]
+                                            )
                                         )
 
                                 elif (
-                                        dependency["in_value"] == "response"
-                                        and dependency["dependent_operation"]
-                                        in self.successful_responses
-                                        and dependency["dependent_val"]
-                                        in self.successful_responses[
-                                            dependency["dependent_operation"]
-                                        ]
+                                    dependency["in_value"] == "response"
+                                    and dependency["dependent_operation"]
+                                    in self.successful_responses
+                                    and dependency["dependent_val"]
+                                    in self.successful_responses[
+                                        dependency["dependent_operation"]
+                                    ]
                                 ):
                                     if self.successful_responses[
                                         dependency["dependent_operation"]
                                     ][dependency["dependent_val"]]:
-                                        unconstructed_body[body_property] = random.choice(
-                                            self.successful_responses[
-                                                dependency["dependent_operation"]
-                                            ][dependency["dependent_val"]]
+                                        unconstructed_body[body_property] = (
+                                            random.choice(
+                                                self.successful_responses[
+                                                    dependency["dependent_operation"]
+                                                ][dependency["dependent_val"]]
+                                            )
                                         )
 
                     deconstructed_supplement_body = (
                         self._deconstruct_body(supplement_body[select_params.mime_type])
                         if supplement_body
-                           and select_params.mime_type in supplement_body
+                        and select_params.mime_type in supplement_body
                         else None
                     )
                     if deconstructed_supplement_body:
@@ -1112,9 +1200,11 @@ class QLearning:
                 operation_id
             ].operation_properties
             if mutate_operation:
-                avail_primitives = sum(len(v) for v in self.successful_primitives.values())
+                avail_primitives = sum(
+                    len(v) for v in self.successful_primitives.values()
+                )
                 use_mutator = random.random() < 0.8 or (
-                        avail_primitives == 0 and operation_id not in complete_body_mappings
+                    avail_primitives == 0 and operation_id not in complete_body_mappings
                 )
                 specific_method = None
 
@@ -1207,7 +1297,7 @@ class QLearning:
                     next_Q_dependency_params,
                     next_Q_dependency_body,
                 ) = ([], [], [], [], [], [], [], [])
-                if data_source == "LLM":
+                if data_source == "LLM" and select_values is not None:
                     processed_value_action = ValueAction(
                         param_mappings=parameters,
                         body_mappings=select_values.body_mappings,
@@ -1223,31 +1313,35 @@ class QLearning:
                         )
                     )
                 elif data_source == "DEPENDENCY" and (
-                        dependency_type == "EXPLORE" or dependency_type == "BEST"
+                    dependency_type == "EXPLORE" or dependency_type == "BEST"
                 ):
                     used_dependent_params = {}
-                    if parameter_dependencies and select_params.req_params:
+                    if (
+                        parameter_dependencies
+                        and select_params.req_params
+                        and parameters
+                    ):
                         for parameter in parameters:
                             if (
-                                    parameter in select_params.req_params
-                                    and parameter in parameter_dependencies
+                                parameter in select_params.req_params
+                                and parameter in parameter_dependencies
                             ):
                                 used_dependent_params[parameter] = (
                                     parameter_dependencies[parameter]
                                 )
                     used_dependent_body = {}
                     if (
-                            request_body_dependencies
-                            and unconstructed_body
-                            and select_params.mime_type
-                            and select_params.mime_type in select_body_properties
-                            and select_body_properties[select_params.mime_type]
+                        request_body_dependencies
+                        and unconstructed_body
+                        and select_params.mime_type
+                        and select_params.mime_type in select_body_properties
+                        and select_body_properties[select_params.mime_type]
                     ):
                         for body_param in unconstructed_body:
                             if (
-                                    body_param
-                                    in select_body_properties[select_params.mime_type]
-                                    and body_param in request_body_dependencies
+                                body_param
+                                in select_body_properties[select_params.mime_type]
+                                and body_param in request_body_dependencies
                             ):
                                 used_dependent_body[body_param] = (
                                     request_body_dependencies[body_param]
@@ -1267,8 +1361,8 @@ class QLearning:
                         continue
                     if parameter_dependencies:
                         for (
-                                parameter,
-                                dependency_info,
+                            parameter,
+                            dependency_info,
                         ) in parameter_dependencies.items():
                             dependent_operation = dependency_info["dependent_operation"]
                             dependency_location = dependency_info["in_value"]
@@ -1283,8 +1377,8 @@ class QLearning:
                             )
                     if request_body_dependencies:
                         for (
-                                body_param,
-                                dependency_info,
+                            body_param,
+                            dependency_info,
                         ) in request_body_dependencies.items():
                             dependent_operation = dependency_info["dependent_operation"]
                             dependency_location = dependency_info["in_value"]
@@ -1300,31 +1394,31 @@ class QLearning:
 
                 # Calculate combined error through value decomposition
                 Q_target = (
-                        next_Q_data
-                        + next_Q_param
-                        + next_Q_mime
-                        + next_Q_body
-                        + next_Q_header
-                        + sum(next_Q_value_params)
-                        + sum(next_Q_value_body)
-                        + sum(next_Q_dependency_params)
-                        + sum(next_Q_dependency_body)
+                    next_Q_data
+                    + next_Q_param
+                    + next_Q_mime
+                    + next_Q_body
+                    + next_Q_header
+                    + sum(next_Q_value_params)
+                    + sum(next_Q_value_body)
+                    + sum(next_Q_dependency_params)
+                    + sum(next_Q_dependency_body)
                 )
                 Q_curr = (
-                        curr_Q_data
-                        + curr_Q_param
-                        + curr_Q_mime
-                        + curr_Q_body
-                        + curr_Q_header
-                        + sum(curr_Q_value_params)
-                        + sum(curr_Q_value_body)
-                        + sum(curr_Q_dependency_params)
-                        + sum(curr_Q_dependency_body)
+                    curr_Q_data
+                    + curr_Q_param
+                    + curr_Q_mime
+                    + curr_Q_body
+                    + curr_Q_header
+                    + sum(curr_Q_value_params)
+                    + sum(curr_Q_value_body)
+                    + sum(curr_Q_dependency_params)
+                    + sum(curr_Q_dependency_body)
                 )
                 td_error = (
-                        self.determine_good_response_reward(response)
-                        + self.gamma * Q_target
-                        - Q_curr
+                    self.determine_good_response_reward(response)
+                    + self.gamma * Q_target
+                    - Q_curr
                 )
 
                 # Update Q-tables
@@ -1346,13 +1440,13 @@ class QLearning:
                         operation_id, select_header, td_error
                     )
 
-                if data_source == "LLM":
+                if data_source == "LLM" and processed_value_action is not None:
                     self.value_agent.update_Q_item(
                         operation_id, processed_value_action, td_error
                     )
 
                 elif data_source == "DEPENDENCY" and (
-                        dependency_type == "EXPLORE" or dependency_type == "BEST"
+                    dependency_type == "EXPLORE" or dependency_type == "BEST"
                 ):
                     self.dependency_agent.update_Q_item(
                         operation_id,
@@ -1365,13 +1459,13 @@ class QLearning:
             if response is not None and response.ok and not mutated_parameter_names:
                 # print("Successful response!")
                 if parameters and self.successful_parameters[operation_id]:
-                    for param_name, param_val in parameters.items():
+                    for param_key, param_val in parameters.items():
                         if (
-                                param_name in self.successful_parameters[operation_id]
-                                and param_val
-                                not in self.successful_parameters[operation_id][param_name]
+                            param_key in self.successful_parameters[operation_id]
+                            and param_val
+                            not in self.successful_parameters[operation_id][param_key]
                         ):
-                            self.successful_parameters[operation_id][param_name].append(
+                            self.successful_parameters[operation_id][param_key].append(
                                 param_val
                             )
                 if body and self.successful_bodies[operation_id]:
@@ -1380,18 +1474,18 @@ class QLearning:
                         if deconstructed_body:
                             for prop_name, prop_val in deconstructed_body.items():
                                 if (
-                                        prop_name in self.successful_bodies[operation_id]
-                                        and prop_val
-                                        not in self.successful_bodies[operation_id][
-                                    prop_name
-                                ]
+                                    prop_name in self.successful_bodies[operation_id]
+                                    and prop_val
+                                    not in self.successful_bodies[operation_id][
+                                        prop_name
+                                    ]
                                 ):
                                     self.successful_bodies[operation_id][
                                         prop_name
                                     ].append(prop_val)
                 if (
-                        response.content
-                        and self.successful_responses[operation_id] is not None
+                    response.content
+                    and self.successful_responses[operation_id] is not None
                 ):
                     try:
                         response_content = json.loads(response.content)
@@ -1405,16 +1499,16 @@ class QLearning:
 
                     if deconstructed_response:
                         for (
-                                response_prop,
-                                response_vals,
+                            response_prop,
+                            response_vals,
                         ) in deconstructed_response.items():
                             if response_prop in self.successful_responses[operation_id]:
                                 for response_val in response_vals:
                                     if (
-                                            response_val
-                                            not in self.successful_responses[operation_id][
-                                        response_prop
-                                    ]
+                                        response_val
+                                        not in self.successful_responses[operation_id][
+                                            response_prop
+                                        ]
                                     ):
                                         self.successful_responses[operation_id][
                                             response_prop
@@ -1424,11 +1518,11 @@ class QLearning:
                                     response_prop
                                 ] = response_vals
                                 if (
-                                        self.dependency_agent.add_undocumented_responses(
-                                            operation_id, response_prop
-                                        )
-                                        and "DEPENDENCY"
-                                        not in self.data_source_agent.available_data_sources
+                                    self.dependency_agent.add_undocumented_responses(
+                                        operation_id, response_prop
+                                    )
+                                    and "DEPENDENCY"
+                                    not in self.data_source_agent.available_data_sources
                                 ):
                                     self.data_source_agent.initialize_dependency_source()
 
@@ -1442,8 +1536,8 @@ class QLearning:
                                         item
                                     )
                         elif (
-                                response_content
-                                not in self.successful_primitives[operation_id]
+                            response_content
+                            not in self.successful_primitives[operation_id]
                         ):
                             self.successful_primitives[operation_id].append(
                                 response_content
@@ -1456,8 +1550,8 @@ class QLearning:
                         response.status_code: 1
                     }
                 elif (
-                        response.status_code
-                        not in self.operation_response_counter[operation_id]
+                    response.status_code
+                    not in self.operation_response_counter[operation_id]
                 ):
                     self.operation_response_counter[operation_id][
                         response.status_code

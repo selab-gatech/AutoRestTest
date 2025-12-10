@@ -776,11 +776,11 @@ class DependencyAgent(BaseAgent):
         ) in qlearning.successful_parameters.items():
             if operation_idx == operation_id:
                 continue
-            for parameter_name, parameter_values in operation_parameters.items():
+            for parameter_key, parameter_values in operation_parameters.items():
                 for parameter_value in parameter_values:
                     possible_options.append(
                         {
-                            "dependent_val": parameter_name,
+                            "dependent_val": parameter_key,
                             "dependent_operation": operation_idx,
                             "value": parameter_value,
                             "in_value": "params",

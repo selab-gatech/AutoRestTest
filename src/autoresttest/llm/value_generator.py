@@ -177,7 +177,14 @@ class NaiveValueGenerator:
         items = getattr(item_properties, "items", None)
         if not isinstance(items, SchemaProperties):
             items = None
-        if item_type == "array" or items is not None:
+        if item_type == "array":
+            if items is not None:
+                return [
+                    self.generate_value(items) for _ in range(randomized_array_length())
+                ]
+            else:
+                return randomize_array()
+        elif items is not None:
             return [
                 self.generate_value(items) for _ in range(randomized_array_length())
             ]
@@ -187,7 +194,11 @@ class NaiveValueGenerator:
     def generate_parameters(self) -> Dict[ParameterKey, Any]:
         query_parameters = {}
         for parameter_name, parameter_properties in self.parameters.items():
-            randomized_value = self.generate_value(parameter_properties.schema)
+            schema = parameter_properties.schema
+            if schema is not None:
+                randomized_value = self.generate_value(schema)
+            else:
+                randomized_value = random_generator()()
             query_parameters[parameter_name] = randomized_value
         return query_parameters
 

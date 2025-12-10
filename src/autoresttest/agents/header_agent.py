@@ -25,6 +25,8 @@ class HeaderAgent(BaseAgent):
 
     def initialize_q_table(self) -> None:
         request_generator = self.operation_graph.request_generator
+        if request_generator is None:
+            return
         token_list: List = []
         for operation_node in self.operation_graph.operation_nodes.values():
             token_info = request_generator.get_auth_info(operation_node, 5)
