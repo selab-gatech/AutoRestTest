@@ -44,7 +44,7 @@ combination_seed = 42
 parallelize = true
 
 # Number of worker threads for parallel generation (ignored if parallelize = false).
-max_workers = 16
+max_workers = 10
 
 [agents.header]
 # Whether to enable the Header Agent (uses Basic tokens). Only helpful for APIs requiring such auth.
