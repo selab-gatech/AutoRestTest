@@ -67,6 +67,13 @@ class RequestGenerationConfig(BaseModel):
     mutation_rate: float
 
 
+class ApiConfig(BaseModel):
+    """API URL configuration. Override the spec URL with custom host/port."""
+    override_url: bool = False
+    host: str = "localhost"
+    port: int = 8080
+
+
 class CustomHeadersConfig(BaseModel):
     """Custom static headers. Supports ${VAR_NAME} env var interpolation."""
 
@@ -92,6 +99,7 @@ class Config(BaseModel):
     cache: CacheConfig
     q_learning: QLearningConfig
     request_generation: RequestGenerationConfig
+    api: ApiConfig = ApiConfig()
     custom_headers: CustomHeadersConfig = CustomHeadersConfig()
 
     model_config = ConfigDict(frozen=True)
@@ -140,6 +148,11 @@ class Config(BaseModel):
     def static_headers(self) -> Dict[str, str]:
         """Return custom headers with env var interpolation applied."""
         return self.custom_headers.get_headers()
+
+    @property
+    def custom_api_url(self) -> str:
+        """Construct API URL from host and port."""
+        return f"http://{self.api.host}:{self.api.port}/"
 
 
 def _load_raw_config() -> Dict[str, Any]:

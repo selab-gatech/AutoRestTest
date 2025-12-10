@@ -64,6 +64,13 @@ time_duration = 1200
 # Probability of mutating request parameters during generation.
 mutation_rate = 0.2
 
+[api]
+# By default, the API URL is extracted from the OpenAPI specification's "servers" field.
+# Set override_url to true to use the custom host and port instead.
+override_url = false
+host = "localhost"
+port = 8080
+
 [custom_headers]
 # Static headers to include with every request.
 # Supports environment variable interpolation using ${VAR_NAME} syntax.

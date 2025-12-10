@@ -211,7 +211,12 @@ class AutoRestTest:
         spec_parser = SpecificationParser(spec_path=str(spec_path), spec_name=spec_name)
         print("Specification parsed successfully!")
 
-        api_url: str = get_api_url(spec_parser)
+        if CONFIG.api.override_url:
+            api_url = CONFIG.custom_api_url
+            print(f"Using custom API URL from config: {api_url}")
+        else:
+            api_url = get_api_url(spec_parser)
+            print(f"Using API URL from specification: {api_url}")
 
         operation_graph = OperationGraph(
             spec_path=str(spec_path),

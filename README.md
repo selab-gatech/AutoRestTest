@@ -182,6 +182,28 @@ ACCESS_TOKEN=your_bearer_token
 > [!CAUTION]
 > If you enable the Header Agent (`[agents.header].enabled = true`) alongside custom headers, be aware that the Header Agent may override your `Authorization` header during testing. The Header Agent uses Basic Authentication tokens and has higher priority than custom static headers. For Bearer token or API key authentication, keep the Header Agent disabled.
 
+#### 8. Custom API URL Override
+
+By default, AutoRestTest extracts the API base URL from the `servers` field in your OpenAPI specification. If you need to target a different host (e.g., a local development server or staging environment), you can override this behavior in the `[api]` section:
+
+```toml
+[api]
+override_url = true
+host = "localhost"
+port = 8080
+```
+
+When `override_url` is set to `true`, the tool constructs the API URL as `http://{host}:{port}/` instead of using the specification's server URL.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `override_url` | `false` | When `false`, uses the URL from the OpenAPI spec. When `true`, uses the custom host and port. |
+| `host` | `localhost` | The hostname for the custom API URL. |
+| `port` | `8080` | The port number for the custom API URL. |
+
+> [!TIP]
+> This is useful when testing local services that run on a different port than specified in the OpenAPI spec, or when the spec contains a production URL but you want to test against a local or staging environment.
+
 ## Execution
 
 Run the script using Poetry, after following the installation instructions:
