@@ -31,6 +31,7 @@ class LLMConfig(BaseModel):
     engine: str
     creative_temperature: float
     strict_temperature: float
+    api_base: str = "https://api.openai.com/v1"
 
 
 class HeaderAgentConfig(BaseModel):
@@ -130,6 +131,11 @@ class Config(BaseModel):
     @property
     def strict_temperature(self) -> float:
         return self.llm.strict_temperature
+
+    @property
+    def llm_api_base(self) -> str:
+        """Return LLM API base URL."""
+        return self.llm.api_base
 
     @property
     def enable_header_agent(self) -> bool:

@@ -54,12 +54,12 @@ class OpenAILanguageModel:
         temperature=CONFIG.creative_temperature,
         max_tokens=20000,
     ):
-        self.api_key = os.getenv("OPENAI_API_KEY")
+        self.api_key = os.getenv("API_KEY")
         if self.api_key is None or self.api_key.strip() == "":
             raise ValueError(
-                "OPENAI API key is required for OpenAI language model, found None or empty string."
+                "API key is required for OpenAI language model, found None or empty string."
             )
-        self.client = OpenAI(api_key=self.api_key)
+        self.client = OpenAI(api_key=self.api_key, base_url=CONFIG.llm_api_base)
         self.engine = engine
         self.temperature = temperature
         self.max_tokens = max_tokens
