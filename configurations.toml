@@ -15,8 +15,9 @@ recursion_limit = 1
 strict_validation = false
 
 [llm]
-# OpenAI model used for Value Agent (and optional Header Agent) generation.
-# Must be JSON-mode compatible.
+# LLM engine used for Value Agent (and optional Header Agent) generation.
+# Supports any model from an OpenAI-API compatible provider (OpenAI, OpenRouter, Azure, local models, etc.).
+# Must support JSON mode.
 engine = "gpt-5-mini-2025-08-07"
 
 # Sampling temperature for creative generations (0.0 = deterministic, higher = more random).
@@ -24,6 +25,10 @@ creative_temperature = 1
 
 # Sampling temperature for strict/repair flows (e.g., retries, JSON fixes).
 strict_temperature = 1
+
+# Base URL for the LLM API. Supports any OpenAI-API compatible endpoint.
+# Examples: "https://api.openai.com/v1", "https://openrouter.ai/api/v1", "http://localhost:1234/v1"
+api_base = "https://api.openai.com/v1"
 
 [agent]
 # Max number of optional parameters per combination (required params always included).

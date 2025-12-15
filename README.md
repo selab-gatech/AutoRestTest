@@ -17,14 +17,12 @@ Watch this [demonstration video](https://www.youtube.com/watch?v=VVus2W8rap8) of
   </a>
 </p>
 
-The program uses OpenAI's cutting-edge LLMs for natural-language processing during the creating of the reinforcement 
-learning tables and graph edges. 
+The program uses LLMs for natural-language processing during the creation of the reinforcement
+learning tables and graph edges. AutoRestTest supports any LLM from an OpenAI-API compatible provider, including OpenAI, OpenRouter, Azure OpenAI, and local models (LocalAI, LM Studio, vLLM, Ollama, etc.).
 
 > [!Important]
-> An OpenAI API key is required to use the software. The key can be obtained 
-> from [OpenAI's API website](https://openai.com/index/openai-api/). The cost for software per execution is linearly 
-> dependent on the number of available operations with the API. For reference, when testing the average API with
-> ~15 operations, the cost was approximately $0.1. 
+> An API key from your chosen LLM provider is required. The cost per execution depends on your provider and model choice.
+> For reference, when testing an average API with ~15 operations using GPT-4o-mini, the cost was approximately $0.1. 
 
 ## Installation
 
@@ -36,7 +34,7 @@ Steps:
 3. Install dependencies with Poetry (uses `poetry.lock` if present):
    - `poetry install`
 4. Create a `.env` file in the project root and add:
-   - `OPENAI_API_KEY='<YOUR_API_KEY>'`
+   - `API_KEY='<YOUR_API_KEY>'`
 
 Alternatives (provided but not recommended):
 - `pip install -r requirements.txt`
@@ -141,16 +139,39 @@ The Value Agent's Q-table initialization can be parallelized using a thread pool
 > [!NOTE]
 > Rate-limited responses (HTTP 429) are automatically retried with exponential backoff.
 
-#### 4. Configuring the OpenAI Model
+#### 4. Configuring the LLM
 
-To manage cost and performance, adjust the LLM settings in `configurations.toml`:
-- `[llm].engine` (default: `gpt-5-mini`)
-- `[llm].creative_temperature` (default: `1`) — used for creative parameter generation.
-- `[llm].strict_temperature` (default: `1`) — used for repair or deterministic flows.
+AutoRestTest supports any LLM from an OpenAI-API compatible provider. Configure the model and provider in `configurations.toml`:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `[llm].engine` | `gpt-4o-mini` | Model identifier. Format depends on provider (e.g., `gpt-4o-mini`, `google/gemini-2.0-flash-001`, `anthropic/claude-3-haiku`). |
+| `[llm].api_base` | `https://api.openai.com/v1` | API endpoint URL. Change for alternative providers. |
+| `[llm].creative_temperature` | `1` | Temperature for creative parameter generation. |
+| `[llm].strict_temperature` | `1` | Temperature for repair or deterministic flows. |
+
+**Example configurations:**
+
+```toml
+# OpenAI (default)
+[llm]
+engine = "gpt-4o-mini"
+api_base = "https://api.openai.com/v1"
+
+# OpenRouter (access to many models)
+[llm]
+engine = "google/gemini-2.0-flash-001"
+api_base = "https://openrouter.ai/api/v1"
+
+# Local model (LM Studio, Ollama, etc.)
+[llm]
+engine = "local-model"
+api_base = "http://localhost:1234/v1"
+```
 
 > [!WARNING]
-> The software heavily uses the **JSON mode** from recent OpenAI API engines. All recent models should support the JSON mode. 
-> The console output will list token usage for analyzing tool costs.
+> The model must support **JSON mode**. Most recent models from major providers support this feature.
+> The console output will list token usage for analyzing costs, if supplied by the provider.
 
 #### 5. Use of Cached Graphs and Reinforcement Learning Tables
 
@@ -159,7 +180,7 @@ The software can cache the graph and Q-tables to reduce cost and speed up repeat
 - `[cache].use_cached_table` (default: `true`)
 
 > [!IMPORTANT]
-> The cache parameter structure changed on Nov. 22, 2025. Recreate caches (clear `cache/` contents) so they remain compatible with newer runs.
+> The cache parameter structure changed on Dec. 10, 2025. Recreate caches (clear `cache/` contents) so they remain compatible with newer runs.
 
 > [!NOTE]
 > When enabled, these options store and read cached data under the `cache/` directory at the project root (for example, `cache/graphs/` and `cache/q_tables/`).
