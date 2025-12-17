@@ -5,8 +5,7 @@
 [spec]
 # Relative path from the project root to the OpenAPI specification file.
 # Only .yaml and .json are supported; file MUST be OpenAPI 3.0.
-# location = "specs/original/oas/ohsome.yaml"
-location = "aratrl-openapi/market2.yaml"
+location = "specs/original/oas/ohsome.yaml"
 
 # Maximum times a circular/self-reference may appear in the resolution stack.
 # A value of 1 means an element may be referred to exactly once before triggering the handler.
@@ -32,7 +31,7 @@ strict_temperature = 1
 api_base = "https://openrouter.ai/api/v1"
 
 # Maximum tokens for LLM response. Set to -1 to omit and use provider default.
-max_tokens = 20000
+max_tokens = 30000
 
 [agent]
 # Max number of optional parameters per combination (required params always included).
@@ -53,7 +52,7 @@ combination_seed = 42
 parallelize = true
 
 # Number of worker threads for parallel generation (ignored if parallelize = false).
-max_workers = 16
+max_workers = 8
 
 [agents.header]
 # Whether to enable the Header Agent (uses Basic tokens). Only helpful for APIs requiring such auth.
@@ -64,7 +63,7 @@ enabled = false
 use_cached_graph = true
 
 # Use the cached Q-table(s) for the Value Agent (and optional Header Agent) to avoid re-running the LLM.
-use_cached_table = false
+use_cached_table = true
 
 # Tip: Set either cache flag to false if you changed graph construction or table generation logic to regenerate the cache.
 

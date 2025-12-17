@@ -234,6 +234,10 @@ class SmartValueGenerator:
         self.parameter_lookup: Dict[str, ParameterKey] = {
             param_key_to_label(key): key for key in self.parameters_raw.keys()
         }
+        # Fallback lookup: plain parameter name -> ParameterKey (for when LLM strips ::location suffix)
+        self.parameter_name_lookup: Dict[str, ParameterKey] = {
+            key[0]: key for key in self.parameters_raw.keys()
+        }
         self.parameters: Dict[str, Dict] = {
             label: remove_nulls(param.to_dict())
             for label, param in (
@@ -660,7 +664,11 @@ class SmartValueGenerator:
             return {}
         param_mappings: Dict[ParameterKey, List[Any]] = defaultdict(list)
         for param_name, param_values in schema.items():
+            # Try exact match first (e.g., "name::query"), then fallback to plain name (e.g., "name")
             param_key = self.parameter_lookup.get(param_name)
+            if param_key is None:
+                # Fallback: LLM may have stripped the ::location suffix
+                param_key = self.parameter_name_lookup.get(param_name)
             if param_key in self.parameters_raw:
                 for param_value in param_values.values():
                     param_mappings[param_key].append(param_value)

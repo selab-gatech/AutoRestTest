@@ -60,6 +60,7 @@ Given a summary of an operation and its parameters schema from its OpenAPI Speci
         }
     }
 }
+IMPORTANT: Use the parameter keys EXACTLY as they appear in the SPECIFICATION object (the keys with "::" format combining name and location, e.g., "name::query", "productId::path"). Do NOT use plain parameter names without the location suffix.
 In the case where a given parameter is an object, use an object with keys to represent the object field names and values to represent their respective field values as the parameter value.
 In the case where a given parameter is an array, use a list as the parameter value. Do not generate lists with more than two items.
 If the OpenAPI Specification includes examples in an example field or description, you must include some of the example values in your generated values. If the OpenAPI Specification includes enums, ensure that your generated values are within the enum values.
@@ -74,19 +75,20 @@ VALUE_AGENT_PARAMS_FEWSHOT_PROMPT = """
 EXAMPLE 1
 SPECIFICATION:
 {
-    "personId": {
+    "personId::path": {
         "name": "personId",
-        "description": "The ID of the person. Must be in the form of their name and number. For example John123.", 
+        "in_value": "path",
+        "description": "The ID of the person. Must be in the form of their name and number. For example John123.",
         "schema": {
             "type": "string"
-        }, 
+        },
         "required": true
     }
 }
 PARAMETER VALUES:
 {
     "parameters": {
-        "personId": {
+        "personId::path": {
             "value1": "John123",
             "value2": "Jane456",
             "value3": "Jack789",
@@ -104,8 +106,9 @@ PARAMETER VALUES:
 EXAMPLE 2
 SPECIFICATION:
 {
-    "language": {
+    "language::query": {
         "name": "language",
+        "in_value": "query",
         "description": "The language code of the text. Must be in the form of a language code like en-US or fr.",
         "schema": {
             "type": "string"
@@ -116,7 +119,7 @@ SPECIFICATION:
 PARAMETER VALUES:
 {
     "parameters": {
-        "language": {
+        "language::query": {
             "value1": "en-US",
             "value2": "fr",
             "value3": "de",
