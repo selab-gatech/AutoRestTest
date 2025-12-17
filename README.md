@@ -149,7 +149,7 @@ AutoRestTest supports any LLM from an OpenAI-API compatible provider. Configure 
 | `[llm].api_base` | `https://api.openai.com/v1` | API endpoint URL. Change for alternative providers. |
 | `[llm].creative_temperature` | `1` | Temperature for creative parameter generation. |
 | `[llm].strict_temperature` | `1` | Temperature for repair or deterministic flows. |
-| `[llm].max_tokens` | `20000` | Maximum tokens for LLM response. Set to `-1` to omit and use provider default. |
+| `[llm].max_tokens` | `30000` | Maximum tokens for LLM response. Set to `-1` to omit and use provider default. |
 
 **Example configurations:**
 
