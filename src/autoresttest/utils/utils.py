@@ -1,24 +1,23 @@
 import base64
 import hashlib
+import itertools
 import json
 import math
 import random
 import time
-from typing import Iterable, Dict, List, Any, Optional, Tuple, Set, cast
-import itertools
 from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, cast
 
+import numpy as np
+from dotenv import load_dotenv
 from gensim.downloader import load
 from gensim.models import KeyedVectors
-import numpy as np
-
-from dotenv import load_dotenv
 
 from autoresttest.config import get_config
-from autoresttest.specification import SpecificationParser
 from autoresttest.models import ParameterKey, ParameterProperties, SchemaProperties
 from autoresttest.prompts.generator_prompts import FIX_JSON_OBJ
 from autoresttest.prompts.system_prompts import FIX_JSON_SYSTEM_MESSAGE
+from autoresttest.specification import SpecificationParser
 
 load_dotenv()
 CONFIG = get_config()

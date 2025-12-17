@@ -32,6 +32,7 @@ class LLMConfig(BaseModel):
     creative_temperature: float
     strict_temperature: float
     api_base: str = "https://api.openai.com/v1"
+    max_tokens: int = 20000
 
 
 class HeaderAgentConfig(BaseModel):
@@ -136,6 +137,11 @@ class Config(BaseModel):
     def llm_api_base(self) -> str:
         """Return LLM API base URL."""
         return self.llm.api_base
+
+    @property
+    def llm_max_tokens(self) -> int:
+        """Return LLM max tokens. -1 means omit from API call."""
+        return self.llm.max_tokens
 
     @property
     def enable_header_agent(self) -> bool:

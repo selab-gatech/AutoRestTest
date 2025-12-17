@@ -52,7 +52,7 @@ class OpenAILanguageModel:
         self,
         engine=CONFIG.openai_llm_engine,
         temperature=CONFIG.creative_temperature,
-        max_tokens=20000,
+        max_tokens=CONFIG.llm_max_tokens,
     ):
         self.api_key = os.getenv("API_KEY")
         if self.api_key is None or self.api_key.strip() == "":
@@ -63,16 +63,6 @@ class OpenAILanguageModel:
         self.engine = engine
         self.temperature = temperature
         self.max_tokens = max_tokens
-
-    def _max_tokens_field(self) -> str:
-        """
-        Prefer the newer OpenAI interface (max_completion_tokens). Fall back to max_tokens
-        for older model families that still expect it.
-        """
-        engine_str = str(self.engine)
-        if engine_str.startswith(("gpt-3.5", "gpt-4", "gpt-4o")):
-            return "max_tokens"
-        return "max_completion_tokens"
 
     def _generate_cache_key(self, user_message, system_message, json_mode):
         key_data = {
@@ -99,46 +89,28 @@ class OpenAILanguageModel:
             {"role": "system", "content": system_message},
             {"role": "user", "content": user_message},
         ]
-        use_legacy_max_tokens = self._max_tokens_field() == "max_tokens"
+
+        kwargs = {
+            "model": self.engine,
+            "messages": messages,
+            "temperature": self.temperature,
+        }
+
+        if self.max_tokens != -1:
+            kwargs["max_tokens"] = self.max_tokens
 
         if json_mode:
-            if use_legacy_max_tokens:
-                response = self.client.chat.completions.create(
-                    model=self.engine,
-                    messages=messages,
-                    max_tokens=self.max_tokens,
-                    temperature=self.temperature,
-                    response_format={"type": "json_object"},
-                )
-            else:
-                response = self.client.chat.completions.create(
-                    model=self.engine,
-                    messages=messages,
-                    max_completion_tokens=self.max_tokens,
-                    temperature=self.temperature,
-                    response_format={"type": "json_object"},
-                )
-        else:
-            if use_legacy_max_tokens:
-                response = self.client.chat.completions.create(
-                    model=self.engine,
-                    messages=messages,
-                    max_tokens=self.max_tokens,
-                    temperature=self.temperature,
-                )
-            else:
-                response = self.client.chat.completions.create(
-                    model=self.engine,
-                    messages=messages,
-                    max_completion_tokens=self.max_tokens,
-                    temperature=self.temperature,
-                )
+            kwargs["response_format"] = {"type": "json_object"}
+
+        response = self.client.chat.completions.create(**kwargs)
 
         input_tokens = 0
         output_tokens = 0
         if response.usage is not None:
             input_tokens = getattr(response.usage, "prompt_tokens", 0) or 0
             output_tokens = getattr(response.usage, "completion_tokens", 0) or 0
+
+        # print(f"[LLM] Input tokens: {input_tokens}, Output tokens: {output_tokens}")
 
         # Thread-safe token and cost updates
         with OpenAILanguageModel._token_lock:
