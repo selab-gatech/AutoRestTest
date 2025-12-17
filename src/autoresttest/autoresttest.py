@@ -4,25 +4,23 @@ import shelve
 from pathlib import Path
 from typing import Union
 
-from autoresttest.graph.generate_graph import OperationGraph
-from autoresttest.marl import QLearning
-from autoresttest.graph import RequestGenerator
-
 from dotenv import load_dotenv
 
-from autoresttest.llm import OpenAILanguageModel
+from autoresttest.config import get_config
+from autoresttest.graph import RequestGenerator
+from autoresttest.graph.generate_graph import OperationGraph
+from autoresttest.llm import LanguageModel
+from autoresttest.marl import QLearning
+from autoresttest.models import to_dict_helper
 from autoresttest.specification import SpecificationParser
 from autoresttest.utils import (
-    construct_db_dir,
-    is_json_seriable,
     EmbeddingModel,
+    construct_db_dir,
     get_api_url,
     get_graph_cache_path,
     get_q_table_cache_path,
+    is_json_seriable,
 )
-from autoresttest.models import to_dict_helper
-
-from autoresttest.config import get_config
 
 load_dotenv()
 
@@ -75,9 +73,9 @@ def output_q_table(q_learning: QLearning, spec_name):
     for operation, operation_values in parameter_table.items():
         simplified_param_table[operation] = {"params": {}, "body": {}}
         for parameter, parameter_values in operation_values["params"].items():
-            simplified_param_table[operation]["params"][
-                str(parameter)
-            ] = parameter_values
+            simplified_param_table[operation]["params"][str(parameter)] = (
+                parameter_values
+            )
         for body, body_values in operation_values["body"].items():
             simplified_param_table[operation]["body"][str(body)] = body_values
 
@@ -206,7 +204,6 @@ class AutoRestTest:
         spec_path: Union[Path, str],
         embedding_model: EmbeddingModel,
     ) -> OperationGraph:
-
         print(f"Parsing OpenAPI specification: {spec_path}...")
         spec_parser = SpecificationParser(spec_path=str(spec_path), spec_name=spec_name)
         print("Specification parsed successfully!")
@@ -315,7 +312,7 @@ class AutoRestTest:
                         f"Initialized value agent's Q-table for {spec_name} from shelve."
                     )
                     loaded_value_from_shelf = True
-                except Exception as e:
+                except Exception:
                     print("Error loading value agent from shelve.")
                     loaded_value_from_shelf = False
 
@@ -329,14 +326,14 @@ class AutoRestTest:
                             True if q_learning.header_agent.q_table else False
                         )
                         # If the header agent is disabled, the Q-table will be None.
-                    except Exception as e:
+                    except Exception:
                         print("Error loading header agent from shelve.")
                         loaded_header_from_shelf = False
 
             if not loaded_value_from_shelf:
                 q_learning.value_agent.initialize_q_table()
                 print(f"Initialized new value agent Q-table for {spec_name}.")
-                token_counter = OpenAILanguageModel.get_tokens()
+                token_counter = LanguageModel.get_tokens()
                 print(
                     f"Value table generation tokens - Input: {token_counter.input_tokens}, Output: {token_counter.output_tokens}"
                 )
@@ -344,7 +341,7 @@ class AutoRestTest:
             if CONFIG.enable_header_agent and not loaded_header_from_shelf:
                 q_learning.header_agent.initialize_q_table()
                 print(f"Initialized new header agent Q-table for {spec_name}.")
-                token_counter = OpenAILanguageModel.get_tokens()
+                token_counter = LanguageModel.get_tokens()
                 print(
                     f"Header table generation tokens - Input: {token_counter.input_tokens}, Output: {token_counter.output_tokens}"
                 )
@@ -356,7 +353,7 @@ class AutoRestTest:
                     "value": q_learning.value_agent.q_table,
                     "header": q_learning.header_agent.q_table,
                 }
-            except Exception as e:
+            except Exception:
                 print("Error saving Q-tables to shelve.")
 
         output_q_table(q_learning, spec_name)
@@ -368,7 +365,7 @@ class AutoRestTest:
         return q_learning
 
     def print_performance(self):
-        token_counter = OpenAILanguageModel.get_tokens()
+        token_counter = LanguageModel.get_tokens()
         print(f"Total input tokens used: {token_counter.input_tokens}")
         print(f"Total output tokens used: {token_counter.output_tokens}")
 

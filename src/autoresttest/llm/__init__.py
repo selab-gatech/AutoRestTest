@@ -1,4 +1,4 @@
-from .llm import OpenAILanguageModel
+from .llm import LanguageModel
 from .value_generator import (
     NaiveValueGenerator,
     PromptData,
@@ -16,7 +16,7 @@ from .value_generator import (
 )
 
 __all__ = [
-    "OpenAILanguageModel",
+    "LanguageModel",
     "NaiveValueGenerator",
     "PromptData",
     "SmartValueGenerator",

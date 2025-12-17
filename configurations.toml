@@ -5,7 +5,7 @@
 [spec]
 # Relative path from the project root to the OpenAPI specification file.
 # Only .yaml and .json are supported; file MUST be OpenAPI 3.0.
-location = "aratrl-openapi/market2.yaml"
+location = "specs/original/oas/ohsome.yaml"
 
 # Maximum times a circular/self-reference may appear in the resolution stack.
 # A value of 1 means an element may be referred to exactly once before triggering the handler.
@@ -18,7 +18,7 @@ strict_validation = false
 # LLM engine used for Value Agent (and optional Header Agent) generation.
 # Supports any model from an OpenAI-API compatible provider (OpenAI, OpenRouter, Azure, local models, etc.).
 # Must support JSON mode.
-engine = "gpt-5-mini-2025-08-07"
+engine = "google/gemini-2.5-flash-lite-preview-09-2025"
 
 # Sampling temperature for creative generations (0.0 = deterministic, higher = more random).
 creative_temperature = 1
@@ -28,7 +28,10 @@ strict_temperature = 1
 
 # Base URL for the LLM API. Supports any OpenAI-API compatible endpoint.
 # Examples: "https://api.openai.com/v1", "https://openrouter.ai/api/v1", "http://localhost:1234/v1"
-api_base = "https://api.openai.com/v1"
+api_base = "https://openrouter.ai/api/v1"
+
+# Maximum tokens for LLM response. Set to -1 to omit and use provider default.
+max_tokens = 30000
 
 [agent]
 # Max number of optional parameters per combination (required params always included).

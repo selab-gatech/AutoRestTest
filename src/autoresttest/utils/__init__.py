@@ -1,6 +1,4 @@
 from .utils import (
-    INPUT_COST_PER_TOKEN,
-    OUTPUT_COST_PER_TOKEN,
     EmbeddingModel,
     attempt_fix_json,
     compose_json_fix_prompt,
@@ -37,8 +35,6 @@ from .utils import (
 )
 
 __all__ = [
-    "INPUT_COST_PER_TOKEN",
-    "OUTPUT_COST_PER_TOKEN",
     "EmbeddingModel",
     "attempt_fix_json",
     "compose_json_fix_prompt",

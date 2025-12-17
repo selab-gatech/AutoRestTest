@@ -536,6 +536,10 @@ class RequestGenerator:
     ):
         visited.add(curr_node.operation_id)
 
+        # Pre-initialize Q-table entry to ensure it exists even if later steps fail
+        if curr_node.operation_id not in parameter_mappings:
+            parameter_mappings[curr_node.operation_id] = {"params": {}, "body": {}}
+
         for edge in curr_node.outgoing_edges:
             if edge.destination.operation_id not in visited:
                 self.value_depth_traversal(
@@ -607,6 +611,11 @@ class RequestGenerator:
                 if operation_id in visited:
                     return
                 visited.add(operation_id)
+
+            # Pre-initialize Q-table entry to ensure it exists even if later steps fail
+            with mappings_lock:
+                if operation_id not in parameter_mappings:
+                    parameter_mappings[operation_id] = {"params": {}, "body": {}}
 
             print(f"Building value table generation for operation: {operation_id}")
 
