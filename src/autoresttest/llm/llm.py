@@ -7,11 +7,7 @@ from openai import OpenAI
 
 from autoresttest.config import get_config
 from autoresttest.prompts.system_prompts import DEFAULT_SYSTEM_MESSAGE
-from autoresttest.utils import (
-    INPUT_COST_PER_TOKEN,
-    OUTPUT_COST_PER_TOKEN,
-    encode_dictionary,
-)
+from autoresttest.utils import encode_dictionary
 
 CONFIG = get_config()
 
@@ -24,10 +20,7 @@ class TokenCounter:
     output_tokens: int = 0
 
 
-class OpenAILanguageModel:
-    # DEPRECATED
-    cumulative_cost = 0
-
+class LanguageModel:
     input_tokens = 0
     output_tokens = 0
     cache = {}
@@ -37,15 +30,10 @@ class OpenAILanguageModel:
     _token_lock = threading.RLock()
 
     @staticmethod
-    # DEPRECATED
-    def get_cumulative_cost():
-        return OpenAILanguageModel.cumulative_cost
-
-    @staticmethod
     def get_tokens() -> TokenCounter:
         return TokenCounter(
-            input_tokens=OpenAILanguageModel.input_tokens,
-            output_tokens=OpenAILanguageModel.output_tokens,
+            input_tokens=LanguageModel.input_tokens,
+            output_tokens=LanguageModel.output_tokens,
         )
 
     def __init__(
@@ -81,9 +69,9 @@ class OpenAILanguageModel:
         cache_key = self._generate_cache_key(user_message, system_message, json_mode)
 
         # Thread-safe cache read
-        with OpenAILanguageModel._cache_lock:
-            if cache_key in OpenAILanguageModel.cache:
-                return OpenAILanguageModel.cache[cache_key]
+        with LanguageModel._cache_lock:
+            if cache_key in LanguageModel.cache:
+                return LanguageModel.cache[cache_key]
 
         messages = [
             {"role": "system", "content": system_message},
@@ -112,18 +100,10 @@ class OpenAILanguageModel:
 
         # print(f"[LLM] Input tokens: {input_tokens}, Output tokens: {output_tokens}")
 
-        # Thread-safe token and cost updates
-        with OpenAILanguageModel._token_lock:
-            OpenAILanguageModel.input_tokens += input_tokens
-            OpenAILanguageModel.output_tokens += output_tokens
-            if self.engine in INPUT_COST_PER_TOKEN:
-                OpenAILanguageModel.cumulative_cost += (
-                    input_tokens * INPUT_COST_PER_TOKEN[self.engine]
-                )
-            if self.engine in OUTPUT_COST_PER_TOKEN:
-                OpenAILanguageModel.cumulative_cost += (
-                    output_tokens * OUTPUT_COST_PER_TOKEN[self.engine]
-                )
+        # Thread-safe token updates
+        with LanguageModel._token_lock:
+            LanguageModel.input_tokens += input_tokens
+            LanguageModel.output_tokens += output_tokens
 
         if not response.choices:
             return ""
@@ -131,7 +111,7 @@ class OpenAILanguageModel:
         result = content.strip() if content else ""
 
         # Thread-safe cache write
-        with OpenAILanguageModel._cache_lock:
-            OpenAILanguageModel.cache[cache_key] = result
+        with LanguageModel._cache_lock:
+            LanguageModel.cache[cache_key] = result
 
         return result

@@ -346,9 +346,9 @@ def compose_json_fix_prompt(invalid_json_str: str):
 
 
 def attempt_fix_json(invalid_json_str: str):
-    from autoresttest.llm import OpenAILanguageModel
+    from autoresttest.llm import LanguageModel
 
-    language_model = OpenAILanguageModel(temperature=CONFIG.strict_temperature)
+    language_model = LanguageModel(temperature=CONFIG.strict_temperature)
     json_prompt = compose_json_fix_prompt(invalid_json_str)
     fixed_json = language_model.query(
         user_message=json_prompt, system_message=FIX_JSON_SYSTEM_MESSAGE, json_mode=True
@@ -557,23 +557,6 @@ def is_json_seriable(data):
         return True
     except (TypeError, ValueError):
         return False
-
-
-# Pricing for OpenAI API usage as of January 18, 2025
-
-INPUT_COST_PER_TOKEN = {
-    "gpt-4o": 2.5e-6,
-    "gpt-4o-mini": 0.15e-6,
-    "o1": 15e-6,
-    "o1-mini": 3e-6,
-}
-
-OUTPUT_COST_PER_TOKEN = {
-    "gpt-4o": 10e-6,
-    "gpt-4o-mini": 0.6e-6,
-    "o1": 60e-6,
-    "o1-mini": 12e-6,
-}
 
 
 class EmbeddingModel:

@@ -1,24 +1,30 @@
+import json
 import random
 import string
-import json
 from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 import requests
-from dataclasses import dataclass, field, asdict
-from typing import Any, AnyStr, Dict, Optional, List
 
 from autoresttest.config import get_config
+from autoresttest.models import (
+    OperationProperties,
+    ParameterKey,
+    ParameterProperties,
+    RequestData,
+    RequestRequirements,
+    RequestResponse,
+    SchemaProperties,
+)
 from autoresttest.prompts import (
     ENUM_EXAMPLE_CONSTRAINT_PROMPT,
     FAILED_PARAMETER_MATCHINGS_PROMPT,
     FAILED_PARAMETER_RESPONSE_PROMPT,
     FEWSHOT_PARAMETER_GEN_PROMPT,
     FEWSHOT_REQUEST_BODY_GEN_PROMPT,
-    FIX_JSON_OBJ,
-    FIX_JSON_SYSTEM_MESSAGE,
     IDENTIFY_AUTHENTICATION_GEN_PROMPT,
     IDENTIFY_AUTHENTICATION_SYSTEM_MESSAGE,
-    INFORMED_VALUE_AGENT_PROMPT,
     PARAMETER_NECESSITY_PROMPT,
     PARAMETER_REQUIREMENTS_PROMPT,
     PARAMETERS_GEN_PROMPT,
@@ -35,23 +41,12 @@ from autoresttest.prompts import (
     template_gen_prompt,
 )
 from autoresttest.utils import (
-    remove_nulls,
-    get_request_body_params,
-    get_object_shallow_mappings,
     attempt_fix_json,
     param_key_to_label,
-)
-from autoresttest.models import (
-    OperationProperties,
-    ParameterProperties,
-    ParameterKey,
-    RequestData,
-    RequestRequirements,
-    RequestResponse,
-    SchemaProperties,
+    remove_nulls,
 )
 
-from .llm import OpenAILanguageModel
+from .llm import LanguageModel
 
 CONFIG = get_config()
 
@@ -250,7 +245,7 @@ class SmartValueGenerator:
             "request_body"
         )
         self.summary: str = self.processed_operation.get("summary")
-        self.language_model = OpenAILanguageModel(temperature=temperature)
+        self.language_model = LanguageModel(temperature=temperature)
         self.parameter_requirements_raw: Dict[ParameterKey, Any] = (
             requirements.parameter_requirements if requirements else {}
         )
