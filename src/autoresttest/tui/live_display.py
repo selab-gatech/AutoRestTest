@@ -2,7 +2,7 @@
 
 import time
 from collections import Counter
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from rich.align import Align
 from rich.box import DOUBLE, HEAVY, ROUNDED
@@ -21,6 +21,9 @@ from .themes import DEFAULT_THEME, TUITheme
 
 class LiveDisplay:
     """Real-time live display for Q-learning request generation phase."""
+
+    # Maximum individual status codes to show before grouping
+    MAX_INDIVIDUAL_CODES = 8
 
     def __init__(
         self,
@@ -53,88 +56,178 @@ class LiveDisplay:
         minutes, secs = divmod(remainder, 60)
         return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
+    def _format_time_verbose(self, seconds: float) -> str:
+        """Format seconds into human-readable string."""
+        hours, remainder = divmod(int(seconds), 3600)
+        minutes, secs = divmod(remainder, 60)
+        parts = []
+        if hours > 0:
+            parts.append(f"{hours}h")
+        if minutes > 0:
+            parts.append(f"{minutes}m")
+        parts.append(f"{secs}s")
+        return " ".join(parts)
+
     def _create_time_panel(self) -> Panel:
-        """Create the time elapsed/remaining panel."""
+        """Create the time elapsed/remaining panel with enhanced visuals."""
         elapsed = time.time() - self.start_time
         remaining = max(0, self.time_duration - elapsed)
         progress_pct = min(100, (elapsed / self.time_duration) * 100)
 
-        # Time display table
-        time_table = Table(box=None, show_header=False, padding=(0, 2))
-        time_table.add_column("Label", style=self.theme.text_dim)
-        time_table.add_column("Value", style=f"bold {self.theme.text}")
-        time_table.add_column("Label2", style=self.theme.text_dim)
-        time_table.add_column("Value2", style=f"bold {self.theme.text}")
+        # Calculate progress bar dimensions
+        bar_width = min(self.width - 30, 70)
+        filled = int((progress_pct / 100) * bar_width)
+        empty = bar_width - filled
 
+        # Create animated progress bar with gradient effect
+        if progress_pct < 25:
+            fill_char = "━"
+            fill_color = self.theme.info
+        elif progress_pct < 50:
+            fill_char = "━"
+            fill_color = self.theme.primary
+        elif progress_pct < 75:
+            fill_char = "━"
+            fill_color = self.theme.warning
+        else:
+            fill_char = "━"
+            fill_color = self.theme.success
+
+        # Add pulsing effect at the end of the progress bar
+        if filled > 0 and empty > 0:
+            bar = (
+                f"[{fill_color}]{fill_char * (filled - 1)}[/{fill_color}]"
+                f"[bold {fill_color}]▶[/bold {fill_color}]"
+                f"[{self.theme.progress_remaining}]{'─' * empty}[/{self.theme.progress_remaining}]"
+            )
+        elif filled > 0:
+            bar = f"[{fill_color}]{fill_char * filled}[/{fill_color}]"
+        else:
+            bar = f"[{self.theme.progress_remaining}]{'─' * bar_width}[/{self.theme.progress_remaining}]"
+
+        # Time display with clear labels
         elapsed_str = self._format_time(elapsed)
         remaining_str = self._format_time(remaining)
 
-        time_table.add_row(
-            "Time Elapsed:",
-            f"[{self.theme.primary}]{elapsed_str}[/{self.theme.primary}]",
-            "Time Remaining:",
-            f"[{self.theme.warning if remaining < 60 else self.theme.text}]{remaining_str}[/]",
+        # Remaining time color (warning when < 1 minute)
+        remaining_color = self.theme.error if remaining < 60 else (
+            self.theme.warning if remaining < 300 else self.theme.text
         )
 
-        # Progress bar
-        bar_width = self.width - 20
-        filled = int((progress_pct / 100) * bar_width)
-        bar = (
-            f"[{self.theme.progress_complete}]{'━' * filled}[/{self.theme.progress_complete}]"
-            f"[{self.theme.progress_remaining}]{'─' * (bar_width - filled)}[/{self.theme.progress_remaining}]"
-        )
-        progress_text = Text.assemble(
-            ("  ", ""),
-            (bar, ""),
-            (f" {progress_pct:.1f}%", f"bold {self.theme.primary}"),
-        )
+        # Build time display
+        time_line = Text()
+        time_line.append("  Time Elapsed: ", style=self.theme.text_dim)
+        time_line.append(elapsed_str, style=f"bold {self.theme.primary}")
+        time_line.append("  │  ", style=self.theme.text_dim)
+        time_line.append("Time Remaining: ", style=self.theme.text_dim)
+        time_line.append(remaining_str, style=f"bold {remaining_color}")
+
+        # Progress percentage display
+        pct_color = fill_color
+        progress_line = Text()
+        progress_line.append(f"  {bar} ", style="")
+        progress_line.append(f"{progress_pct:5.1f}%", style=f"bold {pct_color}")
 
         return Panel(
-            Group(Align.center(time_table), Align.center(progress_text)),
+            Group(
+                Align.center(time_line),
+                Text(),
+                Align.center(progress_line),
+            ),
             box=ROUNDED,
             border_style=self.theme.accent,
+            title="[bold]Progress[/bold]",
+            title_align="left",
             padding=(0, 1),
         )
 
+    def _group_status_codes(self) -> List[Tuple[str, int, str]]:
+        """Group status codes by category when there are many.
+
+        Returns list of (label, count, color) tuples.
+        """
+        if len(self.responses) <= self.MAX_INDIVIDUAL_CODES:
+            # Show individual codes
+            result = []
+            for code in sorted(self.responses.keys()):
+                count = self.responses[code]
+                color = self.theme.get_status_color(code)
+                result.append((str(code), count, color))
+            return result
+
+        # Group by category
+        categories = {
+            "2xx Success": (0, self.theme.status_2xx),
+            "3xx Redirect": (0, self.theme.status_3xx),
+            "4xx Client Error": (0, self.theme.status_4xx),
+            "5xx Server Error": (0, self.theme.status_5xx),
+            "Other": (0, self.theme.text_dim),
+        }
+
+        for code, count in self.responses.items():
+            if 200 <= code < 300:
+                categories["2xx Success"] = (categories["2xx Success"][0] + count, categories["2xx Success"][1])
+            elif 300 <= code < 400:
+                categories["3xx Redirect"] = (categories["3xx Redirect"][0] + count, categories["3xx Redirect"][1])
+            elif 400 <= code < 500:
+                categories["4xx Client Error"] = (categories["4xx Client Error"][0] + count, categories["4xx Client Error"][1])
+            elif 500 <= code < 600:
+                categories["5xx Server Error"] = (categories["5xx Server Error"][0] + count, categories["5xx Server Error"][1])
+            else:
+                categories["Other"] = (categories["Other"][0] + count, categories["Other"][1])
+
+        # Return non-zero categories
+        result = []
+        for label, (count, color) in categories.items():
+            if count > 0:
+                result.append((label, count, color))
+        return result
+
     def _create_status_panel(self) -> Panel:
-        """Create the status code distribution panel."""
+        """Create the status code distribution panel with smart grouping."""
+        status_data = self._group_status_codes()
+
+        if not status_data:
+            return Panel(
+                Align.center(Text("No requests sent yet...", style=self.theme.text_dim)),
+                title="[bold]Status Code Distribution[/bold]",
+                title_align="left",
+                box=ROUNDED,
+                border_style=self.theme.secondary,
+                padding=(0, 1),
+            )
+
         status_table = Table(
             box=None,
             show_header=True,
             header_style=f"bold {self.theme.text}",
             padding=(0, 1),
+            expand=True,
         )
-        status_table.add_column("Code", width=5, justify="center")
-        status_table.add_column("Distribution", width=50)
-        status_table.add_column("Count", width=10, justify="right")
+        status_table.add_column("Status", width=18, justify="left")
+        status_table.add_column("Distribution", min_width=30)
+        status_table.add_column("Count", width=12, justify="right")
 
-        max_count = max(self.responses.values()) if self.responses else 1
+        max_count = max(count for _, count, _ in status_data) if status_data else 1
+        total_requests = sum(count for _, count, _ in status_data)
 
-        # Group status codes by category
-        categories = {
-            "2xx": ([code for code in self.responses if 200 <= code < 300], self.theme.status_2xx),
-            "3xx": ([code for code in self.responses if 300 <= code < 400], self.theme.status_3xx),
-            "4xx": ([code for code in self.responses if 400 <= code < 500], self.theme.status_4xx),
-            "5xx": ([code for code in self.responses if 500 <= code < 600], self.theme.status_5xx),
-        }
+        for label, count, color in status_data:
+            # Calculate bar width proportionally
+            bar_width = min(40, max(1, int((count / max_count) * 40)))
+            pct = (count / total_requests) * 100 if total_requests > 0 else 0
 
-        for code in sorted(self.responses.keys()):
-            count = self.responses[code]
-            color = self.theme.get_status_color(code)
-            bar_width = int((count / max_count) * 45)
-            bar = f"[{color}]{'█' * bar_width}{'░' * (45 - bar_width)}[/{color}]"
+            # Create visual bar
+            bar = f"[{color}]{'█' * bar_width}{'░' * (40 - bar_width)}[/{color}]"
+
             status_table.add_row(
-                f"[{color}]{code}[/{color}]",
+                f"[{color}]{label}[/{color}]",
                 bar,
-                f"[{color}]{count:,}[/{color}]",
+                f"[{color}]{count:,}[/{color}] [dim]({pct:.1f}%)[/dim]",
             )
 
-        title = Text()
-        title.append("Status Code Distribution", style=f"bold {self.theme.secondary}")
-
         return Panel(
-            status_table if self.responses else Align.center(Text("No requests sent yet", style=self.theme.text_dim)),
-            title=title,
+            status_table,
+            title="[bold]Status Code Distribution[/bold]",
             title_align="left",
             box=ROUNDED,
             border_style=self.theme.secondary,
@@ -143,12 +236,12 @@ class LiveDisplay:
 
     def _create_stats_panel(self) -> Panel:
         """Create the statistics panel."""
-        stats_table = Table(box=None, show_header=False, padding=(0, 2))
-        stats_table.add_column("Metric", style=self.theme.text_dim)
-        stats_table.add_column("Value", style=f"bold {self.theme.text}", justify="right")
+        stats_table = Table(box=None, show_header=False, padding=(0, 2), expand=True)
+        stats_table.add_column("Metric", style=self.theme.text_dim, ratio=2)
+        stats_table.add_column("Value", style=f"bold {self.theme.text}", justify="right", ratio=1)
 
         # Calculate statistics
-        total_2xx = sum(count for code, count in self.responses.items() if 200 <= code < 300)
+        total_requests = sum(self.responses.values())
         success_pct = (len(self.successful_operations) / max(self.total_operations, 1)) * 100
         success_color = (
             self.theme.success if success_pct >= 70 else
@@ -156,9 +249,13 @@ class LiveDisplay:
             self.theme.error
         )
 
+        # Requests per second
+        elapsed = time.time() - self.start_time
+        rps = total_requests / max(elapsed, 1)
+
         stats_table.add_row(
             "Successfully Processed (2xx) Operations:",
-            f"[{success_color}]{len(self.successful_operations):,}[/{success_color}]",
+            f"[{success_color}]{len(self.successful_operations):,} / {self.total_operations}[/{success_color}]",
         )
         stats_table.add_row(
             "Operation Coverage:",
@@ -170,11 +267,17 @@ class LiveDisplay:
         )
         stats_table.add_row(
             "Total Requests Sent:",
-            f"[{self.theme.info}]{sum(self.responses.values()):,}[/{self.theme.info}]",
+            f"[{self.theme.info}]{total_requests:,}[/{self.theme.info}]",
+        )
+        stats_table.add_row(
+            "Requests/Second:",
+            f"[{self.theme.info}]{rps:.1f}[/{self.theme.info}]",
         )
 
         return Panel(
-            Align.center(stats_table),
+            stats_table,
+            title="[bold]Statistics[/bold]",
+            title_align="left",
             box=ROUNDED,
             border_style=self.theme.info,
             padding=(0, 1),
@@ -183,11 +286,13 @@ class LiveDisplay:
     def _create_operation_panel(self) -> Panel:
         """Create the current operation panel."""
         op_text = Text()
-        op_text.append("Current Operation: ", style=self.theme.text_dim)
+        op_text.append("▶ ", style=f"bold {self.theme.success}")
         op_text.append(self.current_operation or "Initializing...", style=f"bold {self.theme.primary}")
 
         return Panel(
             Align.center(op_text),
+            title="[bold]Current Operation[/bold]",
+            title_align="left",
             box=ROUNDED,
             border_style=self.theme.accent,
             padding=(0, 1),
@@ -200,11 +305,20 @@ class LiveDisplay:
         estimated_cost = (self.input_tokens * 0.0001 + self.output_tokens * 0.0002) / 1000
 
         cost_text = Text()
-        cost_text.append("[COST] ", style=f"bold {self.theme.warning}")
-        cost_text.append("Total LLM usage: ", style=self.theme.text_dim)
+        cost_text.append("💰 ", style="")
+        cost_text.append("LLM Cost: ", style=self.theme.text_dim)
 
-        cost_color = self.theme.success if estimated_cost < 0.50 else self.theme.warning if estimated_cost < 2.0 else self.theme.error
-        cost_text.append(f"${estimated_cost:.2f} USD", style=f"bold {cost_color}")
+        cost_color = (
+            self.theme.success if estimated_cost < 0.50 else
+            self.theme.warning if estimated_cost < 2.0 else
+            self.theme.error
+        )
+        cost_text.append(f"${estimated_cost:.2f}", style=f"bold {cost_color}")
+        cost_text.append(" USD", style=self.theme.text_dim)
+
+        # Token count
+        cost_text.append("  │  ", style=self.theme.text_dim)
+        cost_text.append(f"Tokens: {self.input_tokens + self.output_tokens:,}", style=self.theme.text_dim)
 
         return Panel(
             Align.center(cost_text),
@@ -217,8 +331,9 @@ class LiveDisplay:
         """Generate the complete live display."""
         # Header
         header = Text()
-        header.append("[STATUS] ", style=f"bold {self.theme.warning}")
-        header.append("Request Generation", style=f"bold {self.theme.primary}")
+        header.append("⚡ ", style=f"bold {self.theme.warning}")
+        header.append("REQUEST GENERATION", style=f"bold {self.theme.primary}")
+        header.append(" ⚡", style=f"bold {self.theme.warning}")
 
         # Combine all panels
         content = Group(
@@ -236,7 +351,7 @@ class LiveDisplay:
         return Panel(
             content,
             title=header,
-            title_align="left",
+            title_align="center",
             box=DOUBLE,
             border_style=self.theme.primary,
             padding=(1, 2),

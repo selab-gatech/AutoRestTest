@@ -82,7 +82,6 @@ Features include:
 
 | Option | Description |
 |--------|-------------|
-| `--no-tui` | Disable TUI and use legacy print output |
 | `--skip-wizard` | Skip configuration wizard, use `configurations.toml` directly |
 | `--quick` | Quick setup wizard (essential settings only) |
 | `-s, --spec PATH` | Override specification path |
@@ -100,9 +99,6 @@ poetry run autoresttest --quick
 
 # Skip wizard entirely, use config file
 poetry run autoresttest --skip-wizard
-
-# Legacy mode without TUI
-poetry run autoresttest --no-tui
 
 # Override spec and duration via CLI
 poetry run autoresttest -s specs/original/oas/spotify.yaml -t 600
@@ -350,8 +346,8 @@ Throughout AutoRestTest's execution, the TUI provides real-time visual feedback 
 - **Phase indicators** showing current execution stage (Graph Construction, Q-Table Initialization, Request Generation)
 - **Live dashboard** during request generation with time tracking, status code distribution, and cost estimation
 - **Final report** with summary statistics, success rates, and token usage
-
-When running with `--no-tui`, legacy print output shows similar information in plain text format. 
+- **Smart status code grouping** - automatically groups by category (2xx, 4xx, 5xx) when there are many different codes
+- **Color-coded time indicators** - remaining time changes color as deadline approaches 
 
 #### Report Generation and Data Files
 

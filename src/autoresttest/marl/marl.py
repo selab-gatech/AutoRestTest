@@ -1589,7 +1589,7 @@ class QLearning:
                         self.unique_errors[operation_id].append(data_signature)
 
     def tui_output(self, start_time, operation_id):
-        """Output current status - uses live TUI display if available, otherwise prints."""
+        """Output current status via live TUI display."""
         unique_processed_200s: Set[str] = set()
         for operation_idx, status_codes in self.operation_response_counter.items():
             for status_code in status_codes:
@@ -1598,7 +1598,7 @@ class QLearning:
 
         unique_errors = sum(len(errs) for errs in self.unique_errors.values())
 
-        # Use live display if available
+        # Update live display
         if self._live_display:
             from autoresttest.llm import LanguageModel
 
@@ -1611,44 +1611,16 @@ class QLearning:
                 input_tokens=token_counter.input_tokens,
                 output_tokens=token_counter.output_tokens,
             )
-            return
-
-        # Fallback to print output
-        not_hit_operations = set()
-        for operation_idx in self.operation_graph.operation_nodes.keys():
-            if operation_idx not in unique_processed_200s:
-                not_hit_operations.add(operation_idx)
-
-        print(
-            "========================================================================="
-        )
-        print(f"Attempting operation: {operation_id}")
-        print(f"Status Code Counter: {dict(self.responses)}")
-        print(f"Number of unique server errors: {unique_errors}")
-        print(f"Number of successful operations: {len(unique_processed_200s)}")
-        print(
-            f"Percentage of successful operations: {len(unique_processed_200s) / max(len(self.operation_graph.operation_nodes), 1) * 100:.2f}%"
-        )
-        print(
-            "Time remaining: ",
-            max(round(self.time_duration - (time.time() - start_time), 3), 0.01),
-        )
-        print(
-            "Percentage of time elapsed: ",
-            str(round((time.time() - start_time) / self.time_duration * 100, 2)) + "%",
-        )
 
     def run(self):
-        """Run the Q-learning execution with optional TUI live display."""
-        # Initialize live display if TUI is enabled
-        if self.tui:
-            from autoresttest.tui import LiveDisplay
+        """Run the Q-learning execution with TUI live display."""
+        from autoresttest.tui import LiveDisplay
 
-            self._live_display = LiveDisplay(
-                time_duration=self.time_duration,
-                total_operations=len(self.operation_graph.operation_nodes),
-            )
-            self._live_display.start()
+        self._live_display = LiveDisplay(
+            time_duration=self.time_duration,
+            total_operations=len(self.operation_graph.operation_nodes),
+        )
+        self._live_display.start()
 
         try:
             self.execute_operations()
