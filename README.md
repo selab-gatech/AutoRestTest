@@ -347,7 +347,7 @@ Throughout AutoRestTest's execution, the TUI provides real-time visual feedback 
 - **Live dashboard** during request generation with time tracking, status code distribution, and cost estimation
 - **Final report** with summary statistics, success rates, and token usage
 - **Smart status code grouping** - automatically groups by category (2xx, 4xx, 5xx) when there are many different codes
-- **Color-coded time indicators** - remaining time changes color as deadline approaches 
+- **Color-coded time indicators** - remaining time changes color based on percentage remaining (red < 5%, yellow < 20%) 
 
 #### Report Generation and Data Files
 

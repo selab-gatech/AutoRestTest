@@ -73,13 +73,14 @@ class LiveDisplay:
         elapsed = time.time() - self.start_time
         remaining = max(0, self.time_duration - elapsed)
         progress_pct = min(100, (elapsed / self.time_duration) * 100)
+        remaining_pct = 100 - progress_pct
 
         # Calculate progress bar dimensions
         bar_width = min(self.width - 30, 70)
         filled = int((progress_pct / 100) * bar_width)
         empty = bar_width - filled
 
-        # Create animated progress bar with gradient effect
+        # Create animated progress bar with gradient effect (based on % complete)
         if progress_pct < 25:
             fill_char = "━"
             fill_color = self.theme.info
@@ -109,9 +110,10 @@ class LiveDisplay:
         elapsed_str = self._format_time(elapsed)
         remaining_str = self._format_time(remaining)
 
-        # Remaining time color (warning when < 1 minute)
-        remaining_color = self.theme.error if remaining < 60 else (
-            self.theme.warning if remaining < 300 else self.theme.text
+        # Remaining time color based on percentage remaining (not absolute time)
+        # Red: < 5% remaining, Yellow: < 20% remaining, Normal: >= 20%
+        remaining_color = self.theme.error if remaining_pct < 5 else (
+            self.theme.warning if remaining_pct < 20 else self.theme.text
         )
 
         # Build time display
