@@ -46,6 +46,7 @@ class LiveDisplay:
         self.successful_operations: Set[str] = set()
         self.input_tokens: int = 0
         self.output_tokens: int = 0
+        self.mutation_count: int = 0
 
         # Live display instance
         self._live: Optional[Live] = None
@@ -275,6 +276,10 @@ class LiveDisplay:
             "Requests/Second:",
             f"[{self.theme.info}]{rps:.1f}[/{self.theme.info}]",
         )
+        stats_table.add_row(
+            "Mutations Applied:",
+            f"[{self.theme.warning}]{self.mutation_count:,}[/{self.theme.warning}]",
+        )
 
         return Panel(
             stats_table,
@@ -384,6 +389,7 @@ class LiveDisplay:
         successful_operations: Set[str],
         input_tokens: int = 0,
         output_tokens: int = 0,
+        mutation_count: int = 0,
     ):
         """Update the live display with new data."""
         self.current_operation = current_operation
@@ -392,6 +398,7 @@ class LiveDisplay:
         self.successful_operations = successful_operations
         self.input_tokens = input_tokens
         self.output_tokens = output_tokens
+        self.mutation_count = mutation_count
 
         if self._live:
             self._live.update(self._generate_display())

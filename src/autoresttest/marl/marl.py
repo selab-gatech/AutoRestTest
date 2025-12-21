@@ -88,6 +88,7 @@ class QLearning:
         self.successful_responses: dict[str, dict[str, list[Any]]] = {}
         self.successful_primitives: dict[str, list[Any]] = {}
         self.operation_response_counter: dict[str, dict[int, int]] = {}
+        self.mutation_count: int = 0  # Track number of mutations performed
         self._init_parameter_tracking()
         self._init_body_tracking()
         self._init_response_tracking()
@@ -1227,6 +1228,7 @@ class QLearning:
                         specific_method,
                         mutated_parameter_names,
                     ) = self.mutate_values(operation_props, parameters, body, header)
+                    self.mutation_count += 1
                 else:
                     if random.random() < 0.2 and avail_primitives > 0:
                         parameters, body = self.assign_random_from_primitives(
@@ -1246,6 +1248,7 @@ class QLearning:
                         ) = self.mutate_values(
                             operation_props, parameters, body, header
                         )
+                        self.mutation_count += 1
 
                 response = self.send_operation(
                     operation_props, parameters, body, header, specific_method
@@ -1610,6 +1613,7 @@ class QLearning:
                 successful_operations=unique_processed_200s,
                 input_tokens=token_counter.input_tokens,
                 output_tokens=token_counter.output_tokens,
+                mutation_count=self.mutation_count,
             )
 
     def run(self):

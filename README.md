@@ -77,6 +77,29 @@ Features include:
 - **Visual progress bars** for status code distribution
 - **Live cost estimation** based on token usage
 - **Current operation indicator** showing what's being tested
+- **Mutation counter** tracking the number of fuzzing mutations applied
+
+### Q-Table Initialization Progress
+
+During the Q-table initialization phase, the Value Agent and Header Agent (if enabled) perform LLM calls to generate test values for each API operation. A live progress display shows:
+
+```
+╭──── ⚙ Value Agent Q-Table Generation ────╮
+│                                           │
+│   ━━━━━━━━━━━━━━━━━━━━━━━───────  67.5%  │
+│                                           │
+│   Operations: 27/40  │  Elapsed: 03:45   │
+│                                           │
+│   ▶ POST /api/users                       │
+│                                           │
+╰───────────────────────────────────────────╯
+```
+
+This progress display appears for both Value Agent and Header Agent initialization, showing:
+- Visual progress bar with percentage complete
+- Operation count (completed/total)
+- Elapsed time
+- Current operation being processed
 
 ### TUI Command Line Options
 
