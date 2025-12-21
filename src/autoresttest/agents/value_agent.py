@@ -1,6 +1,6 @@
 import random
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 import numpy as np
 
@@ -17,6 +17,9 @@ from autoresttest.models import ParameterKey, ValueAction
 # Union[ParameterKey, str] is intentional to support both key types in the same dict
 ValueQTable = dict[str, dict[str, dict[ParameterKey | str, list[list[Any]]]]]
 
+# Progress callback type: (current_operation: str, completed_count: int) -> None
+ProgressCallback = Callable[[str, int], None]
+
 
 class ValueAgent(BaseAgent):
     def __init__(
@@ -32,7 +35,9 @@ class ValueAgent(BaseAgent):
         self.gamma = gamma
         self.epsilon = epsilon
 
-    def initialize_q_table(self) -> None:
+    def initialize_q_table(
+        self, progress_callback: Optional[ProgressCallback] = None
+    ) -> None:
         config = get_config()
         request_generator = self.operation_graph.request_generator
 
@@ -45,19 +50,26 @@ class ValueAgent(BaseAgent):
                 operation_nodes=self.operation_graph.operation_nodes,
                 parameter_mappings=self.q_table,
                 max_workers=config.value_generation_workers,
+                progress_callback=progress_callback,
             )
         else:
             # Original sequential DFS traversal
             responses = defaultdict(list)
             visited = set()
+            completed = 0
             for (
                 operation_id,
                 operation_node,
             ) in self.operation_graph.operation_nodes.items():
                 if operation_id not in visited:
+                    if progress_callback:
+                        progress_callback(operation_id, completed)
                     request_generator.value_depth_traversal(
                         operation_node, self.q_table, responses, visited
                     )
+                    completed += 1
+                    if progress_callback:
+                        progress_callback(operation_id, completed)
 
     def get_action(self, operation_id: str) -> ValueAction:
         if operation_id not in self.q_table:

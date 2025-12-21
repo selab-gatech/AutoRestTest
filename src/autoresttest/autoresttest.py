@@ -15,7 +15,7 @@ from autoresttest.llm import LanguageModel
 from autoresttest.marl import QLearning
 from autoresttest.models import to_dict_helper
 from autoresttest.specification import SpecificationParser
-from autoresttest.tui import ConfigWizard, LiveDisplay, TUIDisplay
+from autoresttest.tui import ConfigWizard, InitializationProgressDisplay, LiveDisplay, TUIDisplay
 from autoresttest.tui.config_wizard import apply_config_overrides
 from autoresttest.tui.themes import DEFAULT_THEME
 from autoresttest.utils import (
@@ -380,8 +380,19 @@ class AutoRestTest:
                         loaded_header_from_shelf = False
 
             if not loaded_value_from_shelf:
-                self.tui.print_step("Generating Value Agent Q-table (LLM calls)...", "progress")
-                q_learning.value_agent.initialize_q_table()
+                total_ops = len(operation_graph.operation_nodes)
+                with InitializationProgressDisplay(
+                    title="Value Agent Q-Table Generation",
+                    total_operations=total_ops,
+                    width=self.tui.width,
+                ) as progress:
+                    def value_progress_callback(op_id: str, completed: int):
+                        progress.update(op_id, completed)
+
+                    q_learning.value_agent.initialize_q_table(
+                        progress_callback=value_progress_callback
+                    )
+
                 token_counter = LanguageModel.get_tokens()
                 self.tui.print_step(
                     f"Value Agent Q-table generated - Tokens: {token_counter.input_tokens:,} in / {token_counter.output_tokens:,} out",
@@ -389,8 +400,19 @@ class AutoRestTest:
                 )
 
             if self.config.enable_header_agent and not loaded_header_from_shelf:
-                self.tui.print_step("Generating Header Agent Q-table...", "progress")
-                q_learning.header_agent.initialize_q_table()
+                total_ops = len(operation_graph.operation_nodes)
+                with InitializationProgressDisplay(
+                    title="Header Agent Q-Table Generation",
+                    total_operations=total_ops,
+                    width=self.tui.width,
+                ) as progress:
+                    def header_progress_callback(op_id: str, completed: int):
+                        progress.update(op_id, completed)
+
+                    q_learning.header_agent.initialize_q_table(
+                        progress_callback=header_progress_callback
+                    )
+
                 token_counter = LanguageModel.get_tokens()
                 self.tui.print_step(
                     f"Header Agent Q-table generated - Tokens: {token_counter.input_tokens:,} in / {token_counter.output_tokens:,} out",

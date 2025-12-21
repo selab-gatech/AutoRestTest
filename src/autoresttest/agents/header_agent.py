@@ -1,5 +1,5 @@
 import random
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 import numpy as np
 
@@ -7,6 +7,9 @@ from .base_agent import BaseAgent
 
 from autoresttest.graph import OperationGraph
 from autoresttest.utils import construct_basic_token
+
+# Progress callback type: (current_operation: str, completed_count: int) -> None
+ProgressCallback = Callable[[str, int], None]
 
 
 class HeaderAgent(BaseAgent):
@@ -23,15 +26,22 @@ class HeaderAgent(BaseAgent):
         self.gamma = gamma
         self.epsilon = epsilon
 
-    def initialize_q_table(self) -> None:
+    def initialize_q_table(
+        self, progress_callback: Optional[ProgressCallback] = None
+    ) -> None:
         request_generator = self.operation_graph.request_generator
         if request_generator is None:
             return
         token_list: List = []
-        for operation_node in self.operation_graph.operation_nodes.values():
+        operation_nodes_list = list(self.operation_graph.operation_nodes.values())
+        for idx, operation_node in enumerate(operation_nodes_list):
+            if progress_callback:
+                progress_callback(operation_node.operation_id, idx)
             token_info = request_generator.get_auth_info(operation_node, 5)
             for token in token_info:
                 token_list.append(construct_basic_token(token))
+
+        completed = 0
         for operation_id in self.operation_graph.operation_nodes.keys():
             if operation_id not in self.q_table:
                 self.q_table[operation_id] = []
@@ -39,6 +49,9 @@ class HeaderAgent(BaseAgent):
             for i in range(min(9, len(token_list))):
                 self.q_table[operation_id].append([token_list[i], 0])
             self.q_table[operation_id].append([None, 0])
+            completed += 1
+            if progress_callback:
+                progress_callback(operation_id, completed)
 
     def get_action(self, operation_id: str) -> Optional[str]:
         if operation_id not in self.q_table:

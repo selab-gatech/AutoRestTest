@@ -441,3 +441,152 @@ class ProgressDisplay:
     def track_operation(self, description: str, total: int):
         """Create a tracking context for operations."""
         return self.create_progress_bar(description, total).__enter__()
+
+
+class InitializationProgressDisplay:
+    """Live progress display for Q-table initialization (Value Agent, Header Agent)."""
+
+    def __init__(
+        self,
+        title: str,
+        total_operations: int,
+        theme: TUITheme = DEFAULT_THEME,
+        width: int = 100,
+    ):
+        self.console = Console(force_terminal=True, width=width)
+        self.theme = theme
+        self.width = width
+        self.title = title
+        self.total_operations = total_operations
+
+        # State tracking
+        self.completed_operations: int = 0
+        self.current_operation: str = ""
+        self.start_time: float = 0.0
+
+        # Live display instance
+        self._live: Optional[Live] = None
+
+    def _format_time(self, seconds: float) -> str:
+        """Format seconds into MM:SS."""
+        minutes, secs = divmod(int(seconds), 60)
+        return f"{minutes:02d}:{secs:02d}"
+
+    def _generate_display(self) -> Panel:
+        """Generate the progress display panel."""
+        elapsed = time.time() - self.start_time
+        progress_pct = (self.completed_operations / max(self.total_operations, 1)) * 100
+
+        # Progress bar
+        bar_width = min(self.width - 30, 60)
+        filled = int((progress_pct / 100) * bar_width)
+        empty = bar_width - filled
+
+        bar_color = self.theme.primary if progress_pct < 100 else self.theme.success
+        if filled > 0 and empty > 0:
+            bar = (
+                f"[{bar_color}]{'━' * filled}[/{bar_color}]"
+                f"[{self.theme.progress_remaining}]{'─' * empty}[/{self.theme.progress_remaining}]"
+            )
+        elif filled > 0:
+            bar = f"[{bar_color}]{'━' * filled}[/{bar_color}]"
+        else:
+            bar = f"[{self.theme.progress_remaining}]{'─' * bar_width}[/{self.theme.progress_remaining}]"
+
+        # Build display content
+        content_lines = []
+
+        # Progress line
+        progress_text = Text()
+        progress_text.append(f"  {bar} ", style="")
+        progress_text.append(f"{progress_pct:5.1f}%", style=f"bold {bar_color}")
+        content_lines.append(Align.center(progress_text))
+        content_lines.append(Text())
+
+        # Stats line
+        stats_text = Text()
+        stats_text.append("  Operations: ", style=self.theme.text_dim)
+        stats_text.append(
+            f"{self.completed_operations}/{self.total_operations}",
+            style=f"bold {self.theme.info}",
+        )
+        stats_text.append("  │  ", style=self.theme.text_dim)
+        stats_text.append("Elapsed: ", style=self.theme.text_dim)
+        stats_text.append(self._format_time(elapsed), style=f"bold {self.theme.primary}")
+        content_lines.append(Align.center(stats_text))
+        content_lines.append(Text())
+
+        # Current operation
+        if self.current_operation:
+            op_text = Text()
+            op_text.append("  ▶ ", style=f"bold {self.theme.success}")
+            # Truncate long operation names
+            op_name = self.current_operation
+            max_op_len = self.width - 20
+            if len(op_name) > max_op_len:
+                op_name = op_name[: max_op_len - 3] + "..."
+            op_text.append(op_name, style=f"{self.theme.text}")
+            content_lines.append(Align.center(op_text))
+
+        # Header
+        header = Text()
+        header.append("⚙ ", style=f"bold {self.theme.warning}")
+        header.append(self.title, style=f"bold {self.theme.primary}")
+
+        return Panel(
+            Group(*content_lines),
+            title=header,
+            title_align="center",
+            box=ROUNDED,
+            border_style=self.theme.accent,
+            padding=(1, 2),
+        )
+
+    def start(self):
+        """Start the live progress display."""
+        self.start_time = time.time()
+        self._live = Live(
+            self._generate_display(),
+            console=self.console,
+            refresh_per_second=4,
+            transient=True,
+        )
+        self._live.start()
+
+    def stop(self):
+        """Stop the live progress display."""
+        if self._live:
+            self._live.stop()
+            self._live = None
+
+    def update(self, current_operation: str, completed: int):
+        """Update progress with current operation and completion count."""
+        self.current_operation = current_operation
+        self.completed_operations = completed
+
+        if self._live:
+            self._live.update(self._generate_display())
+
+    def increment(self, operation_name: str = ""):
+        """Increment completed count and optionally update current operation."""
+        self.completed_operations += 1
+        if operation_name:
+            self.current_operation = operation_name
+        if self._live:
+            self._live.update(self._generate_display())
+
+    def set_current(self, operation_name: str):
+        """Set the current operation being processed."""
+        self.current_operation = operation_name
+        if self._live:
+            self._live.update(self._generate_display())
+
+    def __enter__(self):
+        """Context manager entry."""
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.stop()
+        return False
