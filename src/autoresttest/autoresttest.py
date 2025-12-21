@@ -1,18 +1,24 @@
 import argparse
 import json
 import shelve
+import sys
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 from dotenv import load_dotenv
 
 from autoresttest.config import get_config
+from autoresttest.config.config import Config
 from autoresttest.graph import RequestGenerator
 from autoresttest.graph.generate_graph import OperationGraph
 from autoresttest.llm import LanguageModel
 from autoresttest.marl import QLearning
 from autoresttest.models import to_dict_helper
 from autoresttest.specification import SpecificationParser
+from autoresttest.tui import ConfigWizard, LiveDisplay, TUIDisplay
+from autoresttest.tui.config_wizard import apply_config_overrides
+from autoresttest.tui.live_display import ProgressDisplay
+from autoresttest.tui.themes import DEFAULT_THEME
 from autoresttest.utils import (
     EmbeddingModel,
     construct_db_dir,
@@ -28,8 +34,6 @@ AUTORESTTEST_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = AUTORESTTEST_DIR.parent.parent
 DATA_ROOT = PROJECT_ROOT / "data"
 
-CONFIG = get_config()
-
 
 def ensure_output_dir(spec_name: str) -> Path:
     output_dir = DATA_ROOT / spec_name
@@ -39,24 +43,57 @@ def ensure_output_dir(spec_name: str) -> Path:
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Generate requests based on API specification."
+        description="AutoRestTest - Automated REST API Testing with Multi-Agent RL",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  autoresttest                    # Run with TUI and configuration wizard
+  autoresttest --no-tui           # Run with minimal output (legacy mode)
+  autoresttest --quick            # Quick setup (essential settings only)
+  autoresttest --skip-wizard      # Skip wizard, use configurations.toml directly
+
+For more information, visit: https://github.com/tylerstennett/AutoRestTest
+        """,
     )
     parser.add_argument(
-        "num_specs",
-        choices=["one", "many"],
-        help="Specifies the number of specifications: 'one' or 'many'",
+        "--no-tui",
+        action="store_true",
+        help="Disable TUI and use simple print output (legacy mode)",
+    )
+    parser.add_argument(
+        "--skip-wizard",
+        action="store_true",
+        help="Skip configuration wizard and use configurations.toml directly",
+    )
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        help="Run quick setup wizard (essential settings only)",
     )
     parser.add_argument(
         "-s",
-        "--spec_name",
+        "--spec",
         type=str,
         default=None,
-        help="Optional name of the specification",
+        help="Override specification path (relative to project root)",
+    )
+    parser.add_argument(
+        "-t",
+        "--time",
+        type=int,
+        default=None,
+        help="Override test duration in seconds",
+    )
+    parser.add_argument(
+        "--width",
+        type=int,
+        default=100,
+        help="TUI display width (default: 100)",
     )
     return parser.parse_args()
 
 
-def output_q_table(q_learning: QLearning, spec_name):
+def output_q_table(q_learning: QLearning, spec_name: str):
     parameter_table = q_learning.parameter_agent.q_table
     body_obj_table = q_learning.body_object_agent.q_table
     value_table = q_learning.value_agent.q_table
@@ -191,12 +228,28 @@ def parse_specification_location(spec_loc: str):
 
 
 class AutoRestTest:
-    def __init__(self, spec_dir: Union[Path, str]):
+    def __init__(
+        self,
+        spec_dir: Union[Path, str],
+        config: Optional[Config] = None,
+        tui: Optional[TUIDisplay] = None,
+    ):
         self.spec_dir = Path(spec_dir).expanduser()
         self.is_naive = False
         construct_db_dir()
-        self.use_cached_graph = CONFIG.cache.use_cached_graph
-        self.use_cached_table = CONFIG.cache.use_cached_table
+
+        self.config = config if config else get_config()
+        self.tui = tui
+
+        self.use_cached_graph = self.config.cache.use_cached_graph
+        self.use_cached_table = self.config.cache.use_cached_table
+
+    def _print(self, message: str, status: str = "info"):
+        """Print with TUI or fallback to console."""
+        if self.tui:
+            self.tui.print_step(message, status)
+        else:
+            print(message)
 
     def init_graph(
         self,
@@ -204,16 +257,16 @@ class AutoRestTest:
         spec_path: Union[Path, str],
         embedding_model: EmbeddingModel,
     ) -> OperationGraph:
-        print(f"Parsing OpenAPI specification: {spec_path}...")
+        self._print(f"Parsing OpenAPI specification: {spec_path}...", "progress")
         spec_parser = SpecificationParser(spec_path=str(spec_path), spec_name=spec_name)
-        print("Specification parsed successfully!")
+        self._print("Specification parsed successfully!", "success")
 
-        if CONFIG.api.override_url:
-            api_url = CONFIG.custom_api_url
-            print(f"Using custom API URL from config: {api_url}")
+        if self.config.api.override_url:
+            api_url = self.config.custom_api_url
+            self._print(f"Using custom API URL: {api_url}", "info")
         else:
             api_url = get_api_url(spec_parser)
-            print(f"Using API URL from specification: {api_url}")
+            self._print(f"Using API URL from specification: {api_url}", "info")
 
         operation_graph = OperationGraph(
             spec_path=str(spec_path),
@@ -233,7 +286,14 @@ class AutoRestTest:
     ) -> OperationGraph:
         spec_path = self.spec_dir / f"{spec_name}{ext}"
         db_graph = get_graph_cache_path(spec_name)
-        print("CREATING SEMANTIC OPERATION DEPENDECY GRAPH...")
+
+        if self.tui:
+            self.tui.print_phase_start(
+                "Semantic Operation Dependency Graph",
+                "Building operation relationships and dependencies",
+            )
+        else:
+            print("CREATING SEMANTIC OPERATION DEPENDENCY GRAPH...")
 
         # Always initialize the graph first
         operation_graph = self.init_graph(spec_name, spec_path, embedding_model)
@@ -242,19 +302,18 @@ class AutoRestTest:
             loaded_from_shelf = False
 
             if spec_name in db and self.use_cached_graph:
-                print(f"Loading graph for {spec_name} from shelve.")
+                self._print(f"Loading cached graph for {spec_name}...", "progress")
                 try:
                     graph_properties = db[spec_name]
                     operation_graph.operation_edges = graph_properties["edges"]
                     operation_graph.operation_nodes = graph_properties["nodes"]
-                    print(f"Loaded graph for {spec_name} from shelve.")
+                    self._print(f"Loaded graph from cache", "success")
                     loaded_from_shelf = True
                 except Exception as e:
-                    print(f"Error loading graph from shelve: {e}")
-                    # Fall through to create new graph
+                    self._print(f"Cache load failed: {e}", "warning")
 
             if not loaded_from_shelf:
-                print(f"Initializing new graph for {spec_name}.")
+                self._print(f"Building new graph for {spec_name}...", "progress")
                 operation_graph.create_graph()
 
                 graph_properties = {
@@ -264,36 +323,52 @@ class AutoRestTest:
 
                 try:
                     db[spec_name] = graph_properties
+                    self._print("Graph cached for future runs", "success")
                 except Exception as e:
-                    print(f"Error saving graph to shelve: {e}")
+                    self._print(f"Cache save failed: {e}", "warning")
 
-                print(f"Initialized new graph for {spec_name}.")
+        if self.tui:
+            self.tui.print_phase_complete(
+                "Graph Construction",
+                f"{len(operation_graph.operation_nodes)} operations discovered",
+            )
+        else:
+            print("GRAPH CREATED!!!")
 
-        print("GRAPH CREATED!!!")
         return operation_graph
 
     def perform_q_learning(self, operation_graph: OperationGraph, spec_name: str):
-        print("INITIATING Q-TABLES...")
+        if self.tui:
+            self.tui.print_phase_start(
+                "Q-Table Initialization",
+                "Initializing reinforcement learning agents",
+            )
+        else:
+            print("INITIATING Q-TABLES...")
+
         q_learning = QLearning(
             operation_graph,
-            alpha=CONFIG.q_learning.learning_rate,
-            gamma=CONFIG.q_learning.discount_factor,
-            epsilon=CONFIG.q_learning.max_exploration,
-            time_duration=CONFIG.request_generation.time_duration,
-            mutation_rate=CONFIG.request_generation.mutation_rate,
+            alpha=self.config.q_learning.learning_rate,
+            gamma=self.config.q_learning.discount_factor,
+            epsilon=self.config.q_learning.max_exploration,
+            time_duration=self.config.request_generation.time_duration,
+            mutation_rate=self.config.request_generation.mutation_rate,
+            tui=self.tui,
         )
         db_q_table = get_q_table_cache_path(spec_name)
 
-        q_learning.operation_agent.initialize_q_table()
-        print("Initialized operation agent Q-table.")
-        q_learning.parameter_agent.initialize_q_table()
-        print("Initialized parameter agent Q-table.")
-        q_learning.body_object_agent.initialize_q_table()
-        print("Initialized body object agent Q-table.")
-        q_learning.dependency_agent.initialize_q_table()
-        print("Initialized dependency agent Q-table.")
-        q_learning.data_source_agent.initialize_q_table()
-        print("Initialized data source agent Q-table.")
+        # Initialize Q-tables for all agents
+        agents = [
+            ("operation", q_learning.operation_agent),
+            ("parameter", q_learning.parameter_agent),
+            ("body_object", q_learning.body_object_agent),
+            ("dependency", q_learning.dependency_agent),
+            ("data_source", q_learning.data_source_agent),
+        ]
+
+        for agent_name, agent in agents:
+            agent.initialize_q_table()
+            self._print(f"Initialized {agent_name} agent Q-table", "success")
 
         output_q_table(q_learning, spec_name)
 
@@ -302,50 +377,47 @@ class AutoRestTest:
             loaded_header_from_shelf = False
 
             if spec_name in db and self.use_cached_table:
-                print(f"Loading Q-tables for {spec_name} from shelve.")
+                self._print(f"Loading cached Q-tables for {spec_name}...", "progress")
 
                 compiled_q_table = db[spec_name]
 
                 try:
                     q_learning.value_agent.q_table = compiled_q_table["value"]
-                    print(
-                        f"Initialized value agent's Q-table for {spec_name} from shelve."
-                    )
+                    self._print("Loaded value agent Q-table from cache", "success")
                     loaded_value_from_shelf = True
                 except Exception:
-                    print("Error loading value agent from shelve.")
+                    self._print("Cache load failed for value agent", "warning")
                     loaded_value_from_shelf = False
 
-                if CONFIG.enable_header_agent:
+                if self.config.enable_header_agent:
                     try:
                         q_learning.header_agent.q_table = compiled_q_table["header"]
-                        print(
-                            f"Initialized header agent's Q-table for {spec_name} from shelve."
-                        )
+                        self._print("Loaded header agent Q-table from cache", "success")
                         loaded_header_from_shelf = (
                             True if q_learning.header_agent.q_table else False
                         )
-                        # If the header agent is disabled, the Q-table will be None.
                     except Exception:
-                        print("Error loading header agent from shelve.")
+                        self._print("Cache load failed for header agent", "warning")
                         loaded_header_from_shelf = False
 
             if not loaded_value_from_shelf:
+                self._print("Generating value agent Q-table (LLM calls)...", "progress")
                 q_learning.value_agent.initialize_q_table()
-                print(f"Initialized new value agent Q-table for {spec_name}.")
                 token_counter = LanguageModel.get_tokens()
-                print(
-                    f"Value table generation tokens - Input: {token_counter.input_tokens}, Output: {token_counter.output_tokens}"
+                self._print(
+                    f"Value table generated - Tokens: {token_counter.input_tokens:,} in / {token_counter.output_tokens:,} out",
+                    "success",
                 )
 
-            if CONFIG.enable_header_agent and not loaded_header_from_shelf:
+            if self.config.enable_header_agent and not loaded_header_from_shelf:
+                self._print("Generating header agent Q-table...", "progress")
                 q_learning.header_agent.initialize_q_table()
-                print(f"Initialized new header agent Q-table for {spec_name}.")
                 token_counter = LanguageModel.get_tokens()
-                print(
-                    f"Header table generation tokens - Input: {token_counter.input_tokens}, Output: {token_counter.output_tokens}"
+                self._print(
+                    f"Header table generated - Tokens: {token_counter.input_tokens:,} in / {token_counter.output_tokens:,} out",
+                    "success",
                 )
-            elif not CONFIG.enable_header_agent:
+            elif not self.config.enable_header_agent:
                 q_learning.header_agent.q_table = {}
 
             try:
@@ -353,49 +425,170 @@ class AutoRestTest:
                     "value": q_learning.value_agent.q_table,
                     "header": q_learning.header_agent.q_table,
                 }
+                self._print("Q-tables cached for future runs", "success")
             except Exception:
-                print("Error saving Q-tables to shelve.")
+                self._print("Failed to cache Q-tables", "warning")
 
         output_q_table(q_learning, spec_name)
-        print("Q-TABLES INITIALIZED...")
 
-        print("BEGINNING Q-LEARNING...")
+        if self.tui:
+            self.tui.print_phase_complete("Q-Table Initialization")
+            self.tui.print_phase_start(
+                "Request Generation",
+                f"Testing API for {self.config.request_generation.time_duration} seconds",
+            )
+        else:
+            print("Q-TABLES INITIALIZED...")
+            print("BEGINNING Q-LEARNING...")
+
         q_learning.run()
-        print("Q-LEARNING COMPLETED!!!")
+
+        if self.tui:
+            self.tui.print_phase_complete("Request Generation")
+        else:
+            print("Q-LEARNING COMPLETED!!!")
+
         return q_learning
 
-    def print_performance(self):
+    def print_performance(self, q_learning: QLearning, spec_parser: SpecificationParser):
         token_counter = LanguageModel.get_tokens()
-        print(f"Total input tokens used: {token_counter.input_tokens}")
-        print(f"Total output tokens used: {token_counter.output_tokens}")
+
+        # Calculate statistics for final report
+        unique_processed_200s = set()
+        for operation_idx, status_codes in q_learning.operation_response_counter.items():
+            for status_code in status_codes:
+                if status_code // 100 == 2:
+                    unique_processed_200s.add(operation_idx)
+
+        unique_errors = sum(len(errs) for errs in q_learning.unique_errors.values())
+        total_requests = sum(q_learning.responses.values())
+
+        title = spec_parser.get_api_title() if spec_parser.get_api_title() else "API"
+
+        if self.tui:
+            # Estimate cost (rough approximation)
+            estimated_cost = (
+                token_counter.input_tokens * 0.0001 + token_counter.output_tokens * 0.0002
+            ) / 1000
+
+            self.tui.print_final_report(
+                title=title,
+                duration=q_learning.time_duration,
+                total_requests=total_requests,
+                status_distribution=dict(q_learning.responses),
+                total_operations=len(q_learning.operation_agent.q_table),
+                successful_operations=len(unique_processed_200s),
+                unique_errors=unique_errors,
+            )
+
+            self.tui.print_token_usage(
+                input_tokens=token_counter.input_tokens,
+                output_tokens=token_counter.output_tokens,
+                estimated_cost=estimated_cost,
+            )
+        else:
+            print(f"Total input tokens used: {token_counter.input_tokens}")
+            print(f"Total output tokens used: {token_counter.output_tokens}")
 
     def run_all(self):
         for spec_file in self.spec_dir.iterdir():
             if not spec_file.is_file():
                 continue
             spec_name = spec_file.stem
-            print(f"Running tests for {spec_name}")
+            if self.tui:
+                self.tui.print_section_header(f"Testing: {spec_name}")
+            else:
+                print(f"Running tests for {spec_name}")
             self.run_single(spec_name, spec_file.suffix)
 
     def run_single(self, spec_name: str, ext: str):
-        print("BEGINNING AUTO-REST-TEST...")
+        if self.tui:
+            self.tui.print_banner()
+            self.tui.print_section_header(f"Testing: {spec_name}")
+        else:
+            print("BEGINNING AUTO-REST-TEST...")
+
         embedding_model = EmbeddingModel()
         operation_graph = self.generate_graph(spec_name, ext, embedding_model)
         q_learning = self.perform_q_learning(operation_graph, spec_name)
-        self.print_performance()
+        self.print_performance(q_learning, operation_graph.spec_parser)
         output_q_table(q_learning, spec_name)
         output_successes(q_learning, spec_name)
         output_errors(q_learning, spec_name)
         output_operation_status_codes(q_learning, spec_name)
         output_report(q_learning, spec_name, operation_graph.spec_parser)
-        print("AUTO-REST-TEST COMPLETED!!!")
+
+        if self.tui:
+            self.tui.print_success("AutoRestTest completed successfully!")
+            self.tui.print_step(f"Results saved to: data/{spec_name}/", "info")
+        else:
+            print("AUTO-REST-TEST COMPLETED!!!")
 
 
 def main():
+    args = parse_args()
+
+    # Initialize TUI
+    tui: Optional[TUIDisplay] = None
+    config: Optional[Config] = None
+
+    if not args.no_tui:
+        tui = TUIDisplay(width=args.width)
+        tui.clear()
+        tui.print_banner()
+
+    # Get configuration
+    if args.skip_wizard or args.no_tui:
+        config = get_config()
+    else:
+        wizard = ConfigWizard(width=args.width)
+        overrides = wizard.run(quick_mode=args.quick)
+
+        if overrides is None:
+            # User cancelled
+            sys.exit(0)
+        elif overrides:
+            config = apply_config_overrides(overrides)
+        else:
+            config = get_config()
+
+    # Apply CLI overrides
+    if args.spec or args.time:
+        from autoresttest.config.config import _load_raw_config
+
+        raw_config = _load_raw_config()
+        if args.spec:
+            raw_config["spec"]["location"] = args.spec
+        if args.time:
+            raw_config["request_generation"]["time_duration"] = args.time
+        config = Config.model_validate(raw_config)
+
+    # Display configuration summary
+    if tui and config:
+        config_summary = {
+            "Specification": config.specification_location,
+            "LLM Engine": config.openai_llm_engine,
+            "API Base": config.llm_api_base,
+            "Duration": f"{config.request_generation.time_duration}s",
+            "Cache Graph": config.cache.use_cached_graph,
+            "Cache Q-Tables": config.cache.use_cached_table,
+        }
+        tui.print_config_summary(config_summary)
+
+        if not tui.confirm("Start testing with this configuration?"):
+            tui.print_warning("Execution cancelled by user")
+            sys.exit(0)
+
+    # Parse specification location and run
     specification_directory, specification_name, ext = parse_specification_location(
-        str(PROJECT_ROOT / CONFIG.specification_location)
+        str(PROJECT_ROOT / config.specification_location)
     )
-    auto_rest_test = AutoRestTest(spec_dir=specification_directory)
+
+    auto_rest_test = AutoRestTest(
+        spec_dir=specification_directory,
+        config=config,
+        tui=tui,
+    )
     auto_rest_test.run_single(specification_name, ext)
 
 

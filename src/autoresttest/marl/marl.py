@@ -3,15 +3,18 @@ import json
 import os
 import random
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import asdict
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 import numpy as np
 import requests
 import shelve
 
 from autoresttest.config import get_config
+
+if TYPE_CHECKING:
+    from autoresttest.tui import LiveDisplay, TUIDisplay
 from autoresttest.graph import OperationGraph, OperationProperties
 from autoresttest.agents import (
     OperationAgent,
@@ -56,6 +59,7 @@ class QLearning:
         epsilon: float = 0.3,
         time_duration: int = 600,
         mutation_rate: float = 0.3,
+        tui: Optional["TUIDisplay"] = None,
     ) -> None:
         self.q_table: dict[str, Any] = {}
         self.operation_graph: OperationGraph = operation_graph
@@ -87,6 +91,10 @@ class QLearning:
         self._init_parameter_tracking()
         self._init_body_tracking()
         self._init_response_tracking()
+
+        # TUI integration
+        self.tui = tui
+        self._live_display: Optional["LiveDisplay"] = None
 
     def print_q_tables(self):
         print("OPERATION Q-TABLE: ", self.operation_agent.q_table)
@@ -1581,20 +1589,35 @@ class QLearning:
                         self.unique_errors[operation_id].append(data_signature)
 
     def tui_output(self, start_time, operation_id):
-
-        unique_processed_200s = set()
+        """Output current status - uses live TUI display if available, otherwise prints."""
+        unique_processed_200s: Set[str] = set()
         for operation_idx, status_codes in self.operation_response_counter.items():
             for status_code in status_codes:
                 if status_code // 100 == 2:
                     unique_processed_200s.add(operation_idx)
+
+        unique_errors = sum(len(errs) for errs in self.unique_errors.values())
+
+        # Use live display if available
+        if self._live_display:
+            from autoresttest.llm import LanguageModel
+
+            token_counter = LanguageModel.get_tokens()
+            self._live_display.update(
+                current_operation=operation_id,
+                responses=Counter(self.responses),
+                unique_errors=unique_errors,
+                successful_operations=unique_processed_200s,
+                input_tokens=token_counter.input_tokens,
+                output_tokens=token_counter.output_tokens,
+            )
+            return
+
+        # Fallback to print output
         not_hit_operations = set()
         for operation_idx in self.operation_graph.operation_nodes.keys():
             if operation_idx not in unique_processed_200s:
                 not_hit_operations.add(operation_idx)
-
-        unique_errors = 0
-        for operation_idx in self.unique_errors:
-            unique_errors += len(self.unique_errors[operation_idx])
 
         print(
             "========================================================================="
@@ -1616,4 +1639,21 @@ class QLearning:
         )
 
     def run(self):
-        self.execute_operations()
+        """Run the Q-learning execution with optional TUI live display."""
+        # Initialize live display if TUI is enabled
+        if self.tui:
+            from autoresttest.tui import LiveDisplay
+
+            self._live_display = LiveDisplay(
+                time_duration=self.time_duration,
+                total_operations=len(self.operation_graph.operation_nodes),
+            )
+            self._live_display.start()
+
+        try:
+            self.execute_operations()
+        finally:
+            # Ensure live display is stopped properly
+            if self._live_display:
+                self._live_display.stop()
+                self._live_display = None

@@ -17,6 +17,7 @@ dependencies:
   - pydantic=2.7.1
   - tomli=2.0.1
   - tqdm>=4.66
+  - rich>=13.7
   - pip:
       - prance==23.6.21.0
       - openapi-spec-validator==0.7.1
