@@ -1,51 +1,45 @@
 import copy
 import json
-import os
 import random
 import time
 from collections import Counter, defaultdict
-from dataclasses import asdict
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 import numpy as np
 import requests
-import shelve
 
 from autoresttest.config import get_config
 
 if TYPE_CHECKING:
     from autoresttest.tui import LiveDisplay, TUIDisplay
-from autoresttest.graph import OperationGraph, OperationProperties
 from autoresttest.agents import (
-    OperationAgent,
-    HeaderAgent,
-    ParameterAgent,
-    ValueAgent,
-    ValueAction,
     BodyObjAgent,
     DataSourceAgent,
     DependencyAgent,
+    HeaderAgent,
+    OperationAgent,
+    ParameterAgent,
+    ValueAction,
+    ValueAgent,
 )
-from autoresttest.utils import (
-    construct_db_dir,
-    construct_basic_token,
-    get_body_params,
-    get_response_params,
-    get_response_param_mappings,
-    make_param_key,
-    remove_nulls,
-    encode_dictionary,
-    split_parameter_values,
-    dispatch_request,
-    get_accept_header,
-)
+from autoresttest.graph import OperationGraph, OperationProperties
 from autoresttest.llm import (
     identify_generator,
-    randomize_string,
     random_generator,
     randomize_object,
+    randomize_string,
 )
 from autoresttest.models import ParameterKey
+from autoresttest.utils import (
+    construct_basic_token,
+    dispatch_request,
+    get_accept_header,
+    get_body_params,
+    get_response_param_mappings,
+    get_response_params,
+    make_param_key,
+    split_parameter_values,
+)
 
 CONFIG = get_config()
 
@@ -63,9 +57,9 @@ class QLearning:
     ) -> None:
         self.q_table: dict[str, Any] = {}
         self.operation_graph: OperationGraph = operation_graph
-        assert (
-            operation_graph.request_generator is not None
-        ), "request_generator must be set"
+        assert operation_graph.request_generator is not None, (
+            "request_generator must be set"
+        )
         self.api_url = operation_graph.request_generator.api_url
         self.alpha = alpha
         self.gamma = gamma
@@ -130,6 +124,28 @@ class QLearning:
         avail_types.remove(param_type)
         return identify_generator(random.choice(avail_types))()
 
+    def get_boundary_value(self, param_type: str | None) -> Any:
+        """Generate boundary/edge case values for fuzzing."""
+        if not param_type:
+            return random.choice([None, "", 0, [], {}])
+        if param_type == "integer":
+            return random.choice([0, -1, 1, 2**31 - 1, -(2**31), 2**63 - 1, -(2**63)])
+        elif param_type == "number":
+            return random.choice(
+                [0.0, -0.0, 1e308, -1e308, 1e-308, -1e-308, -1.0, 9999999999999999.9]
+            )
+        elif param_type == "string":
+            return random.choice(
+                ["", " ", "null", "undefined", "a" * 10000, "\x00", "{{", "%s%s%s"]
+            )
+        elif param_type == "array":
+            return random.choice([[], [None], list(range(1000))])
+        elif param_type == "boolean":
+            return random.choice(["true", "false", 1, 0, ""])  # String variants
+        elif param_type == "object":
+            return random.choice([{}, {"": ""}, {"a": "b" * 10000}, None])
+        return None
+
     # Gets a random value from the table of primitive responses
     def assign_random_from_primitives(
         self,
@@ -173,7 +189,6 @@ class QLearning:
     def assign_random_from_successful(
         self, parameters, body, operation_id, complete_body_mappings
     ):
-
         # DEPRECATED
 
         possible_options = []
@@ -354,6 +369,7 @@ class QLearning:
         avail_methods = ["get", "post", "put", "delete", "patch"]
 
         parameter_type_mutate_rate = 0.65
+        boundary_value_rate = 0.25  # Use boundary values instead of type mutation
         body_mutate_rate = 0.4
         mutate_method = (
             random.random() < 0.01
@@ -412,11 +428,17 @@ class QLearning:
             ) in operation_properties.parameters.items():
                 if parameter_key in parameters:
                     mutate_parameter_type = random.random() < parameter_type_mutate_rate
+                    use_boundary_value = random.random() < boundary_value_rate
                     if parameter_properties.schema and mutate_parameter_type:
                         if parameter_properties.schema.type:
-                            parameters[parameter_key] = self.get_mutated_value(
-                                parameter_properties.schema.type
-                            )
+                            if use_boundary_value:
+                                parameters[parameter_key] = self.get_boundary_value(
+                                    parameter_properties.schema.type
+                                )
+                            else:
+                                parameters[parameter_key] = self.get_mutated_value(
+                                    parameter_properties.schema.type
+                                )
                         else:
                             parameters[parameter_key] = random_generator()()
 
@@ -454,8 +476,11 @@ class QLearning:
         if operation_properties.request_body and body:
             for mime, body_properties in operation_properties.request_body.items():
                 mutate_body = random.random() < body_mutate_rate
+                use_body_boundary = random.random() < boundary_value_rate
                 if mime in body and mutate_body:
-                    if random.random() < 0.5 and body_properties.type:
+                    if use_body_boundary and body_properties.type:
+                        body[mime] = self.get_boundary_value(body_properties.type)
+                    elif random.random() < 0.5 and body_properties.type:
                         body[mime] = self.get_mutated_value(body_properties.type)
                     else:
                         body[mime] = randomize_object()
@@ -817,7 +842,6 @@ class QLearning:
         return parameters, body
 
     def select_exploration_agent(self, operation_id, start_time):
-
         # DEPRECATED: Using value decomposition idea for Q-value updating
 
         elapsed_time = time.time() - start_time
@@ -913,7 +937,6 @@ class QLearning:
         )
 
     def execute_operations(self):
-
         start_time = time.time()
 
         complete_body_mappings = self.determine_complete_body_mappings()
