@@ -23,6 +23,9 @@ tomli = "2.0.1"
 httpx = "<0.28"
 tqdm = "^4.66"
 
+# TUI dependencies
+rich = "^13.7"
+
 [tool.poetry.scripts]
 autoresttest = "autoresttest.autoresttest:main"
 

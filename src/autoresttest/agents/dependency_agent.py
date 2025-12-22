@@ -1,5 +1,5 @@
 import random
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Optional, TypedDict, cast
 
 import numpy as np
 from scipy.spatial.distance import cosine
@@ -56,6 +56,11 @@ class DependencyAgent(BaseAgent):
         self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
+        self.dependencies_discovered: int = 0
+
+    def _notify(self, message: str) -> None:
+        """Increment the dependencies discovered counter."""
+        self.dependencies_discovered += 1
 
     @staticmethod
     def _bucket_location(location: str, is_source: bool = False) -> str:
@@ -689,13 +694,8 @@ class DependencyAgent(BaseAgent):
                                 new_property
                             ] = 0
                             updated_tables = True
-                            print(
-                                "New dependency discovered between operation {} and operation {} with parameter {} and response {}".format(
-                                    operation_id,
-                                    new_operation_response_id,
-                                    param,
-                                    new_property,
-                                )
+                            self._notify(
+                                f"Dependency: {operation_id} → {new_operation_response_id} ({param} → {new_property})"
                             )
         return updated_tables
 
@@ -757,10 +757,8 @@ class DependencyAgent(BaseAgent):
             self.q_table[operation_id][param_location][operation_param][
                 dependent_operation_id
             ][dependent_location][dependent_param] = 0
-        print(
-            "New dependency discovered between operation {} and operation {} with operation parameter {} and dependent parameter {}".format(
-                operation_id, dependent_operation_id, operation_param, dependent_param
-            )
+        self._notify(
+            f"Dependency: {operation_id} → {dependent_operation_id} ({operation_param} → {dependent_param})"
         )
 
     # Get a random value from the successful operations to test dependencies

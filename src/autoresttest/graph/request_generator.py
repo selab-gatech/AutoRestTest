@@ -6,7 +6,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from json import JSONDecodeError
-from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING
 
 import numpy as np
 
@@ -596,28 +596,30 @@ class RequestGenerator:
         operation_nodes: Dict[str, "OperationNode"],
         parameter_mappings: Dict,
         max_workers: int = 4,
+        progress_callback: Optional[Callable[[str, int], None]] = None,
     ) -> None:
         """Generate value tables for all operations in parallel using a thread pool."""
         # parameter_mappings corresponds to q_table
         visited_lock = threading.Lock()
         mappings_lock = threading.Lock()
+        progress_lock = threading.Lock()
         visited: Set[str] = set()
+        completed_count = 0
 
-        def process_operation(operation_node: "OperationNode") -> None:
+        def process_operation(operation_node: "OperationNode") -> str:
+            nonlocal completed_count
             operation_id = operation_node.operation_id
 
             # Check if already processed (with lock)
             with visited_lock:
                 if operation_id in visited:
-                    return
+                    return operation_id
                 visited.add(operation_id)
 
             # Pre-initialize Q-table entry to ensure it exists even if later steps fail
             with mappings_lock:
                 if operation_id not in parameter_mappings:
                     parameter_mappings[operation_id] = {"params": {}, "body": {}}
-
-            print(f"Building value table generation for operation: {operation_id}")
 
             # Generate values (I/O bound - HTTP + LLM calls)
             occurrences: Dict[str, int] = {}
@@ -667,7 +669,7 @@ class RequestGenerator:
                         occurrences,
                     )
 
-            print(f"Completed value table generation for operation: {operation_id}")
+            return operation_id
 
         # Submit all operations to thread pool
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -679,9 +681,17 @@ class RequestGenerator:
             for future in as_completed(futures):
                 op_id = futures[future]
                 try:
-                    future.result()
-                except Exception as e:
-                    print(f"Error processing operation {op_id}: {e}")
+                    result_op_id = future.result()
+                    with progress_lock:
+                        completed_count += 1
+                        if progress_callback:
+                            progress_callback(result_op_id, completed_count)
+                except Exception:
+                    # Still increment count on error to avoid stuck progress
+                    with progress_lock:
+                        completed_count += 1
+                        if progress_callback:
+                            progress_callback(op_id, completed_count)
 
     def create_and_send_request(
         self,

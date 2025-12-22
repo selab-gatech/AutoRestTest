@@ -3,15 +3,18 @@ import json
 import os
 import random
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import asdict
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 import numpy as np
 import requests
 import shelve
 
 from autoresttest.config import get_config
+
+if TYPE_CHECKING:
+    from autoresttest.tui import LiveDisplay, TUIDisplay
 from autoresttest.graph import OperationGraph, OperationProperties
 from autoresttest.agents import (
     OperationAgent,
@@ -56,6 +59,7 @@ class QLearning:
         epsilon: float = 0.3,
         time_duration: int = 600,
         mutation_rate: float = 0.3,
+        tui: Optional["TUIDisplay"] = None,
     ) -> None:
         self.q_table: dict[str, Any] = {}
         self.operation_graph: OperationGraph = operation_graph
@@ -84,9 +88,14 @@ class QLearning:
         self.successful_responses: dict[str, dict[str, list[Any]]] = {}
         self.successful_primitives: dict[str, list[Any]] = {}
         self.operation_response_counter: dict[str, dict[int, int]] = {}
+        self.mutation_count: int = 0  # Track number of mutations performed
         self._init_parameter_tracking()
         self._init_body_tracking()
         self._init_response_tracking()
+
+        # TUI integration
+        self.tui = tui
+        self._live_display: Optional["LiveDisplay"] = None
 
     def print_q_tables(self):
         print("OPERATION Q-TABLE: ", self.operation_agent.q_table)
@@ -1219,6 +1228,7 @@ class QLearning:
                         specific_method,
                         mutated_parameter_names,
                     ) = self.mutate_values(operation_props, parameters, body, header)
+                    self.mutation_count += 1
                 else:
                     if random.random() < 0.2 and avail_primitives > 0:
                         parameters, body = self.assign_random_from_primitives(
@@ -1238,6 +1248,7 @@ class QLearning:
                         ) = self.mutate_values(
                             operation_props, parameters, body, header
                         )
+                        self.mutation_count += 1
 
                 response = self.send_operation(
                     operation_props, parameters, body, header, specific_method
@@ -1581,39 +1592,46 @@ class QLearning:
                         self.unique_errors[operation_id].append(data_signature)
 
     def tui_output(self, start_time, operation_id):
-
-        unique_processed_200s = set()
+        """Output current status via live TUI display."""
+        unique_processed_200s: Set[str] = set()
         for operation_idx, status_codes in self.operation_response_counter.items():
             for status_code in status_codes:
                 if status_code // 100 == 2:
                     unique_processed_200s.add(operation_idx)
-        not_hit_operations = set()
-        for operation_idx in self.operation_graph.operation_nodes.keys():
-            if operation_idx not in unique_processed_200s:
-                not_hit_operations.add(operation_idx)
 
-        unique_errors = 0
-        for operation_idx in self.unique_errors:
-            unique_errors += len(self.unique_errors[operation_idx])
+        unique_errors = sum(len(errs) for errs in self.unique_errors.values())
 
-        print(
-            "========================================================================="
-        )
-        print(f"Attempting operation: {operation_id}")
-        print(f"Status Code Counter: {dict(self.responses)}")
-        print(f"Number of unique server errors: {unique_errors}")
-        print(f"Number of successful operations: {len(unique_processed_200s)}")
-        print(
-            f"Percentage of successful operations: {len(unique_processed_200s) / max(len(self.operation_graph.operation_nodes), 1) * 100:.2f}%"
-        )
-        print(
-            "Time remaining: ",
-            max(round(self.time_duration - (time.time() - start_time), 3), 0.01),
-        )
-        print(
-            "Percentage of time elapsed: ",
-            str(round((time.time() - start_time) / self.time_duration * 100, 2)) + "%",
-        )
+        # Update live display
+        if self._live_display:
+            from autoresttest.llm import LanguageModel
+
+            token_counter = LanguageModel.get_tokens()
+            self._live_display.update(
+                current_operation=operation_id,
+                responses=Counter(self.responses),
+                unique_errors=unique_errors,
+                successful_operations=unique_processed_200s,
+                input_tokens=token_counter.input_tokens,
+                output_tokens=token_counter.output_tokens,
+                mutation_count=self.mutation_count,
+                dependencies_discovered=self.dependency_agent.dependencies_discovered,
+            )
 
     def run(self):
-        self.execute_operations()
+        """Run the Q-learning execution with TUI live display."""
+        from autoresttest.tui import LiveDisplay
+
+        self._live_display = LiveDisplay(
+            time_duration=self.time_duration,
+            total_operations=len(self.operation_graph.operation_nodes),
+        )
+
+        self._live_display.start()
+
+        try:
+            self.execute_operations()
+        finally:
+            # Ensure live display is stopped properly
+            if self._live_display:
+                self._live_display.stop()
+                self._live_display = None

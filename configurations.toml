@@ -5,7 +5,8 @@
 [spec]
 # Relative path from the project root to the OpenAPI specification file.
 # Only .yaml and .json are supported; file MUST be OpenAPI 3.0.
-location = "specs/original/oas/ohsome.yaml"
+# location = "specs/original/oas/ohsome.yaml"
+location = "aratrl-openapi/market2.yaml"
 
 # Maximum times a circular/self-reference may appear in the resolution stack.
 # A value of 1 means an element may be referred to exactly once before triggering the handler.
@@ -52,7 +53,7 @@ combination_seed = 42
 parallelize = true
 
 # Number of worker threads for parallel generation (ignored if parallelize = false).
-max_workers = 8
+max_workers = 4
 
 [agents.header]
 # Whether to enable the Header Agent (uses Basic tokens). Only helpful for APIs requiring such auth.
