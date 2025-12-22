@@ -459,11 +459,6 @@ class AutoRestTest:
 
         title = spec_parser.get_api_title() if spec_parser.get_api_title() else "API"
 
-        # Estimate cost (rough approximation)
-        estimated_cost = (
-            token_counter.input_tokens * 0.0001 + token_counter.output_tokens * 0.0002
-        ) / 1000
-
         self.tui.print_final_report(
             title=title,
             duration=q_learning.time_duration,
@@ -477,7 +472,6 @@ class AutoRestTest:
         self.tui.print_token_usage(
             input_tokens=token_counter.input_tokens,
             output_tokens=token_counter.output_tokens,
-            estimated_cost=estimated_cost,
         )
 
     def run_all(self):

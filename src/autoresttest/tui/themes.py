@@ -36,14 +36,23 @@ class TUITheme:
     progress_complete: str = "#00D4FF"
     progress_remaining: str = "#2C3E50"
 
-    # Symbols
-    symbol_success: str = "[green]✓[/green]"
-    symbol_error: str = "[red]✗[/red]"
-    symbol_warning: str = "[yellow]⚠[/yellow]"
-    symbol_info: str = "[blue]ℹ[/blue]"
-    symbol_arrow: str = "[cyan]→[/cyan]"
-    symbol_bullet: str = "[dim]•[/dim]"
-    symbol_progress: str = "[cyan]⏳[/cyan]"
+    # Symbols (plain characters - styling applied at usage site)
+    symbol_success: str = "✓"
+    symbol_error: str = "✗"
+    symbol_warning: str = "⚠"
+    symbol_info: str = "ℹ"
+    symbol_arrow: str = "→"
+    symbol_bullet: str = "•"
+    symbol_progress: str = "⏳"
+
+    # Symbol colors (for applying styles at usage site)
+    symbol_success_color: str = "green"
+    symbol_error_color: str = "red"
+    symbol_warning_color: str = "yellow"
+    symbol_info_color: str = "blue"
+    symbol_arrow_color: str = "cyan"
+    symbol_bullet_color: str = "dim"
+    symbol_progress_color: str = "cyan"
 
     def get_status_color(self, status_code: int) -> str:
         """Return the appropriate color for an HTTP status code."""

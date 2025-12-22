@@ -98,7 +98,7 @@ class TUIDisplay:
     def print_phase_complete(self, phase_name: str, details: Optional[str] = None):
         """Display phase completion."""
         title = Text()
-        title.append(self.theme.symbol_success + " ")
+        title.append(self.theme.symbol_success + " ", style=self.theme.symbol_success_color)
         title.append(f"{phase_name} Complete", style=f"bold {self.theme.success}")
 
         content = Align.center(title)
@@ -117,14 +117,14 @@ class TUIDisplay:
     def print_step(self, message: str, status: str = "info"):
         """Print a step message with appropriate styling."""
         symbols = {
-            "info": self.theme.symbol_info,
-            "success": self.theme.symbol_success,
-            "warning": self.theme.symbol_warning,
-            "error": self.theme.symbol_error,
-            "progress": self.theme.symbol_progress,
+            "info": (self.theme.symbol_info, self.theme.symbol_info_color),
+            "success": (self.theme.symbol_success, self.theme.symbol_success_color),
+            "warning": (self.theme.symbol_warning, self.theme.symbol_warning_color),
+            "error": (self.theme.symbol_error, self.theme.symbol_error_color),
+            "progress": (self.theme.symbol_progress, self.theme.symbol_progress_color),
         }
-        symbol = symbols.get(status, self.theme.symbol_bullet)
-        self.console.print(f"  {symbol} {message}")
+        symbol, color = symbols.get(status, (self.theme.symbol_bullet, self.theme.symbol_bullet_color))
+        self.console.print(f"  [{color}]{symbol}[/{color}] {message}")
 
     def print_key_value(self, key: str, value: Any, indent: int = 2):
         """Print a key-value pair with styling."""
@@ -164,9 +164,7 @@ class TUIDisplay:
         self.console.print()
         self.console.print(Align.center(table))
 
-    def print_token_usage(
-        self, input_tokens: int, output_tokens: int, estimated_cost: Optional[float] = None
-    ):
+    def print_token_usage(self, input_tokens: int, output_tokens: int):
         """Display token usage statistics."""
         table = Table(
             box=ROUNDED,
@@ -183,10 +181,6 @@ class TUIDisplay:
         table.add_row("Input Tokens", f"{input_tokens:,}")
         table.add_row("Output Tokens", f"{output_tokens:,}")
         table.add_row("Total Tokens", f"{input_tokens + output_tokens:,}")
-
-        if estimated_cost is not None:
-            cost_color = self.theme.success if estimated_cost < 1.0 else self.theme.warning
-            table.add_row("Estimated Cost", f"[{cost_color}]${estimated_cost:.4f}[/{cost_color}]")
 
         self.console.print()
         self.console.print(Align.center(table))
@@ -279,7 +273,7 @@ class TUIDisplay:
     def print_error(self, message: str, details: Optional[str] = None):
         """Display an error message."""
         error_text = Text()
-        error_text.append(self.theme.symbol_error + " ")
+        error_text.append(self.theme.symbol_error + " ", style=self.theme.symbol_error_color)
         error_text.append(message, style=f"bold {self.theme.error}")
 
         content = error_text
@@ -299,14 +293,14 @@ class TUIDisplay:
     def print_warning(self, message: str):
         """Display a warning message."""
         warning_text = Text()
-        warning_text.append(self.theme.symbol_warning + " ")
+        warning_text.append(self.theme.symbol_warning + " ", style=self.theme.symbol_warning_color)
         warning_text.append(message, style=self.theme.warning)
         self.console.print(warning_text)
 
     def print_success(self, message: str):
         """Display a success message."""
         success_text = Text()
-        success_text.append(self.theme.symbol_success + " ")
+        success_text.append(self.theme.symbol_success + " ", style=self.theme.symbol_success_color)
         success_text.append(message, style=self.theme.success)
         self.console.print(success_text)
 
@@ -329,7 +323,7 @@ class TUIDisplay:
     def confirm(self, message: str, default: bool = True) -> bool:
         """Display a confirmation prompt."""
         default_str = "Y/n" if default else "y/N"
-        self.console.print(f"\n{self.theme.symbol_info} {message} [{default_str}]: ", end="")
+        self.console.print(f"\n[{self.theme.symbol_info_color}]{self.theme.symbol_info}[/{self.theme.symbol_info_color}] {message} [{default_str}]: ", end="")
 
         try:
             response = input().strip().lower()

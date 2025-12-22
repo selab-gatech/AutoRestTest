@@ -1,33 +1,19 @@
 """Interactive configuration wizard for AutoRestTest."""
 
-import os
-import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from rich.align import Align
 from rich.box import DOUBLE, ROUNDED
-from rich.columns import Columns
 from rich.console import Console, Group
 from rich.panel import Panel
 from rich.prompt import Confirm, FloatPrompt, IntPrompt, Prompt
 from rich.table import Table
 from rich.text import Text
 
-from autoresttest.config import CONFIG_PATH, get_config
+from autoresttest.config import get_config
 from autoresttest.config.config import (
-    AgentCombinationConfig,
-    AgentsConfig,
-    ApiConfig,
-    CacheConfig,
     Config,
-    CustomHeadersConfig,
-    HeaderAgentConfig,
-    LLMConfig,
-    QLearningConfig,
-    RequestGenerationConfig,
-    SpecConfig,
-    ValueAgentConfig,
 )
 
 from .themes import DEFAULT_THEME, TUITheme
@@ -39,17 +25,30 @@ class ConfigWizard:
     # Popular LLM engines organized by provider
     LLM_ENGINES = {
         "OpenAI": [
-            ("gpt-4o", "GPT-4o - Best overall performance"),
-            ("gpt-4o-mini", "GPT-4o Mini - Fast & cost-effective"),
-            ("gpt-4-turbo", "GPT-4 Turbo - High quality"),
-            ("gpt-3.5-turbo", "GPT-3.5 Turbo - Budget option"),
+            (
+                "gpt-5-mini-2025-08-07",
+                "GPT-5 Mini - Recommended balance of speed & quality",
+            ),
+            (
+                "gpt-5-nano-2025-08-07",
+                "GPT-5 Nano - Budget-friendly, may be less accurate",
+            ),
+            ("gpt-5.2-2025-12-11", "GPT-5.2 - Higher intelligence, slower"),
         ],
         "OpenRouter": [
-            ("google/gemini-2.5-flash-lite-preview-09-2025", "Gemini 2.5 Flash Lite - Ultra fast"),
-            ("google/gemini-2.0-flash-001", "Gemini 2.0 Flash - Excellent value"),
-            ("anthropic/claude-3.5-sonnet", "Claude 3.5 Sonnet - High quality"),
-            ("anthropic/claude-3-haiku", "Claude 3 Haiku - Fast responses"),
-            ("meta-llama/llama-3.1-70b-instruct", "Llama 3.1 70B - Open source"),
+            (
+                "google/gemini-2.5-flash-lite-preview-09-2025",
+                "Gemini 2.5 Flash Lite - Recommended: cheap & fast",
+            ),
+            (
+                "google/gemini-3-flash-preview",
+                "Gemini 3 Flash - Fast with higher intelligence",
+            ),
+            ("anthropic/claude-haiku-4.5", "Claude Haiku 4.5 - Fast & smart"),
+            (
+                "meta-llama/llama-3.3-70b-instruct",
+                "Llama 3.3 70B - Efficient open-source",
+            ),
         ],
         "Local": [
             ("local-model", "Local Model - Custom endpoint"),
@@ -84,7 +83,9 @@ class ConfigWizard:
         self.console.print()
         self.console.print(panel)
 
-    def _print_option_table(self, options: List[Tuple[str, str]], title: str = "Options"):
+    def _print_option_table(
+        self, options: List[Tuple[str, str]], title: str = "Options"
+    ):
         """Print a table of numbered options."""
         table = Table(
             box=ROUNDED,
@@ -93,7 +94,9 @@ class ConfigWizard:
             header_style=f"bold {self.theme.secondary}",
             padding=(0, 1),
         )
-        table.add_column("#", style=f"bold {self.theme.primary}", width=4, justify="center")
+        table.add_column(
+            "#", style=f"bold {self.theme.primary}", width=4, justify="center"
+        )
         table.add_column("Option", style=self.theme.text)
         table.add_column("Description", style=self.theme.text_dim)
 
@@ -114,8 +117,9 @@ class ConfigWizard:
         while True:
             self.console.print()
             default_display = f"[{self.theme.text_dim}]default: {default_index + 1}[/{self.theme.text_dim}]"
+            arrow = f"[{self.theme.symbol_arrow_color}]{self.theme.symbol_arrow}[/{self.theme.symbol_arrow_color}]"
             response = Prompt.ask(
-                f"  {self.theme.symbol_arrow} {prompt_text} {default_display}",
+                f"  {arrow} {prompt_text} {default_display}",
                 default=str(default_index + 1),
                 console=self.console,
             )
@@ -124,7 +128,9 @@ class ConfigWizard:
                 idx = int(response) - 1
                 if 0 <= idx < len(options):
                     return idx
-                self.console.print(f"  [red]Please enter a number between 1 and {len(options)}[/red]")
+                self.console.print(
+                    f"  [red]Please enter a number between 1 and {len(options)}[/red]"
+                )
             except ValueError:
                 if response.strip() == "":
                     return default_index
@@ -138,30 +144,33 @@ class ConfigWizard:
         validation: Optional[callable] = None,
     ) -> Any:
         """Prompt for a value with type conversion and optional validation."""
-        default_display = f"[{self.theme.text_dim}]default: {default}[/{self.theme.text_dim}]"
+        default_display = (
+            f"[{self.theme.text_dim}]default: {default}[/{self.theme.text_dim}]"
+        )
+        arrow = f"[{self.theme.symbol_arrow_color}]{self.theme.symbol_arrow}[/{self.theme.symbol_arrow_color}]"
 
         while True:
             if value_type == bool:
                 return Confirm.ask(
-                    f"  {self.theme.symbol_arrow} {prompt_text}",
+                    f"  {arrow} {prompt_text}",
                     default=default,
                     console=self.console,
                 )
             elif value_type == int:
                 result = IntPrompt.ask(
-                    f"  {self.theme.symbol_arrow} {prompt_text} {default_display}",
+                    f"  {arrow} {prompt_text} {default_display}",
                     default=default,
                     console=self.console,
                 )
             elif value_type == float:
                 result = FloatPrompt.ask(
-                    f"  {self.theme.symbol_arrow} {prompt_text} {default_display}",
+                    f"  {arrow} {prompt_text} {default_display}",
                     default=default,
                     console=self.console,
                 )
             else:
                 result = Prompt.ask(
-                    f"  {self.theme.symbol_arrow} {prompt_text} {default_display}",
+                    f"  {arrow} {prompt_text} {default_display}",
                     default=str(default),
                     console=self.console,
                 )
@@ -179,7 +188,6 @@ class ConfigWizard:
         spec_dirs = [
             Path("specs"),
             Path("aratrl-openapi"),
-            Path("aratrl-swagger"),
         ]
 
         specs = []
@@ -190,9 +198,9 @@ class ConfigWizard:
                         rel_path = str(spec_file)
                         specs.append((rel_path, f"Found in {spec_dir}"))
 
-        # Limit to first 20 for display
-        if len(specs) > 20:
-            specs = specs[:20]
+        # Limit to first 8 for display (has 2 other defaults, so 10 total)
+        if len(specs) > 8:
+            specs = specs[:8]
             specs.append(("... more available", "Enter custom path"))
 
         return specs
@@ -238,10 +246,14 @@ class ConfigWizard:
                     ("Use Defaults", "Start with current configurations.toml"),
                 ]
 
-                mode_idx = self._select_option(modes, "Select setup mode", default_index=2)
+                mode_idx = self._select_option(
+                    modes, "Select setup mode", default_index=2
+                )
 
                 if mode_idx == 2:  # Use defaults
-                    self.console.print(f"\n  {self.theme.symbol_success} Using default configuration")
+                    self.console.print(
+                        f"\n  [{self.theme.symbol_success_color}]{self.theme.symbol_success}[/{self.theme.symbol_success_color}] Using default configuration"
+                    )
                     return {}
                 elif mode_idx == 0:
                     quick_mode = True
@@ -271,18 +283,21 @@ class ConfigWizard:
             # Summary
             self._print_config_summary(overrides)
 
+            arrow = f"[{self.theme.symbol_arrow_color}]{self.theme.symbol_arrow}[/{self.theme.symbol_arrow_color}]"
+            warning = f"[{self.theme.symbol_warning_color}]{self.theme.symbol_warning}[/{self.theme.symbol_warning_color}]"
             if Confirm.ask(
-                f"\n  {self.theme.symbol_arrow} Proceed with this configuration?",
+                f"\n  {arrow} Proceed with this configuration?",
                 default=True,
                 console=self.console,
             ):
                 return overrides
             else:
-                self.console.print(f"\n  {self.theme.symbol_warning} Configuration cancelled")
+                self.console.print(f"\n  {warning} Configuration cancelled")
                 return None
 
         except KeyboardInterrupt:
-            self.console.print(f"\n\n  {self.theme.symbol_warning} Configuration cancelled")
+            warning = f"[{self.theme.symbol_warning_color}]{self.theme.symbol_warning}[/{self.theme.symbol_warning_color}]"
+            self.console.print(f"\n\n  {warning} Configuration cancelled")
             return None
 
     def _configure_spec(self) -> Dict[str, Any]:
@@ -297,7 +312,9 @@ class ConfigWizard:
         if specs:
             specs.insert(0, ("Enter custom path", "Specify your own spec file path"))
 
-            self.console.print(f"\n  [dim]Current: {self._default_config.specification_location}[/dim]")
+            self.console.print(
+                f"\n  [dim]Current: {self._default_config.specification_location}[/dim]"
+            )
             idx = self._select_option(specs, "Select specification", default_index=0)
 
             if idx == 0:  # Custom path
@@ -335,21 +352,40 @@ class ConfigWizard:
             ("Custom", "Enter custom engine and API base"),
         ]
 
-        self.console.print(f"\n  [dim]Current engine: {self._default_config.openai_llm_engine}[/dim]")
-        self.console.print(f"  [dim]Current API base: {self._default_config.llm_api_base}[/dim]")
+        self.console.print(
+            f"\n  [dim]Current engine: {self._default_config.openai_llm_engine}[/dim]"
+        )
+        self.console.print(
+            f"  [dim]Current API base: {self._default_config.llm_api_base}[/dim]"
+        )
 
-        provider_idx = self._select_option(providers, "Select LLM provider", default_index=1)
+        provider_idx = self._select_option(
+            providers, "Select LLM provider", default_index=1
+        )
         provider = providers[provider_idx][0]
 
         if provider == "Custom":
-            engine = self._prompt_value("Enter model name", self._default_config.openai_llm_engine)
-            api_base = self._prompt_value("Enter API base URL", self._default_config.llm_api_base)
+            engine = self._prompt_value(
+                "Enter model name", self._default_config.openai_llm_engine
+            )
+            api_base = self._prompt_value(
+                "Enter API base URL", self._default_config.llm_api_base
+            )
         else:
             # Model selection for known providers
             if provider in self.LLM_ENGINES:
-                models = self.LLM_ENGINES[provider]
+                models = list(self.LLM_ENGINES[provider])
+                # Add custom model ID option for all providers
+                models.append(("custom", "Enter custom model ID"))
                 model_idx = self._select_option(models, "Select model", default_index=0)
-                engine = models[model_idx][0]
+
+                if models[model_idx][0] == "custom":
+                    # User wants to enter a custom model ID
+                    engine = self._prompt_value(
+                        "Enter model ID", self._default_config.openai_llm_engine
+                    )
+                else:
+                    engine = models[model_idx][0]
             else:
                 engine = self._default_config.openai_llm_engine
 
@@ -392,7 +428,7 @@ class ConfigWizard:
         q_config = {}
 
         self.console.print(
-            f"\n  [dim]These settings control the reinforcement learning behavior.[/dim]"
+            "\n  [dim]These settings control the reinforcement learning behavior.[/dim]"
         )
 
         learning_rate = self._prompt_value(
@@ -479,7 +515,7 @@ class ConfigWizard:
         cache_config = {}
 
         self.console.print(
-            f"\n  [dim]Caching speeds up repeated runs by reusing computed data.[/dim]"
+            "\n  [dim]Caching speeds up repeated runs by reusing computed data.[/dim]"
         )
 
         use_graph = self._prompt_value(
@@ -511,7 +547,7 @@ class ConfigWizard:
         api_config = {}
 
         self.console.print(
-            f"\n  [dim]Override the API URL from the specification with a custom endpoint.[/dim]"
+            "\n  [dim]Override the API URL from the specification with a custom endpoint.[/dim]"
         )
 
         override_url = self._prompt_value(
@@ -551,7 +587,7 @@ class ConfigWizard:
 
         # Header agent
         self.console.print(
-            f"\n  [dim]Header Agent generates Basic Authentication headers.[/dim]"
+            "\n  [dim]Header Agent generates Basic Authentication headers.[/dim]"
         )
 
         enable_header = self._prompt_value(
@@ -564,7 +600,7 @@ class ConfigWizard:
 
         # Value agent parallelization
         self.console.print(
-            f"\n  [dim]Value Agent parallelization speeds up Q-table initialization.[/dim]"
+            "\n  [dim]Value Agent parallelization speeds up Q-table initialization.[/dim]"
         )
 
         parallelize = self._prompt_value(
@@ -598,9 +634,8 @@ class ConfigWizard:
         self._print_section("Configuration Summary", "")
 
         if not overrides:
-            self.console.print(
-                f"\n  {self.theme.symbol_info} No changes from default configuration"
-            )
+            info = f"[{self.theme.symbol_info_color}]{self.theme.symbol_info}[/{self.theme.symbol_info_color}]"
+            self.console.print(f"\n  {info} No changes from default configuration")
             return
 
         table = Table(
@@ -641,7 +676,11 @@ def apply_config_overrides(overrides: Dict[str, Any]) -> Config:
     def deep_merge(base: Dict, override: Dict) -> Dict:
         result = base.copy()
         for key, value in override.items():
-            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
                 result[key] = deep_merge(result[key], value)
             else:
                 result[key] = value

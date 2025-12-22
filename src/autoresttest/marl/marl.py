@@ -1614,6 +1614,7 @@ class QLearning:
                 input_tokens=token_counter.input_tokens,
                 output_tokens=token_counter.output_tokens,
                 mutation_count=self.mutation_count,
+                dependencies_discovered=self.dependency_agent.dependencies_discovered,
             )
 
     def run(self):
@@ -1624,6 +1625,7 @@ class QLearning:
             time_duration=self.time_duration,
             total_operations=len(self.operation_graph.operation_nodes),
         )
+
         self._live_display.start()
 
         try:

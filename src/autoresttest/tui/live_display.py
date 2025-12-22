@@ -47,6 +47,7 @@ class LiveDisplay:
         self.input_tokens: int = 0
         self.output_tokens: int = 0
         self.mutation_count: int = 0
+        self.dependencies_discovered: int = 0
 
         # Live display instance
         self._live: Optional[Live] = None
@@ -95,18 +96,6 @@ class LiveDisplay:
             fill_char = "━"
             fill_color = self.theme.success
 
-        # Add pulsing effect at the end of the progress bar
-        if filled > 0 and empty > 0:
-            bar = (
-                f"[{fill_color}]{fill_char * (filled - 1)}[/{fill_color}]"
-                f"[bold {fill_color}]▶[/bold {fill_color}]"
-                f"[{self.theme.progress_remaining}]{'─' * empty}[/{self.theme.progress_remaining}]"
-            )
-        elif filled > 0:
-            bar = f"[{fill_color}]{fill_char * filled}[/{fill_color}]"
-        else:
-            bar = f"[{self.theme.progress_remaining}]{'─' * bar_width}[/{self.theme.progress_remaining}]"
-
         # Time display with clear labels
         elapsed_str = self._format_time(elapsed)
         remaining_str = self._format_time(remaining)
@@ -125,11 +114,19 @@ class LiveDisplay:
         time_line.append("Time Remaining: ", style=self.theme.text_dim)
         time_line.append(remaining_str, style=f"bold {remaining_color}")
 
-        # Progress percentage display
-        pct_color = fill_color
+        # Build progress bar using Text objects with explicit styles (not markup strings)
         progress_line = Text()
-        progress_line.append(f"  {bar} ", style="")
-        progress_line.append(f"{progress_pct:5.1f}%", style=f"bold {pct_color}")
+        progress_line.append("  ", style="")
+        if filled > 0 and empty > 0:
+            progress_line.append(fill_char * (filled - 1), style=fill_color)
+            progress_line.append("▶", style=f"bold {fill_color}")
+            progress_line.append("─" * empty, style=self.theme.progress_remaining)
+        elif filled > 0:
+            progress_line.append(fill_char * filled, style=fill_color)
+        else:
+            progress_line.append("─" * bar_width, style=self.theme.progress_remaining)
+        progress_line.append(" ", style="")
+        progress_line.append(f"{progress_pct:5.1f}%", style=f"bold {fill_color}")
 
         return Panel(
             Group(
@@ -280,6 +277,10 @@ class LiveDisplay:
             "Mutations Applied:",
             f"[{self.theme.warning}]{self.mutation_count:,}[/{self.theme.warning}]",
         )
+        stats_table.add_row(
+            "Dependencies Discovered:",
+            f"[{self.theme.accent}]{self.dependencies_discovered:,}[/{self.theme.accent}]",
+        )
 
         return Panel(
             stats_table,
@@ -305,35 +306,6 @@ class LiveDisplay:
             padding=(0, 1),
         )
 
-    def _create_cost_panel(self) -> Panel:
-        """Create the LLM cost tracking panel."""
-        # Rough cost estimate (adjust based on your model's pricing)
-        # Using approximate rates: input $0.0001/1K tokens, output $0.0002/1K tokens
-        estimated_cost = (self.input_tokens * 0.0001 + self.output_tokens * 0.0002) / 1000
-
-        cost_text = Text()
-        cost_text.append("💰 ", style="")
-        cost_text.append("LLM Cost: ", style=self.theme.text_dim)
-
-        cost_color = (
-            self.theme.success if estimated_cost < 0.50 else
-            self.theme.warning if estimated_cost < 2.0 else
-            self.theme.error
-        )
-        cost_text.append(f"${estimated_cost:.2f}", style=f"bold {cost_color}")
-        cost_text.append(" USD", style=self.theme.text_dim)
-
-        # Token count
-        cost_text.append("  │  ", style=self.theme.text_dim)
-        cost_text.append(f"Tokens: {self.input_tokens + self.output_tokens:,}", style=self.theme.text_dim)
-
-        return Panel(
-            Align.center(cost_text),
-            box=ROUNDED,
-            border_style=self.theme.warning,
-            padding=(0, 0),
-        )
-
     def _generate_display(self) -> Panel:
         """Generate the complete live display."""
         # Header
@@ -351,8 +323,6 @@ class LiveDisplay:
             self._create_status_panel(),
             Text(),
             self._create_operation_panel(),
-            Text(),
-            self._create_cost_panel(),
         )
 
         return Panel(
@@ -390,6 +360,7 @@ class LiveDisplay:
         input_tokens: int = 0,
         output_tokens: int = 0,
         mutation_count: int = 0,
+        dependencies_discovered: int = 0,
     ):
         """Update the live display with new data."""
         self.current_operation = current_operation
@@ -399,6 +370,7 @@ class LiveDisplay:
         self.input_tokens = input_tokens
         self.output_tokens = output_tokens
         self.mutation_count = mutation_count
+        self.dependencies_discovered = dependencies_discovered
 
         if self._live:
             self._live.update(self._generate_display())
@@ -490,22 +462,21 @@ class InitializationProgressDisplay:
         empty = bar_width - filled
 
         bar_color = self.theme.primary if progress_pct < 100 else self.theme.success
-        if filled > 0 and empty > 0:
-            bar = (
-                f"[{bar_color}]{'━' * filled}[/{bar_color}]"
-                f"[{self.theme.progress_remaining}]{'─' * empty}[/{self.theme.progress_remaining}]"
-            )
-        elif filled > 0:
-            bar = f"[{bar_color}]{'━' * filled}[/{bar_color}]"
-        else:
-            bar = f"[{self.theme.progress_remaining}]{'─' * bar_width}[/{self.theme.progress_remaining}]"
 
         # Build display content
         content_lines = []
 
-        # Progress line
+        # Progress line - build using Text with explicit styles (not markup strings)
         progress_text = Text()
-        progress_text.append(f"  {bar} ", style="")
+        progress_text.append("  ", style="")
+        if filled > 0 and empty > 0:
+            progress_text.append("━" * filled, style=bar_color)
+            progress_text.append("─" * empty, style=self.theme.progress_remaining)
+        elif filled > 0:
+            progress_text.append("━" * filled, style=bar_color)
+        else:
+            progress_text.append("─" * bar_width, style=self.theme.progress_remaining)
+        progress_text.append(" ", style="")
         progress_text.append(f"{progress_pct:5.1f}%", style=f"bold {bar_color}")
         content_lines.append(Align.center(progress_text))
         content_lines.append(Text())

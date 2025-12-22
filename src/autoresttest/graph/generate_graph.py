@@ -1,8 +1,6 @@
 import heapq
 import logging
 
-from tqdm import tqdm
-
 from .request_generator import RequestGenerator
 from .similarity_comparator import OperationDependencyComparator
 
@@ -181,11 +179,7 @@ class OperationGraph:
     def determine_dependencies(
         self, operations: dict[str, OperationProperties]
     ) -> None:
-        for operation_id, operation_properties in tqdm(
-            operations.items(),
-            desc="Building operation dependency graph",
-            unit="operations",
-        ):
+        for operation_id, operation_properties in operations.items():
             for (
                 dependent_operation_id,
                 dependent_operation_properties,
@@ -217,11 +211,9 @@ class OperationGraph:
         operations: dict[str, OperationProperties] = (
             self.spec_parser.parse_specification()
         )
-        print(f"Parsed specification ({len(operations)} operations)")
         for operation_id, operation_properties in operations.items():
             self.add_operation_node(operation_properties)
         self.determine_dependencies(operations)
-        print("Graph construction complete!")
 
 
 if __name__ == "__main__":
