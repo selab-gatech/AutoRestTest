@@ -525,9 +525,12 @@ class SmartValueGenerator:
         try:
             generated_parameters = json.loads(generated_parameters)
         except json.JSONDecodeError:
-            generated_parameters = attempt_fix_json(generated_parameters)
+            if not generated_parameters or not generated_parameters.strip():
+                generated_parameters = {}
+            else:
+                generated_parameters = attempt_fix_json(generated_parameters)
         parameter_matchings = self._validate_parameters(
-            generated_parameters.get("parameters")
+            generated_parameters.get("parameters") if isinstance(generated_parameters, dict) else None
         )
         return parameter_matchings
 
@@ -564,9 +567,12 @@ class SmartValueGenerator:
             try:
                 generated_request_body = json.loads(generated_request_body)
             except json.JSONDecodeError:
-                generated_request_body = attempt_fix_json(generated_request_body)
+                if not generated_request_body or not generated_request_body.strip():
+                    generated_request_body = {}
+                else:
+                    generated_request_body = attempt_fix_json(generated_request_body)
             validated_request_body = self.validate_request_body(
-                generated_request_body.get("request_body")
+                generated_request_body.get("request_body") if isinstance(generated_request_body, dict) else None
             )
             if validated_request_body:  # Only add if we got valid content
                 request_body[mime_type] = validated_request_body
@@ -596,9 +602,12 @@ class SmartValueGenerator:
         try:
             generated_parameters = json.loads(generated_parameters)
         except json.JSONDecodeError:
-            generated_parameters = attempt_fix_json(generated_parameters)
+            if not generated_parameters or not generated_parameters.strip():
+                generated_parameters = {}
+            else:
+                generated_parameters = attempt_fix_json(generated_parameters)
         parameter_matchings = self._validate_parameters(
-            generated_parameters.get("parameters")
+            generated_parameters.get("parameters") if isinstance(generated_parameters, dict) else None
         )
         return parameter_matchings
 
@@ -632,9 +641,12 @@ class SmartValueGenerator:
             try:
                 generated_request_body = json.loads(generated_request_body)
             except json.JSONDecodeError:
-                generated_request_body = attempt_fix_json(generated_request_body)
+                if not generated_request_body or not generated_request_body.strip():
+                    generated_request_body = {}
+                else:
+                    generated_request_body = attempt_fix_json(generated_request_body)
             validated_request_body = self.validate_request_body(
-                generated_request_body.get("request_body")
+                generated_request_body.get("request_body") if isinstance(generated_request_body, dict) else None
             )
             if validated_request_body:  # Only add if we got valid content
                 request_body[mime_type] = validated_request_body
@@ -654,8 +666,11 @@ class SmartValueGenerator:
         try:
             auth_parameters = json.loads(auth_parameters)
         except json.JSONDecodeError:
-            auth_parameters = attempt_fix_json(auth_parameters)
-        return auth_parameters.get("authentication_parameters")
+            if not auth_parameters or not auth_parameters.strip():
+                auth_parameters = {}
+            else:
+                auth_parameters = attempt_fix_json(auth_parameters)
+        return auth_parameters.get("authentication_parameters") if isinstance(auth_parameters, dict) else None
 
     def _validate_value_params(
         self, schema: Optional[Dict]
@@ -696,9 +711,12 @@ class SmartValueGenerator:
         try:
             generated_parameters = json.loads(generated_parameters)
         except json.JSONDecodeError:
-            generated_parameters = attempt_fix_json(generated_parameters)
+            if not generated_parameters or not generated_parameters.strip():
+                generated_parameters = {}
+            else:
+                generated_parameters = attempt_fix_json(generated_parameters)
         parameter_matchings = self._validate_value_params(
-            generated_parameters.get("parameters")
+            generated_parameters.get("parameters") if isinstance(generated_parameters, dict) else None
         )
         return parameter_matchings
 
@@ -730,9 +748,12 @@ class SmartValueGenerator:
             try:
                 generated_request_body = json.loads(generated_request_body)
             except json.JSONDecodeError:
-                generated_request_body = attempt_fix_json(generated_request_body)
+                if not generated_request_body or not generated_request_body.strip():
+                    generated_request_body = {}
+                else:
+                    generated_request_body = attempt_fix_json(generated_request_body)
             validated_request_body = self._validate_value_body(
-                generated_request_body.get("request_body")
+                generated_request_body.get("request_body") if isinstance(generated_request_body, dict) else None
             )
             request_body[mime_type] = validated_request_body
         return request_body
@@ -763,10 +784,13 @@ class SmartValueGenerator:
             try:
                 generated_request_body = json.loads(generated_request_body)
             except json.JSONDecodeError:
-                print("Handling a JSON decode error...")
-                generated_request_body = attempt_fix_json(generated_request_body)
+                if not generated_request_body or not generated_request_body.strip():
+                    generated_request_body = {}
+                else:
+                    print("Handling a JSON decode error...")
+                    generated_request_body = attempt_fix_json(generated_request_body)
             validated_request_body = self._validate_value_body(
-                generated_request_body.get("request_body")
+                generated_request_body.get("request_body") if isinstance(generated_request_body, dict) else None
             )
             request_body[mime_type] = validated_request_body
         return request_body
@@ -793,8 +817,11 @@ class SmartValueGenerator:
         try:
             generated_parameters = json.loads(generated_parameters)
         except json.JSONDecodeError:
-            generated_parameters = attempt_fix_json(generated_parameters)
+            if not generated_parameters or not generated_parameters.strip():
+                generated_parameters = {}
+            else:
+                generated_parameters = attempt_fix_json(generated_parameters)
         parameter_matchings = self._validate_value_params(
-            generated_parameters.get("parameters")
+            generated_parameters.get("parameters") if isinstance(generated_parameters, dict) else None
         )
         return parameter_matchings
